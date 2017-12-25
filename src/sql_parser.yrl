@@ -11,6 +11,7 @@ id comma dot lit int op open_par close_par.
 Rootsymbol query.
 
 query -> select from where: {'$1', '$2', '$3'}.
+query -> select from: {'$1', '$2', []}.
 
 select -> id select_list : tag('$1', "SELECT"), '$2'.
 select_list -> expr : ['$1'].
@@ -23,6 +24,7 @@ table_list -> table comma table_list : ['$1'] ++ '$3'.
 where -> id expr_list : tag('$1',"WHERE"), '$2'.
 expr_list -> expr : ['$1'].
 expr_list -> expr comma expr_list: ['$1'] ++ '$3'.
+
 
 expr -> column : '$1'.
 expr -> open_par expr close_par : '$2'.
@@ -37,9 +39,9 @@ select -> column comma select: [unwrap('$1')] ++ '$3'.
 
 Erlang code.
 
-unwrap({_,_,V}) -> V.
+unwrap({_,_,V}) -> 'Elixir.List':to_string(V).
 tag(A, B) ->
   A1 = unwrap(A),
   %% io:format("DEBUG: ~p == ~p", [A1, B]),
   A2 = string:uppercase(A1),
-  A2 = B.
+  A2 = 'Elixir.List':to_string(B).

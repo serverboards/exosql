@@ -20,18 +20,16 @@ defmodule Esql do
 
   @doc """
   """
-  def parse(_sql) do
+  def parse(sql) do
+    sql = String.to_charlist(sql)
+    {:ok, lexed, 1} = :sql_lexer.string(sql)
+    {:ok, parsed} = :sql_parser.parse(lexed)
+    {select, from, where} = parsed
+
     {:ok, %Query{
-      select: [{"A","users", "name"}, {"A","products","name"}, {"A","products","price"}],
-      from: [{"A","products"}, {"A","users"}, {"A", "purchases"}],
-      where:
-        {:and,
-          {:and, {:gt, {"A","products","price"}, "10"}, {:gt, {"A","products","stock"}, "0"}},
-          {:and,
-            {:eq, {"A","products","id"}, {"A", "purchases", "product_id"}},
-            {:eq, {"A","users","id"}, {"A", "purchases", "user_id"}},
-          }
-        }
+      select: select,
+      from: from,
+      where: where
     }}
   end
 
