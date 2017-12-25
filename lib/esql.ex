@@ -56,17 +56,24 @@ defmodule Esql do
     Logger.debug("and2: #{inspect op2} => #{inspect r2}")
     r1 && r2
   end
-  defp run_expr({:eq, op1, op2}, cur), do: run_expr(op1, cur) == run_expr(op2, cur)
-  defp run_expr({:gt, op1, op2}, cur) do
+  defp run_expr({"=", op1, op2}, cur), do: run_expr(op1, cur) == run_expr(op2, cur)
+  defp run_expr({"==", op1, op2}, cur), do: run_expr(op1, cur) == run_expr(op2, cur)
+  defp run_expr({">", op1, op2}, cur) do
     {n1, ""} = Integer.parse(run_expr(op1, cur))
     {n2, ""} = Integer.parse(run_expr(op2, cur))
 
     n1 > n2
   end
+  defp run_expr({">=", op1, op2}, cur) do
+    {n1, ""} = Integer.parse(run_expr(op1, cur))
+    {n2, ""} = Integer.parse(run_expr(op2, cur))
+
+    n1 >= n2
+  end
   defp run_expr(val, cur) when is_binary(val), do: val
   defp run_expr({db, _, _} = k, cur) when is_binary(db) do
+    # Logger.debug("Column #{inspect k}")
     v = get_item(cur, k)
-    Logger.info("Get item #{inspect k} => #{inspect v}")
     v
   end
 
@@ -77,7 +84,8 @@ defmodule Esql do
   end
 
 
-  defp execute_select_where(select, expr, [], cur) do
+  defp execute_select_where(select, [expr], [], cur) do
+    # Logger.debug("Check row #{inspect cur} | #{inspect expr}")
     if run_expr(expr, cur) do
       execute_select_where(select, [], [], cur)
     else
@@ -95,7 +103,7 @@ defmodule Esql do
   end
 
   def execute(query, context) do
-    Logger.debug("Execute #{inspect query} #{inspect context}")
+    # Logger.debug("Execute #{inspect query} #{inspect context}")
 
     plan = for {db, table} <- query.from do
       columns = get_vars(db, table, query.select)
@@ -103,10 +111,10 @@ defmodule Esql do
       {db, table, quals, columns}
     end
 
-    Logger.debug("My plan is #{inspect plan, pretty: true}")
+    # Logger.debug("My plan is #{inspect plan, pretty: true}")
 
     data = for {db, table, quals, columns} <- plan do
-      Logger.debug("Plan: #{inspect db} ( #{inspect {table, quals, columns}})")
+      # Logger.debug("Plan: #{inspect db} ( #{inspect {table, quals, columns}})")
       {dbmod, context} = context[db]
       {:ok, data} = apply(dbmod, :execute, [context, table, quals, columns])
 
@@ -116,12 +124,42 @@ defmodule Esql do
 
       %{headers: headers, rows: rows}
     end
-    Logger.debug("My data: #{inspect data, pretty: true}")
+    # Logger.debug("My data: #{inspect data, pretty: true}")
 
     rows = execute_select_where(query.select, query.where, data, [])
       |> Enum.filter(&(&1))
 
 
     {:ok, %{ headers: query.select, rows: rows }}
+  end
+
+
+  def query(sql, context) do
+    Logger.debug(inspect sql)
+    {:ok, parsed} = parse(sql)
+    execute(parsed, context)
+  end
+
+  def format_result(res) do
+    s = for {db, table, column} <- res.headers do
+      "#{db}.#{table}.#{column}"
+    end |> Enum.join(" | ")
+    s = [s,  "\n"]
+    s = [s, String.duplicate("-", Enum.count(s))]
+    s = [s,  "\n"]
+
+    data = for r <- res.rows do
+      c = Enum.join(r, " | ")
+      [c, "\n"]
+    end
+
+    s = [s, data, "\n"]
+
+
+
+    Logger.debug(inspect s)
+
+
+    to_string(s)
   end
 end

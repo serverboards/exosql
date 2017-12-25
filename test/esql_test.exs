@@ -12,4 +12,12 @@ defmodule EsqlTest do
     {:ok, result} = Esql.execute(query, context)
     Logger.debug(inspect result, pretty: true)
   end
+
+  test "Another database" do
+    context = %{
+      "A" => {Esql.Node, []}
+    }
+    {:ok, result} = Esql.query("SELECT A.passwd.uid, A.passwd.user, A.passwd.home FROM A.passwd WHERE A.passwd.uid >= 1001", context)
+    Logger.debug("\n#{Esql.format_result(result)}")
+  end
 end
