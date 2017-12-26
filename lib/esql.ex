@@ -1,6 +1,6 @@
 require Logger
 
-defmodule Esql do
+defmodule ExoSQL do
   @moduledoc """
   Creates a Generic universal parser that can access many tabular databases,
   and perform SQL queries.

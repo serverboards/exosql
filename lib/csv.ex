@@ -1,6 +1,6 @@
 require Logger
 
-defmodule Esql.Csv do
+defmodule ExoSQL.Csv do
   def execute(db, table, quals, columns) do
     # Logger.debug("Get #{inspect table}#{inspect columns} | #{inspect quals}")
 

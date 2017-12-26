@@ -10,11 +10,11 @@ use Mix.Config
 
 # You can configure your application as:
 #
-#     config :esql, key: :value
+#     config :exosql, key: :value
 #
 # and access this configuration in your application as:
 #
-#     Application.get_env(:esql, :key)
+#     Application.get_env(:exosql, :key)
 #
 # You can also configure a 3rd-party app:
 #

@@ -2,7 +2,7 @@ require Logger
 
 defmodule ParserTest do
   use ExUnit.Case
-  doctest Esql
+  doctest ExoSQL
 
   test "Lex and parse" do
     {:ok, res, 1} = :sql_lexer.string('SELECT A.products.name, A.products.stock FROM A.products WHeRE (A.products.price > 0) and (a.products.stock >= 1)')

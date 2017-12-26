@@ -1,4 +1,4 @@
-defmodule Esql.Node do
+defmodule ExoSQL.Node do
   def execute(db, "passwd", _quals, columns) do
 
     csv_data = File.stream!("/etc/passwd") |> CSV.decode(separator: ?:)
