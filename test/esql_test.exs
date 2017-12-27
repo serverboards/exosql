@@ -21,12 +21,21 @@ defmodule ExoSQLTest do
     Logger.debug("\n#{ExoSQL.format_result(result)}")
   end
 
+  test "Multiples tables" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"}
+    }
+    {:ok, query} = ExoSQL.parse("SELECT A.products.name, A.users.name FROM A.products, A.users")
+    {:ok, result} = ExoSQL.execute(query, context)
+    Logger.debug(ExoSQL.format_result result)
+  end
+
   test "Do some expression at select" do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
 
-    {:ok, result} = ExoSQL.query("SELECT A.products.name, A.products.price || ' €', ROUND( A.products.price * 1.21, 2 ) FROM A.products",  context)
+    {:ok, result} = ExoSQL.query("SELECT A.products.name, (A.products.price || ' €'), ROUND( A.products.price * 0.21, 2 ) FROM A.products",  context)
 
     Logger.debug(ExoSQL.format_result result)
   end

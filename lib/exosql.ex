@@ -47,6 +47,7 @@ defmodule ExoSQL do
     []
   end
 
+  # The where filtering has passed, run the expressions for the select, and returns this row
   defp execute_select_where(select, [], [], cur) do
     [for s <- select do
       ExoSQL.Expr.run_expr(s, cur)
@@ -54,6 +55,7 @@ defmodule ExoSQL do
   end
 
 
+  # I have a full row at cur, as a map with the header name as key, perform the where filtering, only one expr always
   defp execute_select_where(select, [expr], [], cur) do
     # Logger.debug("Check row #{inspect cur} | #{inspect expr}")
     if ExoSQL.Expr.run_expr(expr, cur) do
@@ -63,8 +65,8 @@ defmodule ExoSQL do
     end
   end
 
-  defp execute_select_where(select, where, data, cur) do
-    [head | rest ] = data
+  # for each table, get each of the rows, and use as cur, then do the rest of tables
+  defp execute_select_where(select, where, [head | rest ], cur) do
     %{ headers: headers, rows: rows} = head
     Enum.flat_map(rows, fn row ->
       myrows = Enum.zip(headers, row)
@@ -111,8 +113,12 @@ defmodule ExoSQL do
   end
 
   def format_result(res) do
-    s = for {db, table, column} <- res.headers do
-      "#{db}.#{table}.#{column}"
+    s = for {h, n} <- Enum.with_index(res.headers) do
+      case h do
+        {:column, {db, table, column}} ->
+          "#{db}.#{table}.#{column}"
+        _ -> "?COL#{n+1}"
+      end
     end |> Enum.join(" | ")
     s = [s,  "\n"]
     s = [s, String.duplicate("-", Enum.count(s))]
