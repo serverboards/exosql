@@ -20,4 +20,14 @@ defmodule ExoSQLTest do
     {:ok, result} = ExoSQL.query("SELECT A.passwd.uid, A.passwd.user, A.passwd.home FROM A.passwd WHERE A.passwd.uid >= 1001", context)
     Logger.debug("\n#{ExoSQL.format_result(result)}")
   end
+
+  test "Do some expression at select" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"}
+    }
+
+    {:ok, result} = ExoSQL.query("SELECT A.products.name, A.products.price, A.products.price * 1.21 FROM A.products",  context)
+
+    Logger.debug(ExoSQL.format_result result)
+  end
 end

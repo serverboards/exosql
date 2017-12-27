@@ -11,7 +11,6 @@ defmodule ParserTest do
     {:ok, res} = :sql_parser.parse(res)
 
     Logger.debug("Parsed: #{inspect res}")
-
   end
 
 end

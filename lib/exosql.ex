@@ -26,6 +26,8 @@ defmodule ExoSQL do
     {:ok, parsed} = :sql_parser.parse(lexed)
     {select, from, where} = parsed
 
+    from = for {:table, table} <- from, do: table
+
     {:ok, %Query{
       select: select,
       from: from,
@@ -45,48 +47,16 @@ defmodule ExoSQL do
     []
   end
 
-  defp get_item([{k, v} | rest], k), do: v
-  defp get_item([{nk, _} | rest], k), do: get_item(rest, k)
-  defp get_item([], _k), do: nil
-
-  defp run_expr({:and, op1, op2}, cur) do
-    r1 = run_expr(op1, cur)
-    r2 = run_expr(op2, cur)
-    Logger.debug("and1: #{inspect op1} => #{inspect r1}")
-    Logger.debug("and2: #{inspect op2} => #{inspect r2}")
-    r1 && r2
-  end
-  defp run_expr({"=", op1, op2}, cur), do: run_expr(op1, cur) == run_expr(op2, cur)
-  defp run_expr({"==", op1, op2}, cur), do: run_expr(op1, cur) == run_expr(op2, cur)
-  defp run_expr({">", op1, op2}, cur) do
-    {n1, ""} = Integer.parse(run_expr(op1, cur))
-    {n2, ""} = Integer.parse(run_expr(op2, cur))
-
-    n1 > n2
-  end
-  defp run_expr({">=", op1, op2}, cur) do
-    {n1, ""} = Integer.parse(run_expr(op1, cur))
-    {n2, ""} = Integer.parse(run_expr(op2, cur))
-
-    n1 >= n2
-  end
-  defp run_expr(val, cur) when is_binary(val), do: val
-  defp run_expr({db, _, _} = k, cur) when is_binary(db) do
-    # Logger.debug("Column #{inspect k}")
-    v = get_item(cur, k)
-    v
-  end
-
   defp execute_select_where(select, [], [], cur) do
     [for s <- select do
-      get_item(cur, s)
+      ExoSQL.Expr.run_expr(s, cur)
     end]
   end
 
 
   defp execute_select_where(select, [expr], [], cur) do
     # Logger.debug("Check row #{inspect cur} | #{inspect expr}")
-    if run_expr(expr, cur) do
+    if ExoSQL.Expr.run_expr(expr, cur) do
       execute_select_where(select, [], [], cur)
     else
       []
@@ -102,7 +72,7 @@ defmodule ExoSQL do
     end)
   end
 
-  def execute(query, context) do
+  def execute(query, context) when is_map(context) do
     # Logger.debug("Execute #{inspect query} #{inspect context}")
 
     plan = for {db, table} <- query.from do
