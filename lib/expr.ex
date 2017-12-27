@@ -1,23 +1,11 @@
 require Logger
 
 defmodule ExoSQL.Expr do
+  import ExoSQL.Utils, only: [to_number: 1]
+
   defp get_item([{k, v} | rest], k), do: v
   defp get_item([{nk, _} | rest], k), do: get_item(rest, k)
   defp get_item([], _k), do: nil
-
-  defp to_number(n) when is_number(n), do: n
-  defp to_number(n) when is_binary(n) do # Weak typing
-    {n, rem} = if String.contains?(n, ".") do
-      Float.parse(n)
-    else
-      Integer.parse(n)
-    end
-    if rem == "" do
-      {:ok, n}
-    else
-      {:error, :bad_number}
-    end
-  end
 
   def run_expr({:and, op1, op2}, cur) do
     r1 = run_expr(op1, cur)
@@ -49,6 +37,18 @@ defmodule ExoSQL.Expr do
     {:ok, n2} = to_number(run_expr(op2, cur))
 
     n1 * n2
+  end
+
+  def run_expr({:op, {"||", op1, op2}}, cur) do
+    s1 = to_string(run_expr(op1, cur))
+    s2 = to_string(run_expr(op2, cur))
+
+    s1<>s2
+  end
+
+  def run_expr({:fn, {fun, exprs}}, cur) do
+    params = for e <- exprs, do: run_expr(e, cur)
+    apply(ExoSQL.Builtins, String.to_existing_atom(String.downcase(fun)), params)
   end
 
   def run_expr({:lit, val}, _cur) when is_binary(val), do: val

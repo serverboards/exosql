@@ -28,6 +28,7 @@ expr_list -> expr comma expr_list: ['$1'] ++ '$3'.
 
 expr -> column : {column, '$1'}.
 expr -> open_par expr close_par : '$2'.
+expr -> id open_par expr_list close_par : {fn, {unwrap('$1'), '$3'}}.
 expr -> lit : {lit, unwrap('$1')}.
 expr -> expr op expr: {op, {unwrap('$2'), '$1', '$3'}}.
 

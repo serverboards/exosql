@@ -4,10 +4,13 @@ INT    = [0-9]+
 ID     = [a-zA-Z][a-zA-Z0-9]*
 COMMA  = ,
 DOT    = \.
-OP     = (<=|>=|==|!=|<>|-|\+|<|>|=|and|or|&&|\|\||\*)
+OP     = (<=|>=|==|!=|<>|-|\+|<|>|=|and|or|AND|OR|\|\||\*)
 SPACE  = [\n\t\s]+
 OPEN_PAR = \(
 CLOSE_PAR = \)
+QUOTED_STRING = ("(.|[^"])*"|'(.|[^"])*')
+%% "'
+
 
 Rules.
 
@@ -20,5 +23,6 @@ Rules.
 {CLOSE_PAR}     : {token, {close_par, TokenLine, TokenChars}}.
 {INT}{DOT}{INT} : {token, {lit, TokenLine, TokenChars}}.
 {INT}           : {token, {lit, TokenLine, TokenChars}}.
+{QUOTED_STRING} : {token, {lit, TokenLine, string:slice(TokenChars, 1, string:length(TokenChars)-2)}}.
 
 Erlang code.

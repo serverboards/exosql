@@ -26,7 +26,7 @@ defmodule ExoSQLTest do
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
 
-    {:ok, result} = ExoSQL.query("SELECT A.products.name, A.products.price, A.products.price * 1.21 FROM A.products",  context)
+    {:ok, result} = ExoSQL.query("SELECT A.products.name, A.products.price || ' €', ROUND( A.products.price * 1.21, 2 ) FROM A.products",  context)
 
     Logger.debug(ExoSQL.format_result result)
   end
