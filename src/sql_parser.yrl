@@ -19,7 +19,7 @@ select_list -> expr comma select_list : ['$1'] ++ '$3'.
 
 from -> id table_list : tag('$1', "FROM"), '$2'.
 table_list -> table : [{table, '$1'}].
-table_list -> table comma table_list : ['$1'] ++ '$3'.
+table_list -> table comma table_list : [{table, '$1'}] ++ '$3'.
 
 where -> id expr_list : tag('$1',"WHERE"), '$2'.
 expr_list -> expr : ['$1'].

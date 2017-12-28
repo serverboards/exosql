@@ -1,7 +1,7 @@
 Definitions.
 
 INT    = [0-9]+
-ID     = [a-zA-Z][a-zA-Z0-9]*
+ID     = [_a-zA-Z][_a-zA-Z0-9]*
 COMMA  = ,
 DOT    = \.
 OP     = (<=|>=|==|!=|<>|-|\+|<|>|=|and|or|AND|OR|\|\||\*)
