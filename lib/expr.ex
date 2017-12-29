@@ -51,8 +51,7 @@ defmodule ExoSQL.Expr do
 
   def run_expr({:lit, val}, _cur) when is_binary(val), do: val
 
-  def run_expr({:column, {db, _, _} = k}, cur) when is_binary(db) do
-    v = get_item(cur, k)
-    v
+  def run_expr({:column, n}, cur) when is_number(n) do
+    Enum.at(cur, n)
   end
 end

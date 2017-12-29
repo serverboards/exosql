@@ -28,14 +28,14 @@ defmodule ExoSQL do
     def new([first | rest]) do
       rest = new(rest)
       %CrossJoinTables{
-        headers: [first.headers] ++ rest.headers,
+        headers: first.headers ++ rest.headers,
         rows: [first.rows] ++ rest.rows
       }
     end
 
     defimpl Enumerable do
       defp count([head | tail], acc) do
-        Logger.debug("Count #{inspect head} #{inspect acc}")
+        # Logger.debug("Count #{inspect head} #{inspect acc}")
         count( tail, Enum.count(head) * acc )
       end
       defp count([], acc), do: acc
@@ -147,6 +147,17 @@ defmodule ExoSQL do
     []
   end
 
+
+  def convert_column_names({:column, cn}, names) do
+    i = Enum.find_index(names, &(&1 == cn))
+    {:column, i}
+  end
+  def convert_column_names({:op, {op, op1, op2}}, names) do
+    op1 = convert_column_names(op1, names)
+    op2 = convert_column_names(op2, names)
+    {:op, {op, op1, op2}}
+  end
+
   # The where filtering has passed, run the expressions for the select, and returns this row
   defp execute_select_where(select, [], [], cur) do
     [for s <- select do
@@ -196,12 +207,23 @@ defmodule ExoSQL do
     end
 
     rows = CrossJoinTables.new(data) # this is an enumerable
-    Logger.debug("rows #{inspect rows, pretty: true}")
-    Logger.debug("Total count: #{Enum.count(rows)}")
-
-    rows = Enum.filter(rows, fn row ->
-      Logger.debug(row)
-    end)
+    # Logger.debug("rows #{inspect rows, pretty: true}")
+    # Logger.debug("Total count: #{Enum.count(rows)}")
+    # Logger.debug("Data: #{inspect data}")
+    select = for expr <- query.select, do: convert_column_names(expr, rows.headers)
+    rows = if query.where do
+      [expr] = query.where
+      expr = convert_column_names(expr, rows.headers)
+      # Logger.debug("expr #{inspect expr}")
+      rows = Enum.filter(rows, fn row ->
+        # Logger.debug(row)
+        ExoSQL.Expr.run_expr(expr, row)
+      end) |> Enum.map( fn row ->
+        for expr <- select do
+          ExoSQL.Expr.run_expr(expr, row)
+        end
+      end)
+    end
 
     # rows = execute_select_where(query.select, query.where, data, [])
     #   |> Enum.filter(&(&1))
