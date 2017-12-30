@@ -60,7 +60,7 @@ defmodule ExoSQLTest do
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
     {:ok, result} = ExoSQL.query("""
-      SELECT A.products.name, COUNT(*)
+      SELECT A.products.name, COUNT(*), AVG(A.products.price * 1.21)
         FROM A.products, A.purchases
        WHERE A.products.id = A.purchases.product_id
        GROUP BY A.products.name

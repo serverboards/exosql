@@ -165,6 +165,18 @@ defmodule ExoSQL do
   end
   def convert_column_names(other, _names), do: other
 
+
+  def convert_column_names_nofn({:column, cn}, names) do
+    i = Enum.find_index(names, &(&1 == cn))
+    {:column, i}
+  end
+  def convert_column_names_nofn({:op, {op, op1, op2}}, names) do
+    op1 = convert_column_names(op1, names)
+    op2 = convert_column_names(op2, names)
+    {:op, {op, op1, op2}}
+  end
+  def convert_column_names_nofn(other, _names), do: other
+
   # The where filtering has passed, run the expressions for the select, and returns this row
   defp execute_select_where(select, [], [], cur) do
     [for s <- select do
@@ -245,8 +257,8 @@ defmodule ExoSQL do
       #headers = for expr <- query.groupby, do: convert_column_names(expr, headers)
       # Logger.debug("New headers are: #{inspect headers}")
       select = for expr <- query.select do
-        nn = convert_column_names(expr, headers)
-        Logger.debug("#{inspect {expr, headers, nn}}")
+        nn = convert_column_names_nofn(expr, headers)
+        # Logger.debug("#{inspect {expr, headers, nn}}")
         nn
       end
       # Logger.debug("New select is: #{inspect select} // #{inspect headers}")
@@ -254,10 +266,14 @@ defmodule ExoSQL do
       rows = Enum.map(groups, fn {row, data} ->
         for expr <- select do
           case expr do
-            {:fn, {aggr, params}} ->
-              ExoSQL.Builtins.count( params, data )
-            other ->
-              ExoSQL.Expr.run_expr(other, row)
+            {:fn, {fun, ['*']}} ->
+              apply(ExoSQL.Builtins, String.to_existing_atom(String.downcase(fun)), [nil, data])
+            {:fn, {fun, [expr]}} ->
+              expr = convert_column_names(expr, cjt.headers)
+              # Logger.debug("Do #{inspect fun} ( #{inspect expr} )  // #{inspect data}")
+              apply(ExoSQL.Builtins, String.to_existing_atom(String.downcase(fun)), [expr, data])
+            expr ->
+              ExoSQL.Expr.run_expr(expr, row)
           end
         end
       end)
@@ -267,7 +283,7 @@ defmodule ExoSQL do
     else
       # select
       select = for expr <- query.select, do: convert_column_names(expr, cjt.headers)
-      Logger.debug(inspect select)
+      # Logger.debug(inspect select)
       rows = Enum.map(rows, fn row ->
         for expr <- select do
           ExoSQL.Expr.run_expr(expr, row)
@@ -285,7 +301,7 @@ defmodule ExoSQL do
 
 
   def query(sql, context) do
-    Logger.debug(inspect sql)
+    # Logger.debug(inspect sql)
     {:ok, parsed} = parse(sql)
     execute(parsed, context)
   end
@@ -311,7 +327,7 @@ defmodule ExoSQL do
 
 
 
-    Logger.debug(inspect s)
+    # Logger.debug(inspect s)
 
 
     to_string(s)
