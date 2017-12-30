@@ -13,7 +13,8 @@ defmodule ExoSQL do
     defstruct [
       select: [],
       from: [],
-      where: []
+      where: nil,
+      groupby: nil
     ]
   end
 
@@ -121,17 +122,18 @@ defmodule ExoSQL do
   """
   def parse(sql) do
     sql = String.to_charlist(sql)
-    {:ok, lexed, 1} = :sql_lexer.string(sql)
+    {:ok, lexed, _lines} = :sql_lexer.string(sql)
     {:ok, parsed} = :sql_parser.parse(lexed)
     Logger.debug("parsed #{inspect parsed}")
-    {select, from, where} = parsed
+    {select, from, where, groupby} = parsed
 
     from = for {:table, table} <- from, do: table
 
     {:ok, %Query{
       select: select,
       from: from,
-      where: where
+      where: where,
+      groupby: groupby
     }}
   end
 
@@ -211,13 +213,12 @@ defmodule ExoSQL do
       %{headers: headers, rows: rows}
     end
 
-    rows = CrossJoinTables.new(data) # this is an enumerable
+    cjt = CrossJoinTables.new(data) # this is an enumerable
     # Logger.debug("rows #{inspect rows, pretty: true}")
     # Logger.debug("Total count: #{Enum.count(rows)}")
     # Logger.debug("Data: #{inspect data}")
-    select = for expr <- query.select, do: convert_column_names(expr, rows.headers)
-    Logger.debug(inspect select)
-    rows = if query.where != [] do
+    rows = cjt
+    rows = if query.where do
       [expr] = query.where
       expr = convert_column_names(expr, rows.headers)
       # Logger.debug("expr #{inspect expr}")
@@ -228,11 +229,53 @@ defmodule ExoSQL do
     else
       rows
     end
-    rows = Enum.map(rows, fn row ->
-      for expr <- select do
-        ExoSQL.Expr.run_expr(expr, row)
+    # group by
+    rows = if query.groupby do
+      groupby = for expr <- query.groupby, do: convert_column_names(expr, cjt.headers)
+      groups = Enum.reduce(rows, %{}, fn row, acc ->
+        key = Enum.map(groupby, &(ExoSQL.Expr.run_expr( &1, row )))
+        # Logger.debug("Group by #{inspect key}")
+        Map.put(acc, key, [row] ++ Map.get(acc, key, []))
+      end)
+      # Logger.debug("Grouped: #{inspect groups}")
+
+      # now I have other headers, and other select behaviour
+      headers = for {:column, col} <- query.groupby, do: col
+      # Logger.debug("Prepare headers for #{inspect headers}")
+      #headers = for expr <- query.groupby, do: convert_column_names(expr, headers)
+      # Logger.debug("New headers are: #{inspect headers}")
+      select = for expr <- query.select do
+        nn = convert_column_names(expr, headers)
+        Logger.debug("#{inspect {expr, headers, nn}}")
+        nn
       end
-    end)
+      # Logger.debug("New select is: #{inspect select} // #{inspect headers}")
+
+      rows = Enum.map(groups, fn {row, data} ->
+        for expr <- select do
+          case expr do
+            {:fn, {aggr, params}} ->
+              ExoSQL.Builtins.count( params, data )
+            other ->
+              ExoSQL.Expr.run_expr(other, row)
+          end
+        end
+      end)
+
+
+      rows
+    else
+      # select
+      select = for expr <- query.select, do: convert_column_names(expr, cjt.headers)
+      Logger.debug(inspect select)
+      rows = Enum.map(rows, fn row ->
+        for expr <- select do
+          ExoSQL.Expr.run_expr(expr, row)
+        end
+      end)
+    end
+
+
 
     # rows = execute_select_where(query.select, query.where, data, [])
     #   |> Enum.filter(&(&1))

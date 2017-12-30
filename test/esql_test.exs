@@ -54,4 +54,18 @@ defmodule ExoSQLTest do
 
     Logger.debug(ExoSQL.format_result result)
   end
+
+  test "Aggregates" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"}
+    }
+    {:ok, result} = ExoSQL.query("""
+      SELECT A.products.name, COUNT(*)
+        FROM A.products, A.purchases
+       WHERE A.products.id = A.purchases.product_id
+       GROUP BY A.products.name
+    """, context)
+
+    Logger.debug(ExoSQL.format_result result)
+  end
 end

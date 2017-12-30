@@ -14,4 +14,8 @@ defmodule ExoSQL.Builtins do
 
     a <> b
   end
+
+  def count(_anything, data) do
+    Enum.count(data)
+  end
 end
