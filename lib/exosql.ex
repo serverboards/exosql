@@ -157,6 +157,11 @@ defmodule ExoSQL do
     op2 = convert_column_names(op2, names)
     {:op, {op, op1, op2}}
   end
+  def convert_column_names({:fn, {f, params}}, names) do
+    params = Enum.map(params, &convert_column_names(&1, names))
+    {:fn, {f, params}}
+  end
+  def convert_column_names(other, _names), do: other
 
   # The where filtering has passed, run the expressions for the select, and returns this row
   defp execute_select_where(select, [], [], cur) do
@@ -211,19 +216,23 @@ defmodule ExoSQL do
     # Logger.debug("Total count: #{Enum.count(rows)}")
     # Logger.debug("Data: #{inspect data}")
     select = for expr <- query.select, do: convert_column_names(expr, rows.headers)
-    rows = if query.where do
+    Logger.debug(inspect select)
+    rows = if query.where != [] do
       [expr] = query.where
       expr = convert_column_names(expr, rows.headers)
       # Logger.debug("expr #{inspect expr}")
       rows = Enum.filter(rows, fn row ->
         # Logger.debug(row)
         ExoSQL.Expr.run_expr(expr, row)
-      end) |> Enum.map( fn row ->
-        for expr <- select do
-          ExoSQL.Expr.run_expr(expr, row)
-        end
       end)
+    else
+      rows
     end
+    rows = Enum.map(rows, fn row ->
+      for expr <- select do
+        ExoSQL.Expr.run_expr(expr, row)
+      end
+    end)
 
     # rows = execute_select_where(query.select, query.where, data, [])
     #   |> Enum.filter(&(&1))
