@@ -68,4 +68,16 @@ defmodule ExoSQLTest do
 
     Logger.debug(ExoSQL.format_result result)
   end
+
+  test "Aggregates no group" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"}
+    }
+    {:ok, result} = ExoSQL.query("""
+      SELECT COUNT(*), AVG(A.products.price)
+        FROM A.products
+    """, context)
+
+    Logger.debug(ExoSQL.format_result result)
+  end
 end

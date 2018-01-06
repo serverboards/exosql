@@ -17,6 +17,12 @@ defmodule ExoSQL.Builtins do
     a <> b
   end
 
+
+  def is_aggregate("count"), do: true
+  def is_aggregate("avg"), do: true
+  def is_aggregate("sum"), do: true
+  def is_aggregate(_other), do: false
+
   def count(_anything, data) do
     Enum.count(data)
   end

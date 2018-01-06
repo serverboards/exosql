@@ -204,6 +204,44 @@ defmodule ExoSQL do
     end)
   end
 
+  def do_group_by(query, cjt, rows) do
+    groupby = for expr <- query.groupby, do: convert_column_names(expr, cjt.headers)
+    groups = Enum.reduce(rows, %{}, fn row, acc ->
+      key = Enum.map(groupby, &(ExoSQL.Expr.run_expr( &1, row )))
+      # Logger.debug("Group by #{inspect key}")
+      Map.put(acc, key, [row] ++ Map.get(acc, key, []))
+    end)
+    # Logger.debug("Grouped: #{inspect groups}")
+
+    # now I have other headers, and other select behaviour
+    headers = for {:column, col} <- query.groupby, do: col
+    # Logger.debug("Prepare headers for #{inspect headers}")
+    #headers = for expr <- query.groupby, do: convert_column_names(expr, headers)
+    # Logger.debug("New headers are: #{inspect headers}")
+    select = for expr <- query.select do
+      nn = convert_column_names_nofn(expr, headers)
+      # Logger.debug("#{inspect {expr, headers, nn}}")
+      nn
+    end
+    # Logger.debug("New select is: #{inspect select} // #{inspect headers}")
+
+    rows = Enum.map(groups, fn {row, data} ->
+      for expr <- select do
+        case expr do
+          {:fn, {fun, ['*']}} ->
+            apply(ExoSQL.Builtins, String.to_existing_atom(String.downcase(fun)), [nil, data])
+          {:fn, {fun, [expr]}} ->
+            expr = convert_column_names(expr, cjt.headers)
+            # Logger.debug("Do #{inspect fun} ( #{inspect expr} )  // #{inspect data}")
+            apply(ExoSQL.Builtins, String.to_existing_atom(String.downcase(fun)), [expr, data])
+          expr ->
+            ExoSQL.Expr.run_expr(expr, row)
+        end
+      end
+    end)
+    rows
+  end
+
   def execute(query, context) when is_map(context) do
     plan = for {db, table} <- query.from do
       columns = get_vars(db, table, query.select)
@@ -243,55 +281,30 @@ defmodule ExoSQL do
     end
     # group by
     rows = if query.groupby do
-      groupby = for expr <- query.groupby, do: convert_column_names(expr, cjt.headers)
-      groups = Enum.reduce(rows, %{}, fn row, acc ->
-        key = Enum.map(groupby, &(ExoSQL.Expr.run_expr( &1, row )))
-        # Logger.debug("Group by #{inspect key}")
-        Map.put(acc, key, [row] ++ Map.get(acc, key, []))
-      end)
-      # Logger.debug("Grouped: #{inspect groups}")
-
-      # now I have other headers, and other select behaviour
-      headers = for {:column, col} <- query.groupby, do: col
-      # Logger.debug("Prepare headers for #{inspect headers}")
-      #headers = for expr <- query.groupby, do: convert_column_names(expr, headers)
-      # Logger.debug("New headers are: #{inspect headers}")
-      select = for expr <- query.select do
-        nn = convert_column_names_nofn(expr, headers)
-        # Logger.debug("#{inspect {expr, headers, nn}}")
-        nn
-      end
-      # Logger.debug("New select is: #{inspect select} // #{inspect headers}")
-
-      rows = Enum.map(groups, fn {row, data} ->
-        for expr <- select do
-          case expr do
-            {:fn, {fun, ['*']}} ->
-              apply(ExoSQL.Builtins, String.to_existing_atom(String.downcase(fun)), [nil, data])
-            {:fn, {fun, [expr]}} ->
-              expr = convert_column_names(expr, cjt.headers)
-              # Logger.debug("Do #{inspect fun} ( #{inspect expr} )  // #{inspect data}")
-              apply(ExoSQL.Builtins, String.to_existing_atom(String.downcase(fun)), [expr, data])
-            expr ->
-              ExoSQL.Expr.run_expr(expr, row)
-          end
-        end
-      end)
-
-
-      rows
+      do_group_by(query, cjt, rows)
     else
-      # select
-      select = for expr <- query.select, do: convert_column_names(expr, cjt.headers)
-      # Logger.debug(inspect select)
-      rows = Enum.map(rows, fn row ->
-        for expr <- select do
-          ExoSQL.Expr.run_expr(expr, row)
-        end
+      # aggregates full result
+      is_aggretate_no_group = Enum.all?(query.select, fn
+        {:fn, {f, _params}} -> ExoSQL.Builtins.is_aggregate(String.downcase(f))
+        other -> false
       end)
+      if is_aggretate_no_group do
+        res = for expr <- query.select do
+          {:fn, {fun, [expr]}} = convert_column_names(expr, cjt.headers)
+          apply(ExoSQL.Builtins, String.to_existing_atom(String.downcase(fun)), [expr, rows])
+        end
+        [res]
+      else
+        # just plain old select
+        select = for expr <- query.select, do: convert_column_names(expr, cjt.headers)
+        # Logger.debug(inspect select)
+        rows = Enum.map(rows, fn row ->
+          for expr <- select do
+            ExoSQL.Expr.run_expr(expr, row)
+          end
+        end)
+      end
     end
-
-
 
     # rows = execute_select_where(query.select, query.where, data, [])
     #   |> Enum.filter(&(&1))
