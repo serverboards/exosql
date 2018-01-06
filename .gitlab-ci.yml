@@ -1,0 +1,11 @@
+stages:
+  - setup
+  - test
+
+setup_elixir:
+  stage: setup
+  script: mix deps.get
+
+test_upm:
+  stage: test
+  script: mix test
