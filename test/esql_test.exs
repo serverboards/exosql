@@ -22,7 +22,7 @@ defmodule ExoSQLTest do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
-    {:ok, query} = ExoSQL.parse("SELECT A.products.name, A.products.price FROM A.products")
+    {:ok, query} = ExoSQL.parse("SELECT A.products.name, A.products.price FROM A.products", context)
     {:ok, result} = ExoSQL.execute(query, context)
     Logger.debug(inspect result, pretty: true)
   end
@@ -39,7 +39,7 @@ defmodule ExoSQLTest do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
-    {:ok, query} = ExoSQL.parse("SELECT A.products.name, A.users.name FROM A.products, A.purchases, A.users WHERE (A.products.id = A.purchases.product_id) and (A.purchases.user_id = A.users.id)")
+    {:ok, query} = ExoSQL.parse("SELECT A.products.name, A.users.name FROM A.products, A.purchases, A.users WHERE (A.products.id = A.purchases.product_id) and (A.purchases.user_id = A.users.id)", context)
     Logger.debug("Query: #{inspect query}")
     {:ok, result} = ExoSQL.execute(query, context)
     Logger.debug(ExoSQL.format_result result)
@@ -154,5 +154,20 @@ defmodule ExoSQLTest do
           {:table, {"A", "purchases"}},
           {:table, {"A", "products"}}],
         context)
+  end
+
+  test "Partially defined data" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"}
+    }
+    {:ok, query} = ExoSQL.parse("
+      SELECT A.products.name, A.users.name
+        FROM products, purchases, users 
+        WHERE (A.products.id = A.purchases.product_id) and (A.purchases.user_id = A.users.id)
+        ", context)
+    Logger.debug("Query: #{inspect query}")
+    {:ok, result} = ExoSQL.execute(query, context)
+    Logger.debug(ExoSQL.format_result result)
+
   end
 end

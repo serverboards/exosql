@@ -39,6 +39,7 @@ expr -> id open_par op close_par: tag('$3', "*"), {fn, {unwrap('$1'), ["*"]}}.
 
 column -> id dot id dot id : {unwrap('$1'), unwrap('$3'), unwrap('$5')}.
 table -> id dot id : {unwrap('$1'), unwrap('$3')}.
+table -> id : {nil, unwrap('$1')}.
 
 select -> column comma select: [unwrap('$1')] ++ '$3'.
 

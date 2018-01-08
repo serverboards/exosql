@@ -120,14 +120,17 @@ defmodule ExoSQL do
 
   @doc """
   """
-  def parse(sql) do
+  def parse(sql, context) do
     sql = String.to_charlist(sql)
     {:ok, lexed, _lines} = :sql_lexer.string(sql)
     {:ok, parsed} = :sql_parser.parse(lexed)
     Logger.debug("parsed #{inspect parsed}")
     {select, from, where, groupby} = parsed
 
-    from = for {:table, table} <- from, do: table
+    from = for table <- from do
+      {:ok, {:table, table}} = resolve_table(table, context)
+      table
+    end
 
     {:ok, %Query{
       select: select,
@@ -315,7 +318,7 @@ defmodule ExoSQL do
 
   def query(sql, context) do
     # Logger.debug(inspect sql)
-    {:ok, parsed} = parse(sql)
+    {:ok, parsed} = parse(sql, context)
     execute(parsed, context)
   end
 
