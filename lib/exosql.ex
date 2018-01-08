@@ -338,11 +338,70 @@ defmodule ExoSQL do
 
     s = [s, data, "\n"]
 
-
-
     # Logger.debug(inspect s)
-
-
     to_string(s)
   end
+
+  def schema(db, context) do
+    {db, opts} = context[db]
+
+    apply(db, :schema, [opts])
+  end
+  def schema(db, table, context) do
+    {db, opts} = context[db]
+
+    apply(db, :schema, [opts, table])
+  end
+
+  def resolve_table({:table, {nil, name}}, context) when is_binary(name) do
+    options = Enum.flat_map(context, fn {dbname, _db} ->
+      {:ok, tables} = schema(dbname, context)
+      tables
+        |> Enum.filter(&(&1 == name))
+        |> Enum.map(&{:table, {dbname, &1}})
+    end)
+
+
+    case options do
+      [table] -> {:ok, table}
+      l when length(l) == 0 -> {:error, :not_found}
+      other -> {:error, :ambiguous_table_name}
+    end
+  end
+  def resolve_table({:table, {db, name}} = orig, context), do: {:ok, orig}
+
+  def resolve_column({:column, {nil, nil, column}}, tables, context) do
+    matches = Enum.flat_map(tables, fn {:table, {db, table}} ->
+      {:ok, table_schema} = schema(db, table, context)
+      Enum.flat_map(table_schema.headers, fn name ->
+        if name == column do
+          [{:column, {db, table, name}}]
+        else
+          []
+        end
+      end)
+    end)
+
+    case matches do
+      [{:column, data}] -> {:ok, {:column, data}}
+      l when length(l) == 0 -> {:error, :not_found}
+      other -> {:error, :ambiguous_column_name}
+    end
+  end
+
+  def resolve_column({:column, {nil, table, column}}, tables, context) do
+    matches = Enum.flat_map(tables, fn
+      {:table, {db, ^table}} ->
+        [{:column, {db, table, column}}]
+      _ -> []
+    end)
+
+    case matches do
+      [{:column, data}] -> {:ok, {:column, data}}
+      l when length(l) == 0 -> {:error, :not_found}
+      other -> {:error, :ambiguous_column_name}
+    end
+  end
+  def resolve_column({:column, _} = column, _tables, _context), do: {:ok, column}
+
 end
