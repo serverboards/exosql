@@ -128,9 +128,17 @@ defmodule ExoSQL do
     {select, from, where, groupby} = parsed
 
     from = for table <- from do
-      {:ok, {:table, table}} = resolve_table(table, context)
+      {:table, table} = resolve_table(table, context)
       table
     end
+
+    select = Enum.map(select, &resolve_column(&1, from, context))
+    where = if where do
+      Enum.map(where, &resolve_column(&1, from, context))
+    else nil end
+    groupby = if groupby do
+      Enum.map(groupby, &resolve_column(&1, from,context))
+    else nil end
 
     {:ok, %Query{
       select: select,
@@ -366,15 +374,15 @@ defmodule ExoSQL do
 
 
     case options do
-      [table] -> {:ok, table}
-      l when length(l) == 0 -> {:error, :not_found}
-      other -> {:error, :ambiguous_table_name}
+      [table] -> table
+      l when length(l) == 0 -> throw {:not_found, name}
+      other -> throw {:ambiguous_table_name, name}
     end
   end
-  def resolve_table({:table, {db, name}} = orig, context), do: {:ok, orig}
+  def resolve_table({:table, {db, name}} = orig, context), do: orig
 
   def resolve_column({:column, {nil, nil, column}}, tables, context) do
-    matches = Enum.flat_map(tables, fn {:table, {db, table}} ->
+    matches = Enum.flat_map(tables, fn {db, table} ->
       {:ok, table_schema} = schema(db, table, context)
       Enum.flat_map(table_schema.headers, fn name ->
         if name == column do
@@ -386,25 +394,34 @@ defmodule ExoSQL do
     end)
 
     case matches do
-      [{:column, data}] -> {:ok, {:column, data}}
-      l when length(l) == 0 -> {:error, :not_found}
-      other -> {:error, :ambiguous_column_name}
+      [{:column, data}] -> {:column, data}
+      l when length(l) == 0 -> throw {:not_found, column}
+      other -> throw {:ambiguous_column_name, column}
     end
   end
 
   def resolve_column({:column, {nil, table, column}}, tables, context) do
     matches = Enum.flat_map(tables, fn
-      {:table, {db, ^table}} ->
+      {db, ^table} ->
         [{:column, {db, table, column}}]
-      _ -> []
+      other ->
+        []
     end)
 
     case matches do
-      [{:column, data}] -> {:ok, {:column, data}}
-      l when length(l) == 0 -> {:error, :not_found}
-      other -> {:error, :ambiguous_column_name}
+      [{:column, data}] -> {:column, data}
+      l when length(l) == 0 ->
+        throw {:not_found, {table, column}}
+      other -> throw {:ambiguous_column_name, {table, column}}
     end
   end
-  def resolve_column({:column, _} = column, _tables, _context), do: {:ok, column}
+  def resolve_column({:column, _} = column, _tables, _context), do: column
 
+  def resolve_column({:op, {op, ex1, ex2}}, tables, context) do
+    {:op, {op, resolve_column(ex1, tables, context), resolve_column(ex2, tables, context)}}
+  end
+
+  def resolve_column(other, _tables, _context) do
+    other
+  end
 end

@@ -38,6 +38,8 @@ expr -> expr op expr: {op, {unwrap('$2'), '$1', '$3'}}.
 expr -> id open_par op close_par: tag('$3', "*"), {fn, {unwrap('$1'), ["*"]}}.
 
 column -> id dot id dot id : {unwrap('$1'), unwrap('$3'), unwrap('$5')}.
+column -> id dot id : {nil, unwrap('$1'), unwrap('$3')}.
+column -> id : {nil, nil, unwrap('$1')}.
 table -> id dot id : {unwrap('$1'), unwrap('$3')}.
 table -> id : {nil, unwrap('$1')}.
 

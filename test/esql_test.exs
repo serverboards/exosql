@@ -99,61 +99,87 @@ defmodule ExoSQLTest do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
-    assert {:ok, {:table, {"A", "products"}}} ==
+    assert {:table, {"A", "products"}} ==
       ExoSQL.resolve_table({:table, {nil, "products"}}, context)
 
-    assert {:ok, {:table, {"A", "products"}}} ==
+    assert {:table, {"A", "products"}} ==
       ExoSQL.resolve_table({:table, {"A", "products"}}, context)
 
 
-    assert {:error, :not_found} ==
+    try do
       ExoSQL.resolve_table({:table, {nil, "prioducts"}}, context)
+    catch
+      {:not_found, "prioducts"} -> :ok
+      other -> flunk(inspect other)
+    end
 
-    assert {:error, :ambiguous_table_name} ==
+    try do
       ExoSQL.resolve_table({:table, {nil, "products"}}, %{
         "A" => {ExoSQL.Csv, path: "test/data/csv"},
         "B" => {ExoSQL.Csv, path: "test/data/csv"},
         })
+    catch
+      {:ambiguous_table_name, "products"} -> :ok
+      other -> flunk(inspect other)
+    end
 
 
-
-    assert {:ok, {:column, {"A", "products", "price"}}} ==
+    assert {:column, {"A", "products", "price"}} ==
       ExoSQL.resolve_column({:column, {nil, nil, "price"}},
         [
-          {:table, {"A", "users"}},
-          {:table, {"A", "purchases"}},
-          {:table, {"A", "products"}}],
+          {"A", "users"},
+          {"A", "purchases"},
+          {"A", "products"}],
         context)
 
-    assert {:ok, {:column, {"A", "products", "price"}}} ==
+    assert {:column, {"A", "products", "price"}} ==
       ExoSQL.resolve_column({:column, {nil, "products", "price"}},
         [
-          {:table, {"A", "users"}},
-          {:table, {"A", "purchases"}},
-          {:table, {"A", "products"}}],
+          {"A", "users"},
+          {"A", "purchases"},
+          {"A", "products"}],
         context)
-    assert {:ok, {:column, {"A", "products", "price"}}} ==
+    assert {:column, {"A", "products", "price"}} ==
       ExoSQL.resolve_column({:column, {"A", "products", "price"}},
         [
-          {:table, {"A", "users"}},
-          {:table, {"A", "purchases"}},
-          {:table, {"A", "products"}}],
+          {"A", "users"},
+          {"A", "purchases"},
+          {"A", "products"}],
         context)
 
-    assert {:error, :not_found} ==
+    assert {:column, {"A", "products", "name"}} ==
+      ExoSQL.resolve_column({:column, {nil, "products", "name"}},
+        [
+          {"A", "products"},
+          {"A", "purchases"},
+          {"A", "users"},
+        ],
+        context)
+
+
+    try do
       ExoSQL.resolve_column({:column, {nil, nil, "prix"}},
         [
-          {:table, {"A", "users"}},
-          {:table, {"A", "purchases"}},
-          {:table, {"A", "products"}}],
+          {"A", "users"},
+          {"A", "purchases"},
+          {"A", "products"}],
         context)
-    assert {:error, :ambiguous_column_name} ==
+    catch
+      {:not_found, "prix"} -> :ok
+      other -> flunk(inspect other)
+    end
+
+    try do
       ExoSQL.resolve_column({:column, {nil, nil, "id"}},
         [
-          {:table, {"A", "users"}},
-          {:table, {"A", "purchases"}},
-          {:table, {"A", "products"}}],
+          {"A", "users"},
+          {"A", "purchases"},
+          {"A", "products"}],
         context)
+    catch
+      {:ambiguous_column_name, "id"} -> :ok
+      other -> flunk(other)
+    end
   end
 
   test "Partially defined data" do
@@ -161,9 +187,9 @@ defmodule ExoSQLTest do
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
     {:ok, query} = ExoSQL.parse("
-      SELECT A.products.name, A.users.name
-        FROM products, purchases, users 
-        WHERE (A.products.id = A.purchases.product_id) and (A.purchases.user_id = A.users.id)
+      SELECT products.name, users.name
+        FROM products, purchases, users
+        WHERE (products.id = product_id) and (user_id = users.id)
         ", context)
     Logger.debug("Query: #{inspect query}")
     {:ok, result} = ExoSQL.execute(query, context)
