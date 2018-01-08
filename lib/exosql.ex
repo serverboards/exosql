@@ -330,28 +330,7 @@ defmodule ExoSQL do
     execute(parsed, context)
   end
 
-  def format_result(res) do
-    s = for {h, n} <- Enum.with_index(res.headers) do
-      case h do
-        {:column, {db, table, column}} ->
-          "#{db}.#{table}.#{column}"
-        _ -> "?COL#{n+1}"
-      end
-    end |> Enum.join(" | ")
-    s = [s,  "\n"]
-    s = [s, String.duplicate("-", Enum.count(s))]
-    s = [s,  "\n"]
-
-    data = for r <- res.rows do
-      c = Enum.join(r, " | ")
-      [c, "\n"]
-    end
-
-    s = [s, data, "\n"]
-
-    # Logger.debug(inspect s)
-    to_string(s)
-  end
+  def format_result(res), do: ExoSQL.Utils.format_result(res)
 
   def schema(db, context) do
     {db, opts} = context[db]
