@@ -1,5 +1,7 @@
 # ExoSQL
 
+**Not everything described here is working yet**
+
 Universal SQL engine for Elixir.
 
 This library implements the SQL logic to perform queries on user provided
@@ -29,6 +31,16 @@ def deps do
   ]
 end
 ```
+
+## Features
+
+* SELECT over external databases
+* SELECT over several tables
+* WHERE
+* GROUP BY
+* Some aggregation functions: COUNT, SUM, AVG
+
+Check the tests for current features available.
 
 ## INNER JOIN [WIP]
 
