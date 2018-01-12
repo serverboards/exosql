@@ -5,7 +5,8 @@
 Universal SQL engine for Elixir.
 
 This library implements the SQL logic to perform queries on user provided
-databases using a simple interface based on Foreign Data Tables from PostgreSQL.
+databases using a simple interface based on Foreign Data Wrappers from
+PostgreSQL.
 
 This allows to use SQL on your own data.
 
