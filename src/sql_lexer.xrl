@@ -23,6 +23,6 @@ Rules.
 {CLOSE_PAR}     : {token, {close_par, TokenLine, TokenChars}}.
 {INT}{DOT}{INT} : {token, {lit, TokenLine, TokenChars}}.
 {INT}           : {token, {lit, TokenLine, TokenChars}}.
-{QUOTED_STRING} : {token, {lit, TokenLine, string:slice(TokenChars, 1, string:length(TokenChars)-2)}}.
+{QUOTED_STRING} : {token, {lit, TokenLine, string:substr(TokenChars, 1, string:len(TokenChars)-2)}}.
 
 Erlang code.

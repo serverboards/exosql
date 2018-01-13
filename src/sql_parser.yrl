@@ -51,5 +51,5 @@ unwrap({_,_,V}) -> 'Elixir.List':to_string(V).
 tag(A, B) ->
   A1 = unwrap(A),
   %% io:format("DEBUG: ~p == ~p", [A1, B]),
-  A2 = string:uppercase(A1),
+  A2 = 'Elixir.String':upcase(A1),
   A2 = 'Elixir.List':to_string(B).
