@@ -25,10 +25,11 @@ defmodule ExoSQL.Utils do
   end
 
   def format_result(res) do
-    s = for {h, n} <- Enum.with_index(res.headers) do
+    s = for {h, n} <- Enum.with_index(res.columns) do
       case h do
-        {:column, {db, table, column}} ->
+        {db, table, column} ->
           "#{db}.#{table}.#{column}"
+        str when is_binary(str) -> str
         _ -> "?COL#{n+1}"
       end
     end

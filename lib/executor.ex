@@ -72,7 +72,7 @@ defmodule ExoSQL.Executor do
 
     sgroups = Enum.map(groups, &simplify_expr_columns(&1, data.columns))
     rows = Enum.reduce(data.rows, %{}, fn row, acc ->
-      Logger.debug("Which set for #{inspect row} by #{inspect sgroups}")
+      Logger.debug("Which set for #{inspect row} by #{inspect sgroups}/#{inspect groups} (#{inspect data.columns})")
       set = Enum.map(sgroups, &ExoSQL.Expr.run_expr( &1, row ))
       Map.put( acc, set, [row] ++ Map.get(acc, set, []))
     end) |> Enum.map(fn {k,v} -> k ++ [v] end)

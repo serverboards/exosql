@@ -35,6 +35,13 @@ defmodule ExoSQL do
     ExoSQL.Executor.execute(parsed, context)
   end
 
+  def explain(sql, context) do
+    Logger.info("Explain #{inspect sql}")
+    {:ok, parsed} = ExoSQL.Parser.parse(sql, context)
+    {:ok, plan} = ExoSQL.Parser.plan(parsed, context)
+    Logger.info(inspect plan, pretty: true)
+  end
+
   def format_result(res), do: ExoSQL.Utils.format_result(res)
 
   def schema(db, context) do

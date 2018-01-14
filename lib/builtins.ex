@@ -27,11 +27,13 @@ defmodule ExoSQL.Builtins do
     Enum.count(data)
   end
 
-  def avg(expr, data) do
-    sum(expr, data) / count(data)
+  def avg(data, expr) do
+    Logger.debug("Avg of #{inspect data} by #{inspect expr}")
+    sum(data, expr) / count(data)
   end
 
-  def sum(expr, data) do
+  def sum(data, expr) do
+    Logger.debug("Sum of #{inspect data} by #{inspect expr}")
     Enum.reduce(data, 0, fn row, acc ->
       n = ExoSQL.Expr.run_expr(expr, row)
       {:ok, n} = ExoSQL.Utils.to_number(n)

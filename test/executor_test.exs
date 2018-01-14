@@ -1,4 +1,4 @@
-# require Logger
+require Logger
 
 defmodule PlannerTest do
   use ExUnit.Case
@@ -121,6 +121,36 @@ defmodule PlannerTest do
       columns: [{"A", "purchases", "product_id"}, "?NONAME"],
       rows: [["1", 2], ["2", 2], ["3", 1], ["4", 1]]
     }
+  end
+
+  test "Execute complex aggregation 2" do
+      # SELECT users.name, AVG(price*ammount) FROM users, purchases, products
+      # WHERE users.id = purchases.user_id AND products.id = purchases.product_id
+      # GROUP BY product.id
+      plan = {:select, {
+        { :group_by, {
+          { :filter,
+            { {:cross_join, {
+            {:execute, {{"A","users"}, [], [{"A", "users", "id"}, {"A", "users", "name"}]} },
+              {:cross_join, {
+                {:execute, {{"A","purchases"}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}]} },
+                {:execute, {{"A","products"}, [], [{"A","products","id"},{"A","products","name"}, {"A","products","price"}]} }
+              } },
+          } }, {:op, {"and",
+              {:op, {"=", {:column, {"A","users","id"}}, {:column, {"A","purchases","user_id"}}}},
+              {:op, {"=", {:column, {"A","purchases","product_id"}}, {:column, {"A","products","id"}}}},
+            } } } },
+          [ {:column, {"A","users","name"}} ]
+        }
+      }, [{:column, {"A", "users", "name"}}, {:fn, {:sum, [{:column, 1}, {:pass, {:column, 6 }}]}}]}}
+
+
+      {:ok, result} = ExoSQL.Executor.execute(plan, @context)
+      assert result == %ExoSQL.Result{
+        columns: [{"A", "users", "name"}, "?NONAME"],
+        rows: [["David", 44], ["Javier", 31], ["Patricio", 3]]
+      }
+      Logger.info ExoSQL.format_result(result)
   end
 
 end

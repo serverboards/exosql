@@ -44,10 +44,16 @@ defmodule ExoSQL.Expr do
     s1<>s2
   end
 
+  def run_expr({:fn, {fun, exprs}}, cur) when is_atom(fun) do
+    params = for e <- exprs, do: run_expr(e, cur)
+    apply(ExoSQL.Builtins, fun, params)
+  end
+
   def run_expr({:fn, {fun, exprs}}, cur) do
     params = for e <- exprs, do: run_expr(e, cur)
     apply(ExoSQL.Builtins, String.to_existing_atom(String.downcase(fun)), params)
   end
+  def run_expr({:pass, val}, _cur), do: val
 
   def run_expr({:lit, val}, _cur) when is_binary(val), do: val
   def run_expr({:lit, val}, _cur) when is_boolean(val), do: val
