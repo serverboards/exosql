@@ -8,7 +8,7 @@ query
 
 Terminals
 id comma dot lit int op open_par close_par
-'SELECT' 'FROM' 'INNER' 'JOIN' 'ON' 'WHERE' 'GROUP' 'BY'
+'SELECT' 'FROM' 'INNER' 'CROSS' 'JOIN' 'ON' 'WHERE' 'GROUP' 'BY'
 .
 
 Rootsymbol query.
@@ -26,6 +26,7 @@ join -> join_type table 'ON' expr join : [{'$1', {'$2', '$4'}}] ++ '$5'.
 
 join_type -> 'JOIN' : inner_join.
 join_type -> 'INNER' 'JOIN' : inner_join.
+join_type -> 'CROSS' 'JOIN' : cross_join.
 
 where -> '$empty' : nil.
 where -> 'WHERE' expr : '$2'.

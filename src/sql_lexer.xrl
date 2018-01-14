@@ -1,8 +1,8 @@
 Definitions.
 
 INT    = [0-9]+
-RESERVEDL = (select|where|from|inner|join|on|group|by)
-RESERVEDU = (SELECT|WHERE|FROM|INNER|JOIN|ON|GROUP|BY)
+RESERVEDL = (select|where|from|inner|cross|join|on|group|by)
+RESERVEDU = (SELECT|WHERE|FROM|INNER|CROSS|JOIN|ON|GROUP|BY)
 ID     = [_a-zA-Z][_a-zA-Z0-9]*
 COMMA  = ,
 DOT    = \.

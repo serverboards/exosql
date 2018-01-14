@@ -14,7 +14,8 @@ defmodule ExoSQL do
       select: [],
       from: [],
       where: nil,
-      groupby: nil
+      groupby: nil,
+      join: nil,
     ]
   end
 
@@ -126,26 +127,43 @@ defmodule ExoSQL do
     Logger.debug("#{inspect lexed, pretty: true}")
     {:ok, parsed} = :sql_parser.parse(lexed)
     Logger.debug("parsed #{inspect parsed, pretty: true}")
-    %{select: select, from: from, where: where, groupby: groupby} = parsed
+    %{select: select, from: initial_from, where: where, groupby: groupby, join: join} = parsed
 
-    from = for table <- from do
-      {:table, table} = resolve_table(table, context)
-      table
-    end
+    # first resolve all tables
+    # convert from to cross joins
+    [from | rest_from] = initial_from
+    from = resolve_table(from, context)
+    {from_tables, cross_joins} = Enum.reduce(rest_from, {[from], []}, fn {from_tables, cjoins}, {:table, table} ->
+      table = resolve_table(table, context)
+      from_tables = from_tables ++ [table]
+      join_expr = {:lit, true} # always merge the cross join, WHERE will resolve as required later.
+      cjoins = cjoins ++ [{:cross_join, {table, join_expr}}]
+      {from_tables, cjoins}
+    end)
+    Logger.debug("From #{inspect from}, cross join #{inspect cross_joins}")
 
-    select = Enum.map(select, &resolve_column(&1, from, context))
-    where = if where do
-      resolve_column(where, from, context)
-    else nil end
     groupby = if groupby do
-      Enum.map(groupby, &resolve_column(&1, from,context))
+      Enum.map(groupby, &resolve_column(&1, from_tables, context))
+    else nil end
+    join = Enum.map(join, fn {type, {table, expr}} ->
+      {type, {
+        resolve_table(table, context),
+        expr
+      }}
+    end)
+
+    # the resolve all expressions as we know which tables to use
+    select = Enum.map(select, &resolve_column(&1, from_tables, context))
+    where = if where do
+      resolve_column(where, from_tables, context)
     else nil end
 
     {:ok, %Query{
       select: select,
-      from: from,
+      from: from_tables, # all the tables it gets data from, but use only the frist and the joins.
       where: where,
-      groupby: groupby
+      groupby: groupby,
+      join: join
     }}
   end
 
@@ -255,13 +273,14 @@ defmodule ExoSQL do
   end
 
   def execute(query, context) when is_map(context) do
+    Logger.debug("Execute query #{inspect query, pretty: true}")
     plan = for {db, table} <- query.from do
       columns = get_vars(db, table, query.select)
       quals = []
       {db, table, quals, columns}
     end
 
-    # Logger.debug("My plan is #{inspect plan, pretty: true}")
+    Logger.debug("My plan is #{inspect plan, pretty: true}")
 
     data = for {db, table, quals, columns} <- plan do
       # Logger.debug("Plan: #{inspect db} ( #{inspect {table, quals, columns}})")
