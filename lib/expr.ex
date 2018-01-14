@@ -50,6 +50,7 @@ defmodule ExoSQL.Expr do
   end
 
   def run_expr({:lit, val}, _cur) when is_binary(val), do: val
+  def run_expr({:lit, val}, _cur) when is_boolean(val), do: val
 
   def run_expr({:column, n}, cur) when is_number(n) do
     Enum.at(cur, n)

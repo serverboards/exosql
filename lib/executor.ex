@@ -10,14 +10,13 @@ defmodule ExoSQL.Executor do
     {:ok, %{ columns: rcolumns, rows: rows}} = execute(from, context)
 
     exprs = Enum.map(columns, &simplify_expr_columns(&1, rcolumns))
+    Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs}")
+
     rows = Enum.map(rows, fn row ->
       Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, row) )
     end)
 
-    columns = Enum.map(columns, fn
-      {:column, col} -> col
-      other -> "?NONAME"
-    end)
+    columns = resolve_column_nanes(columns)
 
     {:ok, %ExoSQL.Result{ rows: rows, columns: columns}}
   end
@@ -68,10 +67,31 @@ defmodule ExoSQL.Executor do
     }}
   end
 
+  def execute({:group_by, {from, groups}}, context) do
+    {:ok, data} = execute(from, context)
+
+    sgroups = Enum.map(groups, &simplify_expr_columns(&1, data.columns))
+    rows = Enum.reduce(data.rows, %{}, fn row, acc ->
+      Logger.debug("Which set for #{inspect row} by #{inspect sgroups}")
+      set = Enum.map(sgroups, &ExoSQL.Expr.run_expr( &1, row ))
+      Map.put( acc, set, [row] ++ Map.get(acc, set, []))
+    end) |> Enum.map(fn {k,v} -> k ++ [v] end)
+
+    columns = resolve_column_nanes(groups) ++ ["*"]
+
+    {:ok, %ExoSQL.Result{
+      columns: columns,
+      rows: rows
+    } }
+  end
+
   def execute(%ExoSQL.Result{} = res, _context), do: {:ok, res}
   def execute(%{ rows: rows, columns: columns}, _context), do: {:ok, %ExoSQL.Result{ rows: rows, columns: columns }}
 
 
+  def simplify_expr_columns({:column, cn}, names) when is_number(cn) do
+    {:column, cn}
+  end
   def simplify_expr_columns({:column, cn}, names) do
     i = Enum.find_index(names, &(&1 == cn))
     {:column, i}
@@ -97,4 +117,11 @@ defmodule ExoSQL.Executor do
     {:op, {op, op1, op2}}
   end
   def simplify_expr_columns_nofn(other, _names), do: other
+
+  def resolve_column_nanes(columns) do
+    Enum.map(columns, fn
+      {:column, col} -> col
+      other -> "?NONAME"
+    end)
+  end
 end

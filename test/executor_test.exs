@@ -91,4 +91,36 @@ defmodule PlannerTest do
               ["Patricio", "sugus"]]}
   end
 
+
+  test "Execute manual simple aggregation" do
+    # SELECT COUNT(*) FROM products
+    # converted to
+    # SELECT COUNT(A.products.*) FROM products GROUP BY true ## all to one set, returns the table true, {"A","products","*"}
+    plan = {:select, {
+      {:group_by, {
+        {:execute, {{"A","products"}, [], [{"A","products","id"},{"A","products","name"}]} },
+        [{:lit, true}]
+      } },
+      [{:fn, {"count", [{:column, 1}]}}]
+      }}
+    {:ok, result} = ExoSQL.Executor.execute(plan, @context)
+    assert result == %ExoSQL.Result{columns: ["?NONAME"], rows: [[4]]}
+  end
+
+  test "Excute complex aggregation" do
+    plan = {:select, {
+      {:group_by, {
+        {:execute, {{"A","purchases"}, [], [{"A","purchases","product_id"}]} },
+        [{:column, {"A","purchases", "product_id"}}]
+      } },
+      [ {:column, {"A","purchases", "product_id"}},
+        {:fn, {"count", [{:column, 1}]}}
+      ] } }
+    {:ok, result} = ExoSQL.Executor.execute(plan, @context)
+    assert result == %ExoSQL.Result{
+      columns: [{"A", "purchases", "product_id"}, "?NONAME"],
+      rows: [["1", 2], ["2", 2], ["3", 1], ["4", 1]]
+    }
+  end
+
 end

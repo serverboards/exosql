@@ -23,12 +23,12 @@ defmodule ExoSQL.Builtins do
   def is_aggregate("sum"), do: true
   def is_aggregate(_other), do: false
 
-  def count(_anything, data) do
+  def count(data) do
     Enum.count(data)
   end
 
   def avg(expr, data) do
-    sum(expr, data) / count(nil, data)
+    sum(expr, data) / count(data)
   end
 
   def sum(expr, data) do
