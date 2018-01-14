@@ -194,6 +194,20 @@ defmodule ExoSQLTest do
     Logger.debug("Query: #{inspect query}")
     {:ok, result} = ExoSQL.execute(query, context)
     Logger.debug(ExoSQL.format_result result)
+  end
 
+  test "Inner join" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"}
+    }
+    {:ok, query} = ExoSQL.parse("
+      SELECT purchases.id, products.name, users.name
+        FROM purchases
+       INNER JOIN product
+          ON purchases.product_id = products.id
+       INNER JOIN users
+          ON users.id = purchases.user_id
+    ", context)
+    Logger.debug("Query: #{inspect query}")
   end
 end

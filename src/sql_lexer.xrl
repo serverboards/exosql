@@ -1,6 +1,8 @@
 Definitions.
 
 INT    = [0-9]+
+RESERVEDL = (select|where|from|inner|join|on|group|by)
+RESERVEDU = (SELECT|WHERE|FROM|INNER|JOIN|ON|GROUP|BY)
 ID     = [_a-zA-Z][_a-zA-Z0-9]*
 COMMA  = ,
 DOT    = \.
@@ -15,6 +17,8 @@ QUOTED_STRING = ("(.|[^"])*"|'(.|[^"])*')
 Rules.
 
 {SPACE}  : skip_token.
+{RESERVEDL} : {token, {list_to_atom(string:to_upper(TokenChars)), TokenLine}}.
+{RESERVEDU} : {token, {list_to_atom(TokenChars), TokenLine}}.
 {OP}     : {token, {op, TokenLine, TokenChars}}.
 {ID}     : {token, {id, TokenLine, TokenChars}}.
 {COMMA}  : {token, {comma, TokenLine, TokenChars}}.

@@ -123,9 +123,10 @@ defmodule ExoSQL do
   def parse(sql, context) do
     sql = String.to_charlist(sql)
     {:ok, lexed, _lines} = :sql_lexer.string(sql)
+    Logger.debug("#{inspect lexed, pretty: true}")
     {:ok, parsed} = :sql_parser.parse(lexed)
-    Logger.debug("parsed #{inspect parsed}")
-    {select, from, where, groupby} = parsed
+    Logger.debug("parsed #{inspect parsed, pretty: true}")
+    %{select: select, from: from, where: where, groupby: groupby} = parsed
 
     from = for table <- from do
       {:table, table} = resolve_table(table, context)
@@ -134,7 +135,7 @@ defmodule ExoSQL do
 
     select = Enum.map(select, &resolve_column(&1, from, context))
     where = if where do
-      Enum.map(where, &resolve_column(&1, from, context))
+      resolve_column(where, from, context)
     else nil end
     groupby = if groupby do
       Enum.map(groupby, &resolve_column(&1, from,context))
@@ -280,8 +281,7 @@ defmodule ExoSQL do
     # Logger.debug("Data: #{inspect data}")
     rows = cjt
     rows = if query.where do
-      [expr] = query.where
-      expr = convert_column_names(expr, rows.headers)
+      expr = convert_column_names(query.where, rows.headers)
       # Logger.debug("expr #{inspect expr}")
       rows = Enum.filter(rows, fn row ->
         # Logger.debug(row)
