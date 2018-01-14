@@ -19,6 +19,13 @@ defmodule ExoSQL do
     ]
   end
 
+  defmodule Result do
+    defstruct [
+      columns: [],
+      rows: []
+    ]
+  end
+
   def parse(sql, context), do: ExoSQL.Parser.parse(sql, context)
   def execute(sql, context), do: ExoSQL.Executor.execute(sql, context)
 

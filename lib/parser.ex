@@ -67,34 +67,6 @@ defmodule ExoSQL.Parser do
     []
   end
 
-
-  def convert_column_names({:column, cn}, names) do
-    i = Enum.find_index(names, &(&1 == cn))
-    {:column, i}
-  end
-  def convert_column_names({:op, {op, op1, op2}}, names) do
-    op1 = convert_column_names(op1, names)
-    op2 = convert_column_names(op2, names)
-    {:op, {op, op1, op2}}
-  end
-  def convert_column_names({:fn, {f, params}}, names) do
-    params = Enum.map(params, &convert_column_names(&1, names))
-    {:fn, {f, params}}
-  end
-  def convert_column_names(other, _names), do: other
-
-
-  def convert_column_names_nofn({:column, cn}, names) do
-    i = Enum.find_index(names, &(&1 == cn))
-    {:column, i}
-  end
-  def convert_column_names_nofn({:op, {op, op1, op2}}, names) do
-    op1 = convert_column_names(op1, names)
-    op2 = convert_column_names(op2, names)
-    {:op, {op, op1, op2}}
-  end
-  def convert_column_names_nofn(other, _names), do: other
-
   def resolve_table({:table, {nil, name}}, context) when is_binary(name) do
     options = Enum.flat_map(context, fn {dbname, _db} ->
       {:ok, tables} = ExoSQL.schema(dbname, context)
