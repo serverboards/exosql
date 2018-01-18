@@ -1,6 +1,6 @@
 require Logger
 
-defmodule PlannerTest do
+defmodule ExecutorTest do
   use ExUnit.Case
   doctest ExoSQL.Executor, import: true
   @context %{ "A" => {ExoSQL.Csv, path: "test/data/csv/"} }

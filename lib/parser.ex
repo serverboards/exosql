@@ -11,26 +11,15 @@ defmodule ExoSQL.Parser do
   def parse(sql, context) do
     sql = String.to_charlist(sql)
     {:ok, lexed, _lines} = :sql_lexer.string(sql)
-    Logger.debug("#{inspect lexed, pretty: true}")
     {:ok, parsed} = :sql_parser.parse(lexed)
-    Logger.debug("parsed #{inspect parsed, pretty: true}")
-    %{select: select, from: initial_from, where: where, groupby: groupby, join: join} = parsed
+    %{select: select, from: from, where: where, groupby: groupby, join: join} = parsed
 
     # first resolve all tables
     # convert from to cross joins
-    [from | rest_from] = initial_from
-    from = resolve_table(from, context)
-    {from_tables, cross_joins} = Enum.reduce(rest_from, {[from], []}, fn {from_tables, cjoins}, {:table, table} ->
-      table = resolve_table(table, context)
-      from_tables = from_tables ++ [table]
-      join_expr = {:lit, true} # always merge the cross join, WHERE will resolve as required later.
-      cjoins = cjoins ++ [{:cross_join, {table, join_expr}}]
-      {from_tables, cjoins}
-    end)
-    Logger.debug("From #{inspect from}, cross join #{inspect cross_joins}")
+    from = Enum.map(from, &resolve_table(&1, context))
 
     groupby = if groupby do
-      Enum.map(groupby, &resolve_column(&1, from_tables, context))
+      Enum.map(groupby, &resolve_column(&1, from, context))
     else nil end
     join = Enum.map(join, fn {type, {table, expr}} ->
       {type, {
@@ -40,14 +29,14 @@ defmodule ExoSQL.Parser do
     end)
 
     # the resolve all expressions as we know which tables to use
-    select = Enum.map(select, &resolve_column(&1, from_tables, context))
+    select = Enum.map(select, &resolve_column(&1, from, context))
     where = if where do
-      resolve_column(where, from_tables, context)
+      resolve_column(where, from, context)
     else nil end
 
     {:ok, %ExoSQL.Query{
       select: select,
-      from: from_tables, # all the tables it gets data from, but use only the frist and the joins.
+      from: from, # all the tables it gets data from, but use only the frist and the joins.
       where: where,
       groupby: groupby,
       join: join
@@ -72,7 +61,7 @@ defmodule ExoSQL.Parser do
       {:ok, tables} = ExoSQL.schema(dbname, context)
       tables
         |> Enum.filter(&(&1 == name))
-        |> Enum.map(&{:table, {dbname, &1}})
+        |> Enum.map(&{dbname, &1})
     end)
 
 
@@ -82,7 +71,7 @@ defmodule ExoSQL.Parser do
       other -> throw {:ambiguous_table_name, name}
     end
   end
-  def resolve_table({:table, {db, name}} = orig, context), do: orig
+  def resolve_table({:table, {db, name} = orig} , context), do: orig
 
   def resolve_column({:column, {nil, nil, column}}, tables, context) do
     matches = Enum.flat_map(tables, fn {db, table} ->
@@ -104,6 +93,7 @@ defmodule ExoSQL.Parser do
   end
 
   def resolve_column({:column, {nil, table, column}}, tables, context) do
+    # Logger.debug("Look for #{table}.#{column} at #{inspect tables}")
     matches = Enum.flat_map(tables, fn
       {db, ^table} ->
         [{:column, {db, table, column}}]

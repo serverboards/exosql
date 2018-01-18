@@ -5,10 +5,16 @@ defmodule ParserTest do
   doctest ExoSQL
 
   test "Lex and parse" do
-    {:ok, res, 1} = :sql_lexer.string('SELECT A.products.name, A.products.stock FROM A.products WHeRE (A.products.price > 0) and (a.products.stock >= 1)')
+    {:ok, res, 1} = :sql_lexer.string('SELECT A.products.name, A.products.stock FROM A.products WHERE (A.products.price > 0) and (a.products.stock >= 1)')
     Logger.debug("Lexed: #{inspect res}")
 
     {:ok, res} = :sql_parser.parse(res)
+
+    Logger.debug("Parsed: #{inspect res}")
+  end
+
+  test "Elixir parsing to proper struct" do
+    {:ok, res} = ExoSQL.Parser.parse("SELECT A.products.name, A.products.stock FROM A.products WHERE (A.products.price > 0) and (a.products.stock >= 1)", %{})
 
     Logger.debug("Parsed: #{inspect res}")
   end

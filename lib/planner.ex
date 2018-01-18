@@ -12,25 +12,42 @@ defmodule ExoSQL.Planner do
 
   For example, it may return for a very simple:
 
-    iex> plan("SELECT name, price FROM products", %{"A" => {ExoSQL.Csv, path: "test/data/csv/"}})
-    {:execute, {{"A","products"}, [], ["name", "price"]}}
+    iex> {:ok, query} = ExoSQL.Parser.parse("SELECT name, price FROM products", %{"A" => {ExoSQL.Csv, path: "test/data/csv/"}})
+    iex> plan(query)
+    {:ok, {:select, {
+          {:execute, {{"A", "products"}, [], []}}, [
+            column: {"A", "products", "name"},
+            column: {"A", "products", "price"}]}
+    }}
 
   Or a more complex:
 
-    iex> plan("SELECT users.name, products.name FROM users, purchases, products WHERE users.id = purchases.user_id AND purchases_product_id = product.id", %{"A" => {ExoSQL.Csv, path: "test/data/csv/"}})
-    {:select, {
-      {:filter,
+    iex> query = "SELECT users.name, products.name FROM users, purchases, products WHERE (users.id = purchases.user_id) AND (purchases.product_id = products.id)"
+    iex> {:ok, query} = ExoSQL.Parser.parse(query, %{"A" => {ExoSQL.Csv, path: "test/data/csv/"}})
+    iex> plan(query)
+    {:ok, {:select, {
+      {:filter, {
         {:cross_join, {
-        {:execute, {{"A","users"}, [], ["id","name"]}},
+          {:execute, {{"A", "products"}, [], []}},
           {:cross_join, {
-            {:execute, {{"A","purchases"}, [], ["user_id","product_id"]}},
-            {:execute, {{"A","products"}, [], ["id","name"]}}
-          }},
-      }}, {:op, {"AND",
-          {:op, {"=", {:column, {"A","users","id"}}, {:column, {"A","purchases","user_id"}}}},
-          {:op, {"=", {:column, {"A","purchases","product_id"}}, {:column, {"A","products","id"}}}},
-        }}
-    }, ["A.users.name", "A.products.name"]}}
+            {:execute, {{"A", "purchases"}, [], []}},
+            {:execute, {{"A", "users"}, [], []}}
+          }}
+        }},
+        {:op, {"AND",
+              {:op, {"=",
+                {:column, {"A", "users", "id"}},
+                {:column, {"A", "purchases", "user_id"}}
+              }},
+              {:op, {"=",
+                {:column, {"A", "purchases", "product_id"}},
+                {:column, {"A", "products", "id"}}
+              }}
+          }}
+        }},
+        [column: {"A", "users", "name"},
+         column: {"A", "products", "name"}]
+    } } }
 
   Which means that it will extract A.users, cross join with A.purchases, then cross
   join that with A.produtcs, apply a filter of the expession, and finally
@@ -38,13 +55,29 @@ defmodule ExoSQL.Planner do
 
   TODO: explore different plans acording to some weights and return the optimal one.
   """
-  def plan(query, context) do
+  def plan(query) do
     Logger.debug("Prepare plan for query: #{inspect query}")
 
-        for {db, table} <- query.from do
-          columns = ExoSQL.Parser.get_vars(db, table, query.select)
-          quals = []
-          {db, table, quals, columns}
-        end
+    from = for {db, table} <- query.from do
+      columns = ExoSQL.Parser.get_vars(db, table, query.select)
+      quals = []
+      {:execute, {{db, table}, quals, columns}}
+    end
+
+    from_plan = Enum.reduce((tl from), (hd from), fn fr, acc ->
+      {:cross_join, {fr, acc} }
+    end)
+
+    where_plan = if query.where do
+      {:filter, {from_plan, query.where}}
+    else
+      from_plan
+    end
+
+    select_plan = {:select, {where_plan, query.select}}
+
+    plan = select_plan
+
+    {:ok, plan}
   end
 end

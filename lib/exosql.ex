@@ -38,7 +38,7 @@ defmodule ExoSQL do
   def explain(sql, context) do
     Logger.info("Explain #{inspect sql}")
     {:ok, parsed} = ExoSQL.Parser.parse(sql, context)
-    {:ok, plan} = ExoSQL.Parser.plan(parsed, context)
+    {:ok, plan} = ExoSQL.Planner.plan(parsed)
     Logger.info(inspect plan, pretty: true)
   end
 
