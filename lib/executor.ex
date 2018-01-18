@@ -6,7 +6,7 @@ defmodule ExoSQL.Executor do
 
   Always returns a ExoSQL.Result and work over them.
   """
-  def execute({:select, {from, columns}}, context) do
+  def execute({:select, from, columns}, context) do
     {:ok, %{ columns: rcolumns, rows: rows}} = execute(from, context)
 
     exprs = Enum.map(columns, &simplify_expr_columns(&1, rcolumns))
@@ -21,7 +21,7 @@ defmodule ExoSQL.Executor do
     {:ok, %ExoSQL.Result{ rows: rows, columns: columns}}
   end
 
-  def execute({:execute, {{db, table}, quals, columns}}, context) do
+  def execute({:execute, {db, table}, quals, columns}, context) do
     {dbmod, context} = context[db]
     case apply(dbmod, :execute, [context, table, quals, columns]) do
       {:ok, %{ columns: ^columns, rows: rows}} ->
@@ -35,12 +35,12 @@ defmodule ExoSQL.Executor do
           rows: rows
         }
         columns = Enum.map(columns, &({:column, &1}))
-        execute({:select, {result, columns}}, context)
+        execute({:select, result, columns}, context)
       other -> other
     end
   end
 
-  def execute({:filter, {from, expr}}, context) do
+  def execute({:filter, from, expr}, context) do
     {:ok, %{ columns: columns, rows: rows }} = execute(from, context)
 
 
@@ -51,7 +51,7 @@ defmodule ExoSQL.Executor do
     {:ok, %ExoSQL.Result{ columns: columns, rows: rows}}
   end
 
-  def execute({:cross_join, {table1, table2}}, context) do
+  def execute({:cross_join, table1, table2}, context) do
     {:ok, res1} = execute(table1, context)
     {:ok, res2} = execute(table2, context)
 
@@ -67,7 +67,7 @@ defmodule ExoSQL.Executor do
     }}
   end
 
-  def execute({:group_by, {from, groups}}, context) do
+  def execute({:group_by, from, groups}, context) do
     {:ok, data} = execute(from, context)
 
     sgroups = Enum.map(groups, &simplify_expr_columns(&1, data.columns))

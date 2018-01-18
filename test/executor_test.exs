@@ -6,7 +6,7 @@ defmodule ExecutorTest do
   @context %{ "A" => {ExoSQL.Csv, path: "test/data/csv/"} }
 
   test "Execute a simple manual plan"  do
-    plan = {:execute, {{"A","products"}, [], [{"A","products","name"}, {"A","products","price"}]}}
+    plan = {:execute, {"A","products"}, [], [{"A","products","name"}, {"A","products","price"}]}
 
     {:ok, result} = ExoSQL.Executor.execute(plan, @context)
     assert result == %ExoSQL.Result{
@@ -24,12 +24,12 @@ defmodule ExecutorTest do
   test "Execute a mix complex manual plan"  do
     plan = {
       :select,
-        {{:filter,{
-          {:execute, {{"A","products"}, [], [{"A","products","name"}, {"A","products","price"}]}},
+        {:filter,
+          {:execute, {"A","products"}, [], [{"A","products","name"}, {"A","products","price"}]},
           {:op, {">", {:column, {"A","products","price"}}, {:lit, "10"} } }
-        } },
+        },
         [{:column, {"A","products","name"}}, {:column, {"A","products","price"}}]
-      } }
+      }
 
     {:ok, result} = ExoSQL.Executor.execute(plan, @context)
     assert result == %ExoSQL.Result{
@@ -44,10 +44,10 @@ defmodule ExecutorTest do
 
   test "Execute a cross join" do
     plan = {
-      :cross_join, {
-        {:execute, {{"A","purchases"}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}]}},
-        {:execute, {{"A","products"}, [], [{"A","products","id"},{"A","products","name"}]}
-      } } }
+      :cross_join,
+        {:execute, {"A","purchases"}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}]},
+        {:execute, {"A","products"}, [], [{"A","products","id"},{"A","products","name"}]}
+      }
     {:ok, result} = ExoSQL.Executor.execute(plan, @context)
     assert result == %ExoSQL.Result{
      columns: [{"A", "purchases", "user_id"},
@@ -69,19 +69,23 @@ defmodule ExecutorTest do
   end
 
   test "Execute a complex manual plan"  do
-    plan = {:select,
-      { { :filter,
-        { {:cross_join, {
-        {:execute, {{"A","users"}, [], [{"A", "users", "id"}, {"A", "users", "name"}]} },
-          {:cross_join, {
-            {:execute, {{"A","purchases"}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}]} },
-            {:execute, {{"A","products"}, [], [{"A","products","id"},{"A","products","name"}]} }
-          } },
-      } }, {:op, {"and",
-          {:op, {"=", {:column, {"A","users","id"}}, {:column, {"A","purchases","user_id"}}}},
-          {:op, {"=", {:column, {"A","purchases","product_id"}}, {:column, {"A","products","id"}}}},
-        } } }
-    }, [{:column, {"A", "users", "name"}}, {:column, {"A","products", "name"}}]}}
+    plan =
+      {:select,
+        {:filter,
+          {:cross_join,
+            {:execute, {"A","users"}, [], [{"A", "users", "id"}, {"A", "users", "name"}]},
+            {:cross_join,
+              {:execute, {"A","purchases"}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}]},
+              {:execute, {"A","products"}, [], [{"A","products","id"},{"A","products","name"}]}
+            },
+          },
+          {:op, {"and",
+            {:op, {"=", {:column, {"A","users","id"}}, {:column, {"A","purchases","user_id"}}}},
+            {:op, {"=", {:column, {"A","purchases","product_id"}}, {:column, {"A","products","id"}}}},
+          } }
+        },
+        [{:column, {"A", "users", "name"}}, {:column, {"A","products", "name"}}]
+      }
 
     {:ok, result} = ExoSQL.Executor.execute(plan, @context)
     assert result == %ExoSQL.Result{columns: [{"A", "users", "name"},
@@ -96,26 +100,29 @@ defmodule ExecutorTest do
     # SELECT COUNT(*) FROM products
     # converted to
     # SELECT COUNT(A.products.*) FROM products GROUP BY true ## all to one set, returns the table true, {"A","products","*"}
-    plan = {:select, {
-      {:group_by, {
-        {:execute, {{"A","products"}, [], [{"A","products","id"},{"A","products","name"}]} },
-        [{:lit, true}]
-      } },
-      [{:fn, {"count", [{:column, 1}]}}]
-      }}
+    plan =
+      {:select,
+        {:group_by,
+          {:execute, {"A","products"}, [], [{"A","products","id"},{"A","products","name"}]},
+          [{:lit, true}]
+        },
+        [{:fn, {"count", [{:column, 1}]}}]
+      }
     {:ok, result} = ExoSQL.Executor.execute(plan, @context)
     assert result == %ExoSQL.Result{columns: ["?NONAME"], rows: [[4]]}
   end
 
   test "Excute complex aggregation" do
-    plan = {:select, {
-      {:group_by, {
-        {:execute, {{"A","purchases"}, [], [{"A","purchases","product_id"}]} },
-        [{:column, {"A","purchases", "product_id"}}]
-      } },
-      [ {:column, {"A","purchases", "product_id"}},
-        {:fn, {"count", [{:column, 1}]}}
-      ] } }
+    plan =
+      {:select,
+        {:group_by,
+          {:execute, {"A","purchases"}, [], [{"A","purchases","product_id"}]},
+          [{:column, {"A","purchases", "product_id"}}]
+        },
+        [ {:column, {"A","purchases", "product_id"}},
+          {:fn, {"count", [{:column, 1}]}}
+        ]
+      }
     {:ok, result} = ExoSQL.Executor.execute(plan, @context)
     assert result == %ExoSQL.Result{
       columns: [{"A", "purchases", "product_id"}, "?NONAME"],
@@ -127,22 +134,26 @@ defmodule ExecutorTest do
       # SELECT users.name, AVG(price*ammount) FROM users, purchases, products
       # WHERE users.id = purchases.user_id AND products.id = purchases.product_id
       # GROUP BY product.id
-      plan = {:select, {
-        { :group_by, {
-          { :filter,
-            { {:cross_join, {
-            {:execute, {{"A","users"}, [], [{"A", "users", "id"}, {"A", "users", "name"}]} },
-              {:cross_join, {
-                {:execute, {{"A","purchases"}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}]} },
-                {:execute, {{"A","products"}, [], [{"A","products","id"},{"A","products","name"}, {"A","products","price"}]} }
-              } },
-          } }, {:op, {"and",
-              {:op, {"=", {:column, {"A","users","id"}}, {:column, {"A","purchases","user_id"}}}},
-              {:op, {"=", {:column, {"A","purchases","product_id"}}, {:column, {"A","products","id"}}}},
-            } } } },
+      plan =
+        {:select,
+          { :group_by,
+            { :filter,
+              {:cross_join,
+                {:execute, {"A","users"}, [], [{"A", "users", "id"}, {"A", "users", "name"}]} ,
+                  {:cross_join,
+                    {:execute, {"A","purchases"}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}]},
+                    {:execute, {"A","products"}, [], [{"A","products","id"},{"A","products","name"}, {"A","products","price"}]}
+                },
+              },
+              {:op, {"and",
+                {:op, {"=", {:column, {"A","users","id"}}, {:column, {"A","purchases","user_id"}}}},
+                {:op, {"=", {:column, {"A","purchases","product_id"}}, {:column, {"A","products","id"}}}},
+              }}
+            },
           [ {:column, {"A","users","name"}} ]
+          },
+          [{:column, {"A", "users", "name"}}, {:fn, {:sum, [{:column, 1}, {:pass, {:column, 6 }}]}}]
         }
-      }, [{:column, {"A", "users", "name"}}, {:fn, {:sum, [{:column, 1}, {:pass, {:column, 6 }}]}}]}}
 
 
       {:ok, result} = ExoSQL.Executor.execute(plan, @context)

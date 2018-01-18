@@ -15,18 +15,19 @@ defmodule PlannerTest do
     {:ok, plan} = ExoSQL.Planner.plan(parsed)
 
     assert plan ==
-      {:select, {
-        {:filter, {
-          {:execute,
-            {{"A", "products"}, [], []}},
-            {:op, {"and",
-              {:op, {">", {:column, {"A", "products", "price"}}, {:lit, "0"}}},
-              {:op, {">=", {:column, {"A", "products", "stock"}}, {:lit, "1"}}
+      {:select,
+        {:filter,
+          {:execute, {"A", "products"}, [], []},
+          {:op, {"and",
+            {:op, {">", {:column, {"A", "products", "price"}}, {:lit, "0"}}},
+            {:op, {">=", {:column, {"A", "products", "stock"}}, {:lit, "1"}}
           }}}
-        }}, [
+        },
+        [
           column: {"A", "products", "name"},
-          column: {"A", "products", "stock"}]
-      }}
+          column: {"A", "products", "stock"}
+        ]
+      }
 
     ExoSQL.explain(q, @context)
   end
