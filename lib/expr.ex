@@ -12,6 +12,11 @@ defmodule ExoSQL.Expr do
     r2 = run_expr(op2, cur)
     r1 && r2
   end
+  def run_expr({:op, {"AND", op1, op2}}, cur) do
+    r1 = run_expr(op1, cur)
+    r2 = run_expr(op2, cur)
+    r1 && r2
+  end
 
   def run_expr({:op, {"=", op1, op2}}, cur), do: run_expr(op1, cur) == run_expr(op2, cur)
   def run_expr({:op, {"==", op1, op2}}, cur), do: run_expr(op1, cur) == run_expr(op2, cur)

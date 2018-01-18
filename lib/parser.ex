@@ -43,19 +43,6 @@ defmodule ExoSQL.Parser do
     }}
   end
 
-
-  def get_vars(db, table, [expr | tail]) do
-    get_vars(db, table, expr) ++ get_vars(db, table, tail)
-  end
-  def get_vars(db, table, []), do: []
-
-  def get_vars(db, table, {db, table, column}) do
-    [column]
-  end
-  def get_vars(_db, _table, _other) do
-    []
-  end
-
   def resolve_table({:table, {nil, name}}, context) when is_binary(name) do
     options = Enum.flat_map(context, fn {dbname, _db} ->
       {:ok, tables} = ExoSQL.schema(dbname, context)

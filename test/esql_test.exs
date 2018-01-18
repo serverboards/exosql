@@ -4,26 +4,14 @@ defmodule ExoSQLTest do
   use ExUnit.Case
   doctest ExoSQL
 
-  test "Cartesian product at CrossJoinTables" do
-    rows = [
-      [[1,11],[2,22],[3,33]],
-      [[4,44],[5,55],[6,66]],
-      [[7,77],[8,88],[9,99]],
-    ]
-    cjt = %ExoSQL.CrossJoinTables{
-      headers: [[:a, :aa],[:b, :bb],[:c, :cc]],
-      rows: rows
-    }
-
-    Enum.map(cjt, &(Logger.info("Row: #{inspect &1}")))
-  end
-
   test "Simple parse SQL" do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
     {:ok, query} = ExoSQL.parse("SELECT A.products.name, A.products.price FROM A.products", context)
-    {:ok, result} = ExoSQL.execute(query, context)
+    {:ok, plan} = ExoSQL.Planner.plan(query)
+    Logger.debug("Plan is #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.Executor.execute(plan, context)
     Logger.debug(inspect result, pretty: true)
   end
 
@@ -39,9 +27,18 @@ defmodule ExoSQLTest do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
-    {:ok, query} = ExoSQL.parse("SELECT A.products.name, A.users.name FROM A.products, A.purchases, A.users WHERE (A.products.id = A.purchases.product_id) and (A.purchases.user_id = A.users.id)", context)
-    Logger.debug("Query: #{inspect query}")
-    {:ok, result} = ExoSQL.execute(query, context)
+    ExoSQL.explain("""
+      SELECT A.products.name, A.users.name
+        FROM A.products, A.purchases, A.users
+       WHERE (A.products.id = A.purchases.product_id)
+         AND (A.purchases.user_id = A.users.id)
+      """, context)
+    {:ok, result} = ExoSQL.query("""
+      SELECT A.products.name, A.users.name
+        FROM A.products, A.purchases, A.users
+       WHERE (A.products.id = A.purchases.product_id)
+         AND (A.purchases.user_id = A.users.id)
+      """, context)
     Logger.debug(ExoSQL.format_result result)
   end
 

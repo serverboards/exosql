@@ -15,7 +15,7 @@ defmodule ExoSQL.Node do
       l
     end
 
-    {:ok, %{ headers: [
+    {:ok, %{ columns: [
       "user", "x", "uid", "gid", "name", "home", "shell"
       ], rows: rows}}
 

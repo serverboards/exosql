@@ -10,7 +10,7 @@ defmodule ExoSQL.Executor do
     {:ok, %{ columns: rcolumns, rows: rows}} = execute(from, context)
 
     exprs = Enum.map(columns, &simplify_expr_columns(&1, rcolumns))
-    Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs}")
+    # Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs} / #{inspect columns} #{inspect rcolumns}")
 
     rows = Enum.map(rows, fn row ->
       Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, row) )
@@ -72,7 +72,7 @@ defmodule ExoSQL.Executor do
 
     sgroups = Enum.map(groups, &simplify_expr_columns(&1, data.columns))
     rows = Enum.reduce(data.rows, %{}, fn row, acc ->
-      Logger.debug("Which set for #{inspect row} by #{inspect sgroups}/#{inspect groups} (#{inspect data.columns})")
+      # Logger.debug("Which set for #{inspect row} by #{inspect sgroups}/#{inspect groups} (#{inspect data.columns})")
       set = Enum.map(sgroups, &ExoSQL.Expr.run_expr( &1, row ))
       Map.put( acc, set, [row] ++ Map.get(acc, set, []))
     end) |> Enum.map(fn {k,v} -> k ++ [v] end)
@@ -94,6 +94,9 @@ defmodule ExoSQL.Executor do
   end
   def simplify_expr_columns({:column, cn}, names) do
     i = Enum.find_index(names, &(&1 == cn))
+    if i == nil do
+      throw {:error, {:not_found, cn, :in, names}}
+    end
     {:column, i}
   end
   def simplify_expr_columns({:op, {op, op1, op2}}, names) do
