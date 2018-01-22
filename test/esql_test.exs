@@ -73,7 +73,7 @@ defmodule ExoSQLTest do
     }
     {:ok, result} = ExoSQL.query("""
       SELECT COUNT(*), AVG(A.products.price)
-        FROM A.products
+        FROM A.products GROUP BY A.products.id
     """, context)
 
     Logger.debug(ExoSQL.format_result result)
@@ -94,25 +94,27 @@ defmodule ExoSQLTest do
   end
 
   test "Resolve table and column from partial name" do
+    import ExoSQL.Parser, only: [resolve_table: 2, resolve_column: 3]
+
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
-    assert {:table, {"A", "products"}} ==
-      ExoSQL.resolve_table({:table, {nil, "products"}}, context)
+    assert {"A", "products"} ==
+      resolve_table({:table, {nil, "products"}}, context)
 
-    assert {:table, {"A", "products"}} ==
-      ExoSQL.resolve_table({:table, {"A", "products"}}, context)
+    assert {"A", "products"} ==
+      resolve_table({:table, {"A", "products"}}, context)
 
 
     try do
-      ExoSQL.resolve_table({:table, {nil, "prioducts"}}, context)
+      resolve_table({:table, {nil, "prioducts"}}, context)
     catch
       {:not_found, "prioducts"} -> :ok
       other -> flunk(inspect other)
     end
 
     try do
-      ExoSQL.resolve_table({:table, {nil, "products"}}, %{
+      resolve_table({:table, {nil, "products"}}, %{
         "A" => {ExoSQL.Csv, path: "test/data/csv"},
         "B" => {ExoSQL.Csv, path: "test/data/csv"},
         })
@@ -123,7 +125,7 @@ defmodule ExoSQLTest do
 
 
     assert {:column, {"A", "products", "price"}} ==
-      ExoSQL.resolve_column({:column, {nil, nil, "price"}},
+      resolve_column({:column, {nil, nil, "price"}},
         [
           {"A", "users"},
           {"A", "purchases"},
@@ -131,14 +133,14 @@ defmodule ExoSQLTest do
         context)
 
     assert {:column, {"A", "products", "price"}} ==
-      ExoSQL.resolve_column({:column, {nil, "products", "price"}},
+      resolve_column({:column, {nil, "products", "price"}},
         [
           {"A", "users"},
           {"A", "purchases"},
           {"A", "products"}],
         context)
     assert {:column, {"A", "products", "price"}} ==
-      ExoSQL.resolve_column({:column, {"A", "products", "price"}},
+      resolve_column({:column, {"A", "products", "price"}},
         [
           {"A", "users"},
           {"A", "purchases"},
@@ -146,7 +148,7 @@ defmodule ExoSQLTest do
         context)
 
     assert {:column, {"A", "products", "name"}} ==
-      ExoSQL.resolve_column({:column, {nil, "products", "name"}},
+      resolve_column({:column, {nil, "products", "name"}},
         [
           {"A", "products"},
           {"A", "purchases"},
@@ -156,7 +158,7 @@ defmodule ExoSQLTest do
 
 
     try do
-      ExoSQL.resolve_column({:column, {nil, nil, "prix"}},
+      resolve_column({:column, {nil, nil, "prix"}},
         [
           {"A", "users"},
           {"A", "purchases"},
@@ -168,7 +170,7 @@ defmodule ExoSQLTest do
     end
 
     try do
-      ExoSQL.resolve_column({:column, {nil, nil, "id"}},
+      resolve_column({:column, {nil, nil, "id"}},
         [
           {"A", "users"},
           {"A", "purchases"},
@@ -184,16 +186,15 @@ defmodule ExoSQLTest do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
-    {:ok, query} = ExoSQL.parse("
+    {:ok, result} = ExoSQL.query("
       SELECT products.name, users.name
         FROM products, purchases, users
         WHERE (products.id = product_id) and (user_id = users.id)
         ", context)
-    Logger.debug("Query: #{inspect query}")
-    {:ok, result} = ExoSQL.execute(query, context)
     Logger.debug(ExoSQL.format_result result)
   end
 
+  @tag skip: "Not ready"
   test "Inner join" do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
