@@ -3,6 +3,8 @@ require Logger
 defmodule ExecutorTest do
   use ExUnit.Case
   doctest ExoSQL.Executor, import: true
+  @moduletag :capture_log
+
   @context %{ "A" => {ExoSQL.Csv, path: "test/data/csv/"} }
 
   test "Execute a simple manual plan"  do

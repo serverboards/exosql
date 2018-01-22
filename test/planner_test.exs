@@ -3,6 +3,7 @@ require Logger
 defmodule PlannerTest do
   use ExUnit.Case
   doctest ExoSQL.Planner, import: true
+  @moduletag :capture_log
 
   @context %{
     "A" => {ExoSQL.Csv, path: "test/data/csv/"}
