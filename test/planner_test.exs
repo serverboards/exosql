@@ -17,7 +17,11 @@ defmodule PlannerTest do
     assert plan ==
       {:select,
         {:filter,
-          {:execute, {"A", "products"}, [], []},
+          {:execute, {"A", "products"}, [], [
+            {"A", "products", "price"},
+            {"A", "products", "stock"},
+            {"A", "products", "name"},
+          ]},
           {:op, {"and",
             {:op, {">", {:column, {"A", "products", "price"}}, {:lit, "0"}}},
             {:op, {">=", {:column, {"A", "products", "stock"}}, {:lit, "1"}}

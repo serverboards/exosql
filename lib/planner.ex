@@ -16,7 +16,7 @@ defmodule ExoSQL.Planner do
     iex> plan(query)
     {:ok,
       {:select,
-        {:execute, {"A", "products"}, [], []}, [
+        {:execute, {"A", "products"}, [], [{"A", "products", "name"}, {"A", "products", "price"}]}, [
           column: {"A", "products", "name"},
           column: {"A", "products", "price"}]
         }
@@ -31,10 +31,13 @@ defmodule ExoSQL.Planner do
       {:select,
         {:filter,
           {:cross_join,
-            {:execute, {"A", "products"}, [], []},
+            {:execute, {"A", "products"}, [], [{"A", "products", "id"}, {"A", "products", "name"}]},
             {:cross_join,
-              {:execute, {"A", "purchases"}, [], []},
-              {:execute, {"A", "users"}, [], []}
+              {:execute, {"A", "purchases"}, [], [
+                  {"A", "purchases", "user_id"},
+                  {"A", "purchases", "product_id"}
+                ]},
+              {:execute, {"A", "users"}, [], [{"A", "users", "id"}, {"A", "users", "name"}]}
             }
           },
           {:op, {"AND",
@@ -61,7 +64,7 @@ defmodule ExoSQL.Planner do
     Logger.debug("Prepare plan for query: #{inspect query}")
 
     from = for {db, table} <- query.from do
-      columns = get_table_columns_at_expr(db, table, [query.where | query.select])
+      columns = Enum.uniq(get_table_columns_at_expr(db, table, [query.where | query.select]))
       quals = []
       {:execute, {db, table}, quals, columns}
     end
