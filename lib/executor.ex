@@ -11,7 +11,7 @@ defmodule ExoSQL.Executor do
     # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}")
 
     exprs = Enum.map(columns, &simplify_expr_columns(&1, rcolumns))
-    # Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs} / #{inspect columns} #{inspect rcolumns}")
+    Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs} / #{inspect columns}")
 
     rows = Enum.map(rows, fn row ->
       Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, row) )
@@ -113,7 +113,7 @@ defmodule ExoSQL.Executor do
     {:op, {op, op1, op2}}
   end
   def simplify_expr_columns({:fn, {f, params}}, names) do
-    Enum.map(params, &simplify_expr_columns(&1, names))
+    params = Enum.map(params, &simplify_expr_columns(&1, names))
     {:fn, {f, params}}
   end
   def simplify_expr_columns(other, _names), do: other
