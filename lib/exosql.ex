@@ -27,7 +27,8 @@ defmodule ExoSQL do
   end
 
   def parse(sql, context), do: ExoSQL.Parser.parse(sql, context)
-  def execute(sql, context), do: ExoSQL.Executor.execute(sql, context)
+  def plan(parsed, context), do: ExoSQL.Planner.plan(parsed, context)
+  def execute(plan, context), do: ExoSQL.Executor.execute(plan, context)
 
   def query(sql, context) do
     # Logger.debug(inspect sql)

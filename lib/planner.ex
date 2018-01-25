@@ -61,10 +61,12 @@ defmodule ExoSQL.Planner do
   TODO: explore different plans acording to some weights and return the optimal one.
   """
   def plan(query) do
-    Logger.debug("Prepare plan for query: #{inspect query}")
-
     from = for {db, table} <- query.from do
-      columns = Enum.uniq(get_table_columns_at_expr(db, table, [query.where | query.select]))
+      all_expressions = [query.where, query.select, query.groupby]
+
+      Logger.debug(inspect all_expressions)
+
+      columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
       quals = []
       {:execute, {db, table}, quals, columns}
     end
@@ -79,7 +81,13 @@ defmodule ExoSQL.Planner do
       from_plan
     end
 
-    select_plan = {:select, where_plan, query.select}
+    group_plan = if query.groupby do
+      {:group_by, where_plan, query.groupby}
+    else
+      where_plan
+    end
+
+    select_plan = {:select, group_plan, query.select}
 
     plan = select_plan
 
@@ -97,5 +105,6 @@ defmodule ExoSQL.Planner do
     get_table_columns_at_expr(db, table, op1) ++ get_table_columns_at_expr(db, table, op2)
   end
   def get_table_columns_at_expr(db, table, {:column, {db, table, var} = res}), do: [res]
+  def get_table_columns_at_expr(db, table, {:fn, {f, params}}), do: Enum.flat_map(params, &get_table_columns_at_expr(db, table, &1))
   def get_table_columns_at_expr(db, table, _other), do: []
 end

@@ -53,16 +53,43 @@ defmodule ExoSQLTest do
     Logger.debug(ExoSQL.format_result result)
   end
 
+  test "Very simple aggregate" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"}
+    }
+
+    {:ok, parsed} = ExoSQL.parse("""
+      SELECT user_id, COUNT(A.purchases.user_id)
+        FROM A.purchases
+       GROUP BY user_id
+    """, context)
+    Logger.debug("Parsed: #{inspect parsed, inspect: true}")
+    {:ok, plan} = ExoSQL.Planner.plan(parsed)
+    Logger.debug("Plan: #{inspect plan, inspect: true}")
+    {:ok, result} = ExoSQL.Executor.execute(plan, context)
+
+    Logger.debug(ExoSQL.format_result result)
+    assert result.rows == [
+      ["1",3],
+      ["2",2],
+      ["3",1]
+    ]
+  end
+
   test "Aggregates" do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
-    {:ok, result} = ExoSQL.query("""
+    {:ok, parsed} = ExoSQL.parse("""
       SELECT A.products.name, COUNT(*), AVG(A.products.price * 1.21)
         FROM A.products, A.purchases
        WHERE A.products.id = A.purchases.product_id
        GROUP BY A.products.name
     """, context)
+    Logger.debug("Parsed: #{inspect parsed, inspect: true}")
+    {:ok, plan} = ExoSQL.Planner.plan(parsed)
+    Logger.debug("Plan: #{inspect plan, inspect: true}")
+    {:ok, result} = ExoSQL.Executor.execute(plan, context)
 
     Logger.debug(ExoSQL.format_result result)
   end
@@ -71,10 +98,15 @@ defmodule ExoSQLTest do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
-    {:ok, result} = ExoSQL.query("""
+    {:ok, parse} = ExoSQL.parse("""
       SELECT COUNT(*), AVG(A.products.price)
-        FROM A.products GROUP BY A.products.id
+        FROM A.products
     """, context)
+    Logger.debug("Parsed: #{inspect parse, inspect: true}")
+    {:ok, plan} = ExoSQL.Planner.plan(parse)
+    Logger.debug("Plan: #{inspect plan, inspect: true}")
+    {:ok, result} = ExoSQL.Executor.execute(plan, context)
+
 
     Logger.debug(ExoSQL.format_result result)
   end

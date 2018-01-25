@@ -114,7 +114,7 @@ defmodule ExecutorTest do
     assert result == %ExoSQL.Result{columns: ["?NONAME"], rows: [[4]]}
   end
 
-  test "Excute complex aggregation" do
+  test "Execute complex aggregation" do
     plan =
       {:select,
         {:group_by,
@@ -133,7 +133,7 @@ defmodule ExecutorTest do
   end
 
   test "Execute complex aggregation 2" do
-      # SELECT users.name, AVG(price*ammount) FROM users, purchases, products
+      # SELECT users.name, SUM(price*ammount) FROM users, purchases, products
       # WHERE users.id = purchases.user_id AND products.id = purchases.product_id
       # GROUP BY product.id
       plan =
@@ -143,7 +143,7 @@ defmodule ExecutorTest do
               {:cross_join,
                 {:execute, {"A","users"}, [], [{"A", "users", "id"}, {"A", "users", "name"}]} ,
                   {:cross_join,
-                    {:execute, {"A","purchases"}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}]},
+                    {:execute, {"A","purchases"}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}, {"A","purchases","ammount"}]},
                     {:execute, {"A","products"}, [], [{"A","products","id"},{"A","products","name"}, {"A","products","price"}]}
                 },
               },
@@ -154,14 +154,23 @@ defmodule ExecutorTest do
             },
           [ {:column, {"A","users","name"}} ]
           },
-          [{:column, {"A", "users", "name"}}, {:fn, {:sum, [{:column, 1}, {:pass, {:column, 6 }}]}}]
+          [
+            {:column, {"A", "users", "name"}},
+            {:fn, {"sum", [
+              {:column, 1},
+              {:pass, {:op, {"*",
+                {:column, {"A","products","price"}},
+                {:column, {"A","purchases","ammount"}}
+              } } }
+            ] } }
+          ]
         }
 
 
       {:ok, result} = ExoSQL.Executor.execute(plan, @context)
       assert result == %ExoSQL.Result{
         columns: [{"A", "users", "name"}, "?NONAME"],
-        rows: [["David", 44], ["Javier", 31], ["Patricio", 3]]
+        rows: [["David", 550], ["Javier", 1300], ["Patricio", 30]]
       }
       Logger.info ExoSQL.format_result(result)
   end

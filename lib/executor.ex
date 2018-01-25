@@ -8,6 +8,7 @@ defmodule ExoSQL.Executor do
   """
   def execute({:select, from, columns}, context) do
     {:ok, %{ columns: rcolumns, rows: rows}} = execute(from, context)
+    Logger.debug("Get #{inspect columns} from #{inspect rcolumns}")
 
     exprs = Enum.map(columns, &simplify_expr_columns(&1, rcolumns))
     # Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs} / #{inspect columns} #{inspect rcolumns}")
@@ -16,7 +17,7 @@ defmodule ExoSQL.Executor do
       Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, row) )
     end)
 
-    columns = resolve_column_nanes(columns)
+    columns = resolve_column_names(columns)
 
     {:ok, %ExoSQL.Result{ rows: rows, columns: columns}}
   end
@@ -72,12 +73,19 @@ defmodule ExoSQL.Executor do
 
     sgroups = Enum.map(groups, &simplify_expr_columns(&1, data.columns))
     rows = Enum.reduce(data.rows, %{}, fn row, acc ->
-      # Logger.debug("Which set for #{inspect row} by #{inspect sgroups}/#{inspect groups} (#{inspect data.columns})")
       set = Enum.map(sgroups, &ExoSQL.Expr.run_expr( &1, row ))
+      # Logger.debug("Which set for #{inspect row} by #{inspect sgroups}/#{inspect groups} (#{inspect data.columns}): #{inspect set}")
       Map.put( acc, set, [row] ++ Map.get(acc, set, []))
-    end) |> Enum.map(fn {k,v} -> k ++ [v] end)
+    end) |> Enum.map(fn {group,row} ->
+      table = %ExoSQL.Result{
+        columns: data.columns,
+        rows: row
+      }
+      group ++ [table] 
+    end)
 
-    columns = resolve_column_nanes(groups) ++ ["*"]
+    columns = resolve_column_names(groups) ++ [{"group_by"}]
+    Logger.debug("Grouped rows: #{inspect columns} #{inspect rows}")
 
     {:ok, %ExoSQL.Result{
       columns: columns,
@@ -105,7 +113,7 @@ defmodule ExoSQL.Executor do
     {:op, {op, op1, op2}}
   end
   def simplify_expr_columns({:fn, {f, params}}, names) do
-    params = Enum.map(params, &simplify_expr_columns(&1, names))
+    Enum.map(params, &simplify_expr_columns(&1, names))
     {:fn, {f, params}}
   end
   def simplify_expr_columns(other, _names), do: other
@@ -121,7 +129,7 @@ defmodule ExoSQL.Executor do
   end
   def simplify_expr_columns_nofn(other, _names), do: other
 
-  def resolve_column_nanes(columns) do
+  def resolve_column_names(columns) do
     Enum.map(columns, fn
       {:column, col} -> col
       other -> "?NONAME"
