@@ -22,7 +22,7 @@ table_list -> table : [{table, '$1'}].
 table_list -> table comma table_list : [{table, '$1'}] ++ '$3'.
 
 join -> '$empty' : [].
-join -> join_type table 'ON' expr join : [{'$1', {'$2', '$4'}}] ++ '$5'.
+join -> join_type table 'ON' expr join : [{'$1', {{table, '$2'}, '$4'}}] ++ '$5'.
 
 join_type -> 'JOIN' : inner_join.
 join_type -> 'INNER' 'JOIN' : inner_join.

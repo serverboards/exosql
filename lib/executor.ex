@@ -11,7 +11,7 @@ defmodule ExoSQL.Executor do
     # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}")
 
     exprs = Enum.map(columns, &simplify_expr_columns(&1, rcolumns))
-    Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs} / #{inspect columns}")
+    # Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs} / #{inspect columns}")
 
     rows = Enum.map(rows, fn row ->
       Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, row) )
@@ -68,6 +68,36 @@ defmodule ExoSQL.Executor do
     }}
   end
 
+  def execute({:inner_join, table1, table2, expr}, context) do
+    {:ok, table1} = execute(table1, context)
+    {:ok, table2} = execute(table2, context)
+
+    # Logger.debug("Inner join of\n\n#{inspect table1, pretty: true}\n\n#{inspect table2, pretty: true}\n\n#{inspect expr}")
+
+    columns = table1.columns ++ table2.columns
+    # Logger.debug("Columns #{inspect columns}")
+    rexpr = simplify_expr_columns(expr, columns)
+    rows = Enum.reduce( table1.rows, [], fn row1, acc ->
+      nrows = Enum.map( table2.rows, fn row2 ->
+        row = row1 ++ row2
+        if ExoSQL.Expr.run_expr(rexpr, row) do
+          row
+        else
+          nil
+        end
+      end) |> Enum.filter(&(&1 != nil))
+      # Logger.debug("Test row #{inspect nrow} #{inspect rexpr}")
+      nrows ++ acc
+    end)
+
+    # Logger.debug("Result #{inspect rows, pretty: true}")
+
+    {:ok, %ExoSQL.Result{
+      columns: columns,
+      rows: rows
+    }}
+  end
+
   def execute({:group_by, from, groups}, context) do
     {:ok, data} = execute(from, context)
 
@@ -85,7 +115,7 @@ defmodule ExoSQL.Executor do
     end)
 
     columns = resolve_column_names(groups) ++ [{"group_by"}]
-    Logger.debug("Grouped rows: #{inspect columns}\n #{inspect rows, pretty: true}")
+    # Logger.debug("Grouped rows: #{inspect columns}\n #{inspect rows, pretty: true}")
 
     {:ok, %ExoSQL.Result{
       columns: columns,
@@ -105,6 +135,7 @@ defmodule ExoSQL.Executor do
   def execute(%{ rows: rows, columns: columns}, _context), do: {:ok, %ExoSQL.Result{ rows: rows, columns: columns }}
 
 
+  ## Simplify the column ids to positions on the list of columns, to ease operations.
   def simplify_expr_columns({:column, cn}, names) when is_number(cn) do
     {:column, cn}
   end

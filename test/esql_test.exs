@@ -227,7 +227,6 @@ defmodule ExoSQLTest do
     Logger.debug(ExoSQL.format_result result)
   end
 
-  @tag skip: "Not ready"
   test "Inner join" do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
@@ -235,11 +234,25 @@ defmodule ExoSQLTest do
     {:ok, query} = ExoSQL.parse("
       SELECT purchases.id, products.name, users.name
         FROM purchases
-       INNER JOIN product
+       INNER JOIN products
           ON purchases.product_id = products.id
        INNER JOIN users
           ON users.id = purchases.user_id
     ", context)
-    Logger.debug("Query: #{inspect query}")
+    Logger.debug("Query: #{inspect query, pretty: true}")
+    {:ok, plan} = ExoSQL.plan(query, context)
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.execute(plan, context)
+    Logger.debug("Result: #{inspect result, pretty: true}")
+
+    assert result == %ExoSQL.Result{
+      columns: [
+        {"A", "purchases", "id"}, {"A", "products", "name"},
+        {"A", "users", "name"}],
+      rows: [
+        ["1", "sugus", "David"], ["2", "lollipop", "David"],
+        ["3", "donut", "David"], ["4", "lollipop", "Javier"],
+        ["5", "water", "Javier"], ["6", "sugus", "Patricio"]
+      ]}
   end
 end

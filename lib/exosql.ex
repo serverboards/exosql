@@ -32,11 +32,12 @@ defmodule ExoSQL do
 
   def query(sql, context) do
     # Logger.debug(inspect sql)
-    {:ok, parsed} = ExoSQL.Parser.parse(sql, context)
-    {:ok, plan} = ExoSQL.Planner.plan(parsed)
+    with {:ok, parsed} <- ExoSQL.Parser.parse(sql, context),
+         {:ok, plan} <- ExoSQL.Planner.plan(parsed) do
+         ExoSQL.Executor.execute(plan, context)
+    end
     # Logger.debug("parsed #{inspect parsed, pretty: true}")
     # Logger.debug("planned #{inspect plan, pretty: true}")
-    ExoSQL.Executor.execute(plan, context)
   end
 
   def explain(sql, context) do

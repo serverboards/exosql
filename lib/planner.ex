@@ -61,11 +61,14 @@ defmodule ExoSQL.Planner do
   TODO: explore different plans acording to some weights and return the optimal one.
   """
   def plan(query) do
+    all_expressions = [
+      query.where,
+      query.select,
+      query.groupby,
+      Enum.map(query.join, fn {:inner_join, {_from, expr}} -> expr end),
+    ]
+    # Logger.debug("All expressions: #{inspect all_expressions}")
     from = for {db, table} <- query.from do
-      all_expressions = [query.where, query.select, query.groupby]
-
-      Logger.debug(inspect all_expressions)
-
       columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
       quals = []
       {:execute, {db, table}, quals, columns}
@@ -75,10 +78,19 @@ defmodule ExoSQL.Planner do
       {:cross_join, fr, acc}
     end)
 
+    join_plan = Enum.reduce(query.join, from_plan, fn
+      {:inner_join, {from, expr}}, acc ->
+        # Logger.debug(inspect from)
+        {db, table} = from
+        columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
+        from = {:execute, from, [], columns}
+        {:inner_join, acc, from, expr}
+    end)
+
     where_plan = if query.where do
-      {:filter, from_plan, query.where}
+      {:filter, join_plan, query.where}
     else
-      from_plan
+      join_plan
     end
 
     group_plan = if query.groupby do
@@ -107,6 +119,8 @@ defmodule ExoSQL.Planner do
 
     {:ok, plan}
   end
+
+  def plan(plan, _context), do: plan(plan)
 
   # Gets all the vars referenced in an expression that refer to a given table
   def get_table_columns_at_expr(db, table, l) when is_list(l) do

@@ -8,12 +8,12 @@ defmodule ExoSQL.Parser do
   """
   @doc """
   """
-  def parse(sql, context) do
+  defp real_parse(sql, context) do
     sql = String.to_charlist(sql)
     {:ok, lexed, _lines} = :sql_lexer.string(sql)
     {:ok, parsed} = :sql_parser.parse(lexed)
     %{select: select, from: from, where: where, groupby: groupby, join: join} = parsed
-
+    Logger.debug(inspect parsed, pretty: true)
     # first resolve all tables
     # convert from to cross joins
     from = Enum.map(from, &resolve_table(&1, context))
@@ -21,15 +21,23 @@ defmodule ExoSQL.Parser do
     groupby = if groupby do
       Enum.map(groupby, &resolve_column(&1, from, context))
     else nil end
+
+    all_tables = if join != [] do
+      from ++ Enum.map(join, fn {_type, {table, _expr}} -> resolve_table(table, context) end)
+    else
+      from
+    end
+    Logger.debug("All tables #{inspect all_tables}")
     join = Enum.map(join, fn {type, {table, expr}} ->
       {type, {
         resolve_table(table, context),
-        expr
+        resolve_column(expr, all_tables, context)
       }}
     end)
 
+
     # the resolve all expressions as we know which tables to use
-    select = Enum.map(select, &resolve_column(&1, from, context))
+    select = Enum.map(select, &resolve_column(&1, all_tables, context))
     where = if where do
       resolve_column(where, from, context)
     else nil end
@@ -41,6 +49,14 @@ defmodule ExoSQL.Parser do
       groupby: groupby,
       join: join
     }}
+  end
+
+  def parse(sql, context) do
+    try do
+      real_parse(sql, context)
+    catch
+      any -> {:error, any}
+    end
   end
 
   def resolve_table({:table, {nil, name}}, context) when is_binary(name) do
