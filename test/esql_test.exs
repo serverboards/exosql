@@ -3,27 +3,16 @@ require Logger
 defmodule ExoSQLTest do
   use ExUnit.Case
   doctest ExoSQL
-
-  test "Cartesian product at CrossJoinTables" do
-    rows = [
-      [[1,11],[2,22],[3,33]],
-      [[4,44],[5,55],[6,66]],
-      [[7,77],[8,88],[9,99]],
-    ]
-    cjt = %ExoSQL.CrossJoinTables{
-      headers: [[:a, :aa],[:b, :bb],[:c, :cc]],
-      rows: rows
-    }
-
-    Enum.map(cjt, &(Logger.info("Row: #{inspect &1}")))
-  end
+  @moduletag :capture_log
 
   test "Simple parse SQL" do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
     {:ok, query} = ExoSQL.parse("SELECT A.products.name, A.products.price FROM A.products", context)
-    {:ok, result} = ExoSQL.execute(query, context)
+    {:ok, plan} = ExoSQL.Planner.plan(query)
+    Logger.debug("Plan is #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.Executor.execute(plan, context)
     Logger.debug(inspect result, pretty: true)
   end
 
@@ -39,9 +28,18 @@ defmodule ExoSQLTest do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
-    {:ok, query} = ExoSQL.parse("SELECT A.products.name, A.users.name FROM A.products, A.purchases, A.users WHERE (A.products.id = A.purchases.product_id) and (A.purchases.user_id = A.users.id)", context)
-    Logger.debug("Query: #{inspect query}")
-    {:ok, result} = ExoSQL.execute(query, context)
+    ExoSQL.explain("""
+      SELECT A.products.name, A.users.name
+        FROM A.products, A.purchases, A.users
+       WHERE (A.products.id = A.purchases.product_id)
+         AND (A.purchases.user_id = A.users.id)
+      """, context)
+    {:ok, result} = ExoSQL.query("""
+      SELECT A.products.name, A.users.name
+        FROM A.products, A.purchases, A.users
+       WHERE (A.products.id = A.purchases.product_id)
+         AND (A.purchases.user_id = A.users.id)
+      """, context)
     Logger.debug(ExoSQL.format_result result)
   end
 
@@ -55,16 +53,43 @@ defmodule ExoSQLTest do
     Logger.debug(ExoSQL.format_result result)
   end
 
+  test "Very simple aggregate" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"}
+    }
+
+    {:ok, parsed} = ExoSQL.parse("""
+      SELECT user_id, COUNT(A.purchases.user_id)
+        FROM A.purchases
+       GROUP BY user_id
+    """, context)
+    Logger.debug("Parsed: #{inspect parsed, pretty: true}")
+    {:ok, plan} = ExoSQL.Planner.plan(parsed)
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.Executor.execute(plan, context)
+
+    Logger.debug(ExoSQL.format_result result)
+    assert result.rows == [
+      ["1",3],
+      ["2",2],
+      ["3",1]
+    ]
+  end
+
   test "Aggregates" do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
-    {:ok, result} = ExoSQL.query("""
+    {:ok, parsed} = ExoSQL.parse("""
       SELECT A.products.name, COUNT(*), AVG(A.products.price * 1.21)
         FROM A.products, A.purchases
        WHERE A.products.id = A.purchases.product_id
        GROUP BY A.products.name
     """, context)
+    Logger.debug("Parsed: #{inspect parsed, pretty: true}")
+    {:ok, plan} = ExoSQL.Planner.plan(parsed)
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.Executor.execute(plan, context)
 
     Logger.debug(ExoSQL.format_result result)
   end
@@ -73,12 +98,18 @@ defmodule ExoSQLTest do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
-    {:ok, result} = ExoSQL.query("""
+    {:ok, parse} = ExoSQL.parse("""
       SELECT COUNT(*), AVG(A.products.price)
         FROM A.products
     """, context)
+    Logger.debug("Parsed: #{inspect parse, pretty: true}")
+    {:ok, plan} = ExoSQL.Planner.plan(parse)
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.Executor.execute(plan, context)
+
 
     Logger.debug(ExoSQL.format_result result)
+    assert result == %ExoSQL.Result{columns: ["?NONAME", "?NONAME"], rows: [[4, 16.0]]}
   end
 
 
@@ -96,25 +127,27 @@ defmodule ExoSQLTest do
   end
 
   test "Resolve table and column from partial name" do
+    import ExoSQL.Parser, only: [resolve_table: 2, resolve_column: 3]
+
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
-    assert {:table, {"A", "products"}} ==
-      ExoSQL.resolve_table({:table, {nil, "products"}}, context)
+    assert {"A", "products"} ==
+      resolve_table({:table, {nil, "products"}}, context)
 
-    assert {:table, {"A", "products"}} ==
-      ExoSQL.resolve_table({:table, {"A", "products"}}, context)
+    assert {"A", "products"} ==
+      resolve_table({:table, {"A", "products"}}, context)
 
 
     try do
-      ExoSQL.resolve_table({:table, {nil, "prioducts"}}, context)
+      resolve_table({:table, {nil, "prioducts"}}, context)
     catch
       {:not_found, "prioducts"} -> :ok
       other -> flunk(inspect other)
     end
 
     try do
-      ExoSQL.resolve_table({:table, {nil, "products"}}, %{
+      resolve_table({:table, {nil, "products"}}, %{
         "A" => {ExoSQL.Csv, path: "test/data/csv"},
         "B" => {ExoSQL.Csv, path: "test/data/csv"},
         })
@@ -125,7 +158,7 @@ defmodule ExoSQLTest do
 
 
     assert {:column, {"A", "products", "price"}} ==
-      ExoSQL.resolve_column({:column, {nil, nil, "price"}},
+      resolve_column({:column, {nil, nil, "price"}},
         [
           {"A", "users"},
           {"A", "purchases"},
@@ -133,14 +166,14 @@ defmodule ExoSQLTest do
         context)
 
     assert {:column, {"A", "products", "price"}} ==
-      ExoSQL.resolve_column({:column, {nil, "products", "price"}},
+      resolve_column({:column, {nil, "products", "price"}},
         [
           {"A", "users"},
           {"A", "purchases"},
           {"A", "products"}],
         context)
     assert {:column, {"A", "products", "price"}} ==
-      ExoSQL.resolve_column({:column, {"A", "products", "price"}},
+      resolve_column({:column, {"A", "products", "price"}},
         [
           {"A", "users"},
           {"A", "purchases"},
@@ -148,7 +181,7 @@ defmodule ExoSQLTest do
         context)
 
     assert {:column, {"A", "products", "name"}} ==
-      ExoSQL.resolve_column({:column, {nil, "products", "name"}},
+      resolve_column({:column, {nil, "products", "name"}},
         [
           {"A", "products"},
           {"A", "purchases"},
@@ -158,7 +191,7 @@ defmodule ExoSQLTest do
 
 
     try do
-      ExoSQL.resolve_column({:column, {nil, nil, "prix"}},
+      resolve_column({:column, {nil, nil, "prix"}},
         [
           {"A", "users"},
           {"A", "purchases"},
@@ -170,7 +203,7 @@ defmodule ExoSQLTest do
     end
 
     try do
-      ExoSQL.resolve_column({:column, {nil, nil, "id"}},
+      resolve_column({:column, {nil, nil, "id"}},
         [
           {"A", "users"},
           {"A", "purchases"},
@@ -186,14 +219,40 @@ defmodule ExoSQLTest do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
     }
-    {:ok, query} = ExoSQL.parse("
+    {:ok, result} = ExoSQL.query("
       SELECT products.name, users.name
         FROM products, purchases, users
         WHERE (products.id = product_id) and (user_id = users.id)
         ", context)
-    Logger.debug("Query: #{inspect query}")
-    {:ok, result} = ExoSQL.execute(query, context)
     Logger.debug(ExoSQL.format_result result)
+  end
 
+  test "Inner join" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"}
+    }
+    {:ok, query} = ExoSQL.parse("
+      SELECT purchases.id, products.name, users.name
+        FROM purchases
+       INNER JOIN products
+          ON purchases.product_id = products.id
+       INNER JOIN users
+          ON users.id = purchases.user_id
+    ", context)
+    Logger.debug("Query: #{inspect query, pretty: true}")
+    {:ok, plan} = ExoSQL.plan(query, context)
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.execute(plan, context)
+    Logger.debug("Result: #{inspect result, pretty: true}")
+
+    assert result == %ExoSQL.Result{
+      columns: [
+        {"A", "purchases", "id"}, {"A", "products", "name"},
+        {"A", "users", "name"}],
+      rows: [
+        ["1", "sugus", "David"], ["2", "lollipop", "David"],
+        ["3", "donut", "David"], ["4", "lollipop", "Javier"],
+        ["5", "water", "Javier"], ["6", "sugus", "Patricio"]
+      ]}
   end
 end

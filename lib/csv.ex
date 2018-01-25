@@ -30,6 +30,6 @@ defmodule ExoSQL.Csv do
 
     [headers | rows] = data
 
-    {:ok, %{ headers: headers, rows: rows}}
+    {:ok, %ExoSQL.Result{ columns: headers, rows: rows}}
   end
 end
