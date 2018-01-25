@@ -93,6 +93,14 @@ defmodule ExoSQL.Executor do
     } }
   end
 
+  def execute({:table_to_row, from}, context) do
+    {:ok, data} = execute(from, context)
+    {:ok, %ExoSQL.Result{
+      columns: ["group_by"],
+      rows: [[data]]
+    }}
+  end
+
   def execute(%ExoSQL.Result{} = res, _context), do: {:ok, res}
   def execute(%{ rows: rows, columns: columns}, _context), do: {:ok, %ExoSQL.Result{ rows: rows, columns: columns }}
 

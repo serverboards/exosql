@@ -109,6 +109,7 @@ defmodule ExoSQLTest do
 
 
     Logger.debug(ExoSQL.format_result result)
+    assert result == %ExoSQL.Result{columns: ["?NONAME", "?NONAME"], rows: [[4, 16.0]]}
   end
 
 

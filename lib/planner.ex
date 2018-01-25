@@ -87,15 +87,21 @@ defmodule ExoSQL.Planner do
       where_plan
     end
 
-    select = if query.groupby do # if grouping, special care on aggregate builtins
-      res = Enum.map(query.select, &fix_aggregates_select(&1, Enum.count(query.groupby)))
-      Logger.debug("Aggregated selects #{inspect res, pretty: true}")
-      res
-    else
-      query.select
+
+    select_plan = cond do
+      # if grouping, special care on aggregate builtins
+      query.groupby ->
+        select = Enum.map(query.select, &fix_aggregates_select(&1, Enum.count(query.groupby)))
+        {:select, group_plan, select}
+      # groups full table, do a table to row conversion, and then the ops
+      has_aggregates(query.select) ->
+        table_in_a_row = {:table_to_row, group_plan}
+        select = Enum.map(query.select, &fix_aggregates_select(&1, 0))
+        {:select, table_in_a_row, select}
+      true ->
+        {:select, group_plan, query.select}
     end
 
-    select_plan = {:select, group_plan, select}
 
     plan = select_plan
 
@@ -136,4 +142,13 @@ defmodule ExoSQL.Planner do
     end
   end
   def fix_aggregates_select(other, _), do: other
+
+  def has_aggregates({:op, {op, op1, op2}}) do
+    has_aggregates(op1) or has_aggregates(op2)
+  end
+  def has_aggregates({:fn, {f, args}}) do
+    ExoSQL.Builtins.is_aggregate(f)
+  end
+  def has_aggregates(l) when is_list(l), do: Enum.any?(l, &has_aggregates/1)
+  def has_aggregates(_other), do: false
 end
