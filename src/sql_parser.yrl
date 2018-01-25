@@ -41,8 +41,8 @@ expr -> column : {column, '$1'}.
 expr -> lit : {lit, unwrap('$1')}.
 expr -> open_par expr close_par : '$2'.
 expr -> expr op expr: {op, {unwrap('$2'), '$1', '$3'}}.
-expr -> id open_par expr_list close_par : {fn, {unwrap('$1'), '$3'}}.
-expr -> id open_par op close_par: tag('$3', "*"), {fn, {unwrap('$1'), [{lit, "*"}]}}.
+expr -> id open_par expr_list close_par : {fn, {unwrap_d('$1'), '$3'}}.
+expr -> id open_par op close_par: tag('$3', "*"), {fn, {unwrap_d('$1'), [{lit, "*"}]}}.
 
 column -> id dot id dot id : {unwrap('$1'), unwrap('$3'), unwrap('$5')}.
 column -> id dot id : {nil, unwrap('$1'), unwrap('$3')}.
@@ -54,6 +54,7 @@ select -> column comma select: [unwrap('$1')] ++ '$3'.
 
 Erlang code.
 
+unwrap_d({_,_,V}) -> 'Elixir.String':downcase('Elixir.List':to_string(V)).
 unwrap({_,_,V}) -> 'Elixir.List':to_string(V).
 tag(A, B) ->
   A1 = unwrap(A),

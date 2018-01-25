@@ -23,18 +23,18 @@ defmodule ExoSQL.Builtins do
   def is_aggregate("sum"), do: true
   def is_aggregate(_other), do: false
 
-  def count(data) do
-    # Logger.debug("Count #{inspect data}")
+  def count(data, _) do
+    Logger.debug("Count #{inspect data}")
     Enum.count(data.rows)
   end
 
   def avg(data, expr) do
-    # Logger.debug("Avg of #{inspect data} by #{inspect expr}")
-    sum(data, expr) / count(data)
+    Logger.debug("Avg of #{inspect data} by #{inspect expr}")
+    sum(data, expr) / count(data, nil)
   end
 
   def sum(data, expr) do
-    # Logger.debug("Sum of #{inspect data} by #{inspect expr}")
+    Logger.debug("Sum of #{inspect data} by #{inspect expr}")
     expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns)
     # Logger.debug("Simplified expression #{inspect expr}")
     Enum.reduce(data.rows, 0, fn row, acc ->

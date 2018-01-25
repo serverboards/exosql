@@ -8,7 +8,7 @@ defmodule ExoSQL.Executor do
   """
   def execute({:select, from, columns}, context) do
     {:ok, %{ columns: rcolumns, rows: rows}} = execute(from, context)
-    Logger.debug("Get #{inspect columns} from #{inspect rcolumns}")
+    # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}")
 
     exprs = Enum.map(columns, &simplify_expr_columns(&1, rcolumns))
     # Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs} / #{inspect columns} #{inspect rcolumns}")
@@ -81,11 +81,11 @@ defmodule ExoSQL.Executor do
         columns: data.columns,
         rows: row
       }
-      group ++ [table] 
+      group ++ [table]
     end)
 
     columns = resolve_column_names(groups) ++ [{"group_by"}]
-    Logger.debug("Grouped rows: #{inspect columns} #{inspect rows}")
+    Logger.debug("Grouped rows: #{inspect columns}\n #{inspect rows, pretty: true}")
 
     {:ok, %ExoSQL.Result{
       columns: columns,

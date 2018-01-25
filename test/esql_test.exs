@@ -63,9 +63,9 @@ defmodule ExoSQLTest do
         FROM A.purchases
        GROUP BY user_id
     """, context)
-    Logger.debug("Parsed: #{inspect parsed, inspect: true}")
+    Logger.debug("Parsed: #{inspect parsed, pretty: true}")
     {:ok, plan} = ExoSQL.Planner.plan(parsed)
-    Logger.debug("Plan: #{inspect plan, inspect: true}")
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
     {:ok, result} = ExoSQL.Executor.execute(plan, context)
 
     Logger.debug(ExoSQL.format_result result)
@@ -86,9 +86,9 @@ defmodule ExoSQLTest do
        WHERE A.products.id = A.purchases.product_id
        GROUP BY A.products.name
     """, context)
-    Logger.debug("Parsed: #{inspect parsed, inspect: true}")
+    Logger.debug("Parsed: #{inspect parsed, pretty: true}")
     {:ok, plan} = ExoSQL.Planner.plan(parsed)
-    Logger.debug("Plan: #{inspect plan, inspect: true}")
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
     {:ok, result} = ExoSQL.Executor.execute(plan, context)
 
     Logger.debug(ExoSQL.format_result result)
@@ -102,9 +102,9 @@ defmodule ExoSQLTest do
       SELECT COUNT(*), AVG(A.products.price)
         FROM A.products
     """, context)
-    Logger.debug("Parsed: #{inspect parse, inspect: true}")
+    Logger.debug("Parsed: #{inspect parse, pretty: true}")
     {:ok, plan} = ExoSQL.Planner.plan(parse)
-    Logger.debug("Plan: #{inspect plan, inspect: true}")
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
     {:ok, result} = ExoSQL.Executor.execute(plan, context)
 
 

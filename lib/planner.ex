@@ -87,7 +87,15 @@ defmodule ExoSQL.Planner do
       where_plan
     end
 
-    select_plan = {:select, group_plan, query.select}
+    select = if query.groupby do # if grouping, special care on aggregate builtins
+      res = Enum.map(query.select, &fix_aggregates_select(&1, Enum.count(query.groupby)))
+      Logger.debug("Aggregated selects #{inspect res, pretty: true}")
+      res
+    else
+      query.select
+    end
+
+    select_plan = {:select, group_plan, select}
 
     plan = select_plan
 
@@ -107,4 +115,25 @@ defmodule ExoSQL.Planner do
   def get_table_columns_at_expr(db, table, {:column, {db, table, var} = res}), do: [res]
   def get_table_columns_at_expr(db, table, {:fn, {f, params}}), do: Enum.flat_map(params, &get_table_columns_at_expr(db, table, &1))
   def get_table_columns_at_expr(db, table, _other), do: []
+
+
+  # If an aggregate function is found, rewrite it to be a real aggregate
+  # The way to do it is set as first argument the column with the aggregated table
+  # and the rest inside `{:pass, op}`, so its the real function that evaluates it
+  # over the first argument
+  def fix_aggregates_select({:op, {op, op1, op2}}, aggregate_column) do
+    op1 = fix_aggregates_select(op1, aggregate_column)
+    op2 = fix_aggregates_select(op2, aggregate_column)
+
+    {:op, {op, op1, op2}}
+  end
+  def fix_aggregates_select({:fn, {f, args}}, aggregate_column) do
+    if ExoSQL.Builtins.is_aggregate(f) do
+      args = for a <- args, do: {:pass, a}
+      {:fn, {f, [ {:column, aggregate_column} | args]}}
+    else
+      {:fn, {f, args}}
+    end
+  end
+  def fix_aggregates_select(other, _), do: other
 end
