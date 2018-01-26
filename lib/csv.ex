@@ -16,7 +16,7 @@ defmodule ExoSQL.Csv do
     {:ok, %{ columns: columns}}
   end
 
-  def execute(db, table, quals, columns) do
+  def execute(db, table, _quals, _columns) do
     # Logger.debug("Get #{inspect table}#{inspect columns} | #{inspect quals}")
 
     filename = "#{Path.join(db[:path], table)}.csv"

@@ -132,9 +132,9 @@ defmodule ExoSQL.Planner do
   def get_table_columns_at_expr(db, table, {:op, {_op, op1, op2}}) do
     get_table_columns_at_expr(db, table, op1) ++ get_table_columns_at_expr(db, table, op2)
   end
-  def get_table_columns_at_expr(db, table, {:column, {db, table, var} = res}), do: [res]
-  def get_table_columns_at_expr(db, table, {:fn, {f, params}}), do: Enum.flat_map(params, &get_table_columns_at_expr(db, table, &1))
-  def get_table_columns_at_expr(db, table, _other), do: []
+  def get_table_columns_at_expr(db, table, {:column, {db, table, _var} = res}), do: [res]
+  def get_table_columns_at_expr(db, table, {:fn, {_f, params}}), do: Enum.flat_map(params, &get_table_columns_at_expr(db, table, &1))
+  def get_table_columns_at_expr(_db, _table, _other), do: []
 
 
   # If an aggregate function is found, rewrite it to be a real aggregate
@@ -160,7 +160,7 @@ defmodule ExoSQL.Planner do
   def has_aggregates({:op, {op, op1, op2}}) do
     has_aggregates(op1) or has_aggregates(op2)
   end
-  def has_aggregates({:fn, {f, args}}) do
+  def has_aggregates({:fn, {f, _args}}) do
     ExoSQL.Builtins.is_aggregate(f)
   end
   def has_aggregates(l) when is_list(l), do: Enum.any?(l, &has_aggregates/1)

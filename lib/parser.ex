@@ -6,14 +6,12 @@ defmodule ExoSQL.Parser do
   convert an dprocess the structure using more context knowledge to return
   a proper Query struct.
   """
-  @doc """
-  """
   defp real_parse(sql, context) do
     sql = String.to_charlist(sql)
     {:ok, lexed, _lines} = :sql_lexer.string(sql)
     {:ok, parsed} = :sql_parser.parse(lexed)
     %{select: select, from: from, where: where, groupby: groupby, join: join} = parsed
-    Logger.debug(inspect parsed, pretty: true)
+    # Logger.debug(inspect parsed, pretty: true)
     # first resolve all tables
     # convert from to cross joins
     from = Enum.map(from, &resolve_table(&1, context))
@@ -27,7 +25,7 @@ defmodule ExoSQL.Parser do
     else
       from
     end
-    Logger.debug("All tables #{inspect all_tables}")
+    # Logger.debug("All tables #{inspect all_tables}")
     join = Enum.map(join, fn {type, {table, expr}} ->
       {type, {
         resolve_table(table, context),
@@ -51,6 +49,9 @@ defmodule ExoSQL.Parser do
     }}
   end
 
+  @doc """
+  Parses an SQL statement and returns the parsed ExoSQL struct.
+  """
   def parse(sql, context) do
     try do
       real_parse(sql, context)
@@ -71,10 +72,10 @@ defmodule ExoSQL.Parser do
     case options do
       [table] -> table
       l when length(l) == 0 -> throw {:not_found, name}
-      other -> throw {:ambiguous_table_name, name}
+      _other -> throw {:ambiguous_table_name, name}
     end
   end
-  def resolve_table({:table, {db, name} = orig} , context), do: orig
+  def resolve_table({:table, {_db, _name} = orig} , _context), do: orig
 
   def resolve_column({:column, {nil, nil, column}}, tables, context) do
     matches = Enum.flat_map(tables, fn {db, table} ->
@@ -91,16 +92,16 @@ defmodule ExoSQL.Parser do
     case matches do
       [{:column, data}] -> {:column, data}
       l when length(l) == 0 -> throw {:not_found, column}
-      other -> throw {:ambiguous_column_name, column}
+      _other -> throw {:ambiguous_column_name, column}
     end
   end
 
-  def resolve_column({:column, {nil, table, column}}, tables, context) do
+  def resolve_column({:column, {nil, table, column}}, tables, _context) do
     # Logger.debug("Look for #{table}.#{column} at #{inspect tables}")
     matches = Enum.flat_map(tables, fn
       {db, ^table} ->
         [{:column, {db, table, column}}]
-      other ->
+      _other ->
         []
     end)
 
@@ -108,7 +109,7 @@ defmodule ExoSQL.Parser do
       [{:column, data}] -> {:column, data}
       l when length(l) == 0 ->
         throw {:not_found, {table, column}}
-      other -> throw {:ambiguous_column_name, {table, column}}
+      _other -> throw {:ambiguous_column_name, {table, column}}
     end
   end
   def resolve_column({:column, _} = column, _tables, _context), do: column

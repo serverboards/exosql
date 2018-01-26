@@ -136,7 +136,7 @@ defmodule ExoSQL.Executor do
 
 
   ## Simplify the column ids to positions on the list of columns, to ease operations.
-  def simplify_expr_columns({:column, cn}, names) when is_number(cn) do
+  def simplify_expr_columns({:column, cn}, _names) when is_number(cn) do
     {:column, cn}
   end
   def simplify_expr_columns({:column, cn}, names) do
@@ -171,7 +171,7 @@ defmodule ExoSQL.Executor do
   def resolve_column_names(columns) do
     Enum.map(columns, fn
       {:column, col} -> col
-      other -> "?NONAME"
+      _other -> "?NONAME"
     end)
   end
 end

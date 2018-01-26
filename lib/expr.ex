@@ -3,10 +3,6 @@ require Logger
 defmodule ExoSQL.Expr do
   import ExoSQL.Utils, only: [to_number: 1]
 
-  defp get_item([{k, v} | rest], k), do: v
-  defp get_item([{nk, _} | rest], k), do: get_item(rest, k)
-  defp get_item([], _k), do: nil
-
   def run_expr({:op, {"and", op1, op2}}, cur) do
     r1 = run_expr(op1, cur)
     r2 = run_expr(op2, cur)
