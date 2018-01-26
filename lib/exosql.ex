@@ -25,7 +25,6 @@ defmodule ExoSQL do
     http://www.facebook.com | 302
     https://serverboards.io | 200
     http://www.serverboards.io | 301
-    http://www.google.com | 302
     ''' |> to_string
 
   ```
