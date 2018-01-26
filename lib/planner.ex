@@ -157,7 +157,7 @@ defmodule ExoSQL.Planner do
   end
   def fix_aggregates_select(other, _), do: other
 
-  def has_aggregates({:op, {op, op1, op2}}) do
+  def has_aggregates({:op, {_op, op1, op2}}) do
     has_aggregates(op1) or has_aggregates(op2)
   end
   def has_aggregates({:fn, {f, _args}}) do
