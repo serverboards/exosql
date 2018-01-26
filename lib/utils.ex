@@ -37,7 +37,7 @@ defmodule ExoSQL.Utils do
     s = ["\n", s |> Enum.join(" | ")]
     s = [s,  "\n"]
     totalw = (Enum.count(s) * 3) + Enum.reduce(widths, 0, &(&1 + &2))
-    Logger.debug("#{inspect widths} #{inspect totalw}")
+    # Logger.debug("#{inspect widths} #{inspect totalw}")
     s = [s, String.duplicate("-",  totalw)]
     s = [s,  "\n"]
 
