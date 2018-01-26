@@ -68,17 +68,46 @@ defmodule ExoSQL.Executor do
     }}
   end
 
+  # An inner join does a first loop to get the quals for a single query on the
+  # second table with all the join ids (a {:in, "id", [1,2,3,4]} or similar)
+  # and then does the full join and filter
   def execute({:inner_join, table1, table2, expr}, context) do
-    {:ok, table1} = execute(table1, context)
-    {:ok, table2} = execute(table2, context)
+    {:ok, res1} = execute(table1, context)
+
+    # calculate extraquals with the {:in, "id", [...]} form, or none and
+    # do a full query
+    # if it follows the canonical form, then all OK
+    {:execute, {db2, tablename2}, quals2, columns2} = table2
+    extraquals = case expr do
+      {:op, {"=", {:column, a}, {:column, b}}} ->
+        idf = case a do
+          {^db2, ^tablename2, columnname} -> b
+          _other -> a
+        end
+        ids = simplify_expr_columns({:column, idf}, res1.columns)
+        # Logger.debug("From ltable get #{inspect idf} #{inspect ids}")
+        inids = Enum.reduce(res1.rows, [], fn row, acc ->
+          [ExoSQL.Expr.run_expr(ids, row) | acc]
+        end) |> Enum.uniq
+        # Logger.debug("inids #{inspect inids}")
+        {_db, _table, columnname} = idf
+        [{:in, columnname, inids}]
+      _expr ->
+        []
+    end
+    table2 = {:execute, {db2, tablename2}, quals2 ++ extraquals, columns2}
+
+    # Now we get the final table2. As always if the quals are ignored it is just
+    # less efficient.
+    {:ok, res2} = execute(table2, context)
 
     # Logger.debug("Inner join of\n\n#{inspect table1, pretty: true}\n\n#{inspect table2, pretty: true}\n\n#{inspect expr}")
 
-    columns = table1.columns ++ table2.columns
+    columns = res1.columns ++ res2.columns
     # Logger.debug("Columns #{inspect columns}")
     rexpr = simplify_expr_columns(expr, columns)
-    rows = Enum.reduce( table1.rows, [], fn row1, acc ->
-      nrows = Enum.map( table2.rows, fn row2 ->
+    rows = Enum.reduce( res1.rows, [], fn row1, acc ->
+      nrows = Enum.map( res2.rows, fn row2 ->
         row = row1 ++ row2
         if ExoSQL.Expr.run_expr(rexpr, row) do
           row

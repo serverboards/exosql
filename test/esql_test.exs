@@ -255,4 +255,33 @@ defmodule ExoSQLTest do
         ["5", "water", "Javier"], ["6", "sugus", "Patricio"]
       ]}
   end
+
+  test "Advanced inner join, ask by qual" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"},
+      "B" => {ExoSQL.HTTP, []}
+    }
+    {:ok, query} = ExoSQL.parse("
+      SELECT urls.url, request.status_code
+        FROM urls
+       INNER JOIN request
+          ON urls.url = request.url
+    ", context)
+    Logger.debug("Query: #{inspect query, pretty: true}")
+    {:ok, plan} = ExoSQL.plan(query, context)
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.execute(plan, context)
+    Logger.debug("Result: #{inspect result, pretty: true}")
+
+    assert result == %ExoSQL.Result{
+      columns: [{"A", "urls", "url"}, {"B", "request", "status_code"}],
+      rows: [
+        ["https://serverboards.io/e404", 404],
+        ["http://www.facebook.com", 302],
+        ["https://serverboards.io", 200],
+        ["http://www.serverboards.io", 301],
+        ["http://www.google.com", 302]
+      ]}
+
+  end
 end
