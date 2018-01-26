@@ -1,11 +1,17 @@
 require Logger
 
 defmodule ExoSQL.HTTP do
+  @moduledoc """
+  Example Extractor that performs HTTP requests
+
+  This is a virtual extractor that requires an `url` to operate with.
+  """
+
   def schema(_db) do
     {:ok, ["request"]}
   end
 
-  def schema(_db, "request"), do: {:ok, ["url","status_code","body"]}
+  def schema(_db, "request"), do: {:ok, %{ columns: ["url","status_code","body"]}}
 
   def execute(_db, "request", quals, columns) do
     Logger.debug("Get request #{inspect quals} #{inspect columns}")

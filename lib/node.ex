@@ -1,4 +1,10 @@
 defmodule ExoSQL.Node do
+  @moduledoc """
+  Example extractor that gather information from the system
+
+  Currently only supports the `passwd` table.
+  """
+
   def schema(_db), do: {:ok, ["passwd"]}
   def schema(_db, "passwd") do
     {:ok, %{ columns: [

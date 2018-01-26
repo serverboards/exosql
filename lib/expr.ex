@@ -1,6 +1,20 @@
 require Logger
 
 defmodule ExoSQL.Expr do
+  @moduledoc """
+  Expression executor.
+
+  Requires a simplified expression from `simplify_expr_columns` that converts
+  columns names to column positions, and then use as:
+
+    ```
+    iex> row = [1,2,3,4,5]
+    iex> expr = {:op, {"*", {:column, 1}, {:column, 2}}}
+    iex> ExoSQL.Expr.run_expr(expr, row)
+    6
+    ```
+  """
+
   import ExoSQL.Utils, only: [to_number: 1]
 
   def run_expr({:op, {"and", op1, op2}}, cur) do

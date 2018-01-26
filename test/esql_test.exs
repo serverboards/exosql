@@ -3,6 +3,7 @@ require Logger
 defmodule ExoSQLTest do
   use ExUnit.Case
   doctest ExoSQL
+  doctest ExoSQL.Expr
   @moduletag :capture_log
 
   test "Simple parse SQL" do

@@ -164,7 +164,12 @@ defmodule ExoSQL.Executor do
   def execute(%{ rows: rows, columns: columns}, _context), do: {:ok, %ExoSQL.Result{ rows: rows, columns: columns }}
 
 
-  ## Simplify the column ids to positions on the list of columns, to ease operations.
+  @doc """
+  Simplify the column ids to positions on the list of columns, to ease operations.
+
+  This operation is required to change expressions from column names to column
+  positions, so that `ExoSQL.Expr` can perform its operations on rows.
+  """
   def simplify_expr_columns({:column, cn}, _names) when is_number(cn) do
     {:column, cn}
   end

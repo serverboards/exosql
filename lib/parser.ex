@@ -2,6 +2,13 @@ require Logger
 
 defmodule ExoSQL.Parser do
   @moduledoc """
+  Parsed an SQL statement into a ExoSQL.Query.
+
+  The Query then needs to be planned and executed.
+
+  It also resolves partial column and table names using data from the context
+  and its schema functions.
+
   Uses leex and yecc to perform a first phase parsing, and then
   convert an dprocess the structure using more context knowledge to return
   a proper Query struct.

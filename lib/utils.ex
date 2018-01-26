@@ -1,6 +1,10 @@
 require Logger
 
 defmodule ExoSQL.Utils do
+  @moduledoc """
+  Various assorted utility functions.
+  """
+
   def to_number(n) when is_number(n), do: {:ok, n}
   def to_number(n) when is_binary(n) do # Weak typing
     {n, rem} = if String.contains?(n, ".") do
@@ -34,12 +38,13 @@ defmodule ExoSQL.Utils do
       end
     end
     widths = Enum.map(s, &String.length/1)
-    s = ["\n", s |> Enum.join(" | ")]
+    s = [ s |> Enum.join(" | ")]
     s = [s,  "\n"]
     totalw = (Enum.count(s) * 3) + Enum.reduce(widths, 0, &(&1 + &2))
     # Logger.debug("#{inspect widths} #{inspect totalw}")
     s = [s, String.duplicate("-",  totalw)]
     s = [s,  "\n"]
+    widths = Enum.drop(widths, -1) ++ [0]
 
     data = for r <- res.rows do
       c = Enum.join(Enum.map( Enum.zip(widths, r), fn {w, r} ->
@@ -48,7 +53,7 @@ defmodule ExoSQL.Utils do
       [c, "\n"]
     end
 
-    s = [s, data, "\n"]
+    s = [s, data]
 
     # Logger.debug(inspect s)
     to_string(s)

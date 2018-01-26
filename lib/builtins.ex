@@ -1,6 +1,17 @@
 require Logger
 
 defmodule ExoSQL.Builtins do
+  @moduledoc """
+  Builtin functions.
+
+  There are two categories, normal functions and aggregate functions. Aggregate
+  functions receive as first parameter a ExoSQL.Result with a full table,
+  and the rest of parameters are the function calling parameters, unsolved.
+
+  These expressions must be first simplified with
+  `ExoSQL.executor.simplify_expr_columns` and then executed on the rows with
+  `ExoSQL.Expr.run_expr`.
+  """
   import ExoSQL.Utils, only: [to_number: 1, to_float: 1]
 
   def round(n, r) do

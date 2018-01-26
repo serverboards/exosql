@@ -7,6 +7,34 @@ defmodule ExoSQL do
 
   The databases can be heterogenic, so you can perform searches mixing
   data from postgres, mysql, csv or Google Analytics.
+
+  For example:
+
+  ```
+    iex> {:ok, result} = ExoSQL.query(
+    ...>   "SELECT urls.url, status_code FROM urls INNER JOIN request ON request.url = urls.url",
+    ...>    %{
+    ...>      "A" => {ExoSQL.Csv, path: "test/data/csv/"},
+    ...>      "B" => {ExoSQL.HTTP, []}
+    ...>    })
+    ...> ExoSQL.format_result(result)
+    '''
+    A.urls.url | B.request.status_code
+    -------------------------------------
+    https://serverboards.io/e404 | 404
+    http://www.facebook.com | 302
+    https://serverboards.io | 200
+    http://www.serverboards.io | 301
+    http://www.google.com | 302
+    ''' |> to_string
+
+  ```
+
+  It also contains functions for all the steps of the process:
+  `parse` |> `plan` |> `execute`. They can be useful for debugging pourposes.
+
+  Finally there are helper functions as `explain` that prints out an explanation
+  of the plan, and `format_result` for pretty printing results.
   """
 
   defmodule Query do

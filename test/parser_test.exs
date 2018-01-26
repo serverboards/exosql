@@ -2,7 +2,7 @@ require Logger
 
 defmodule ParserTest do
   use ExUnit.Case
-  doctest ExoSQL
+  doctest ExoSQL.Parser
   @moduletag :capture_log
 
   test "Lex and parse" do
