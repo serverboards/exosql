@@ -1,7 +1,7 @@
 defmodule ExoSQL.Node do
   def schema(_db), do: {:ok, ["passwd"]}
   def schema(_db, "passwd") do
-    {:ok, %{ headers: [
+    {:ok, %{ columns: [
       "user", "x", "uid", "gid", "name", "home", "shell"
       ]}}
   end

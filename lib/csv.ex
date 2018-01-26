@@ -11,9 +11,9 @@ defmodule ExoSQL.Csv do
 
   def schema(db, table) do
     filename = "#{Path.join(db[:path], table)}.csv"
-    [{:ok, headers}] = File.stream!(filename) |> CSV.decode |> Enum.take(1)
+    [{:ok, columns}] = File.stream!(filename) |> CSV.decode |> Enum.take(1)
 
-    {:ok, %{ headers: headers}}
+    {:ok, %{ columns: columns}}
   end
 
   def execute(db, table, quals, columns) do
@@ -28,8 +28,8 @@ defmodule ExoSQL.Csv do
       l
     end
 
-    [headers | rows] = data
+    [columns | rows] = data
 
-    {:ok, %ExoSQL.Result{ columns: headers, rows: rows}}
+    {:ok, %ExoSQL.Result{ columns: columns, rows: rows}}
   end
 end

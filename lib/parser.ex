@@ -79,7 +79,7 @@ defmodule ExoSQL.Parser do
   def resolve_column({:column, {nil, nil, column}}, tables, context) do
     matches = Enum.flat_map(tables, fn {db, table} ->
       {:ok, table_schema} = ExoSQL.schema(db, table, context)
-      Enum.flat_map(table_schema.headers, fn name ->
+      Enum.flat_map(table_schema.columns, fn name ->
         if name == column do
           [{:column, {db, table, name}}]
         else
