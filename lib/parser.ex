@@ -49,7 +49,17 @@ defmodule ExoSQL.Parser do
 
 
     # the resolve all expressions as we know which tables to use
-    select = Enum.map(select, &resolve_column(&1, all_tables, context))
+    select = case select do
+      [{:all_columns}] ->
+        Enum.flat_map(all_tables, fn {db, table} ->
+          {:ok, %{ columns: columns }} = ExoSQL.schema(db, table, context)
+          Enum.map(columns, &{:column, {db, table, &1}})
+        end)
+      _other  ->
+        Enum.map(select, &resolve_column(&1, all_tables, context))
+    end
+
+
     where = if where do
       resolve_column(where, from, context)
     else nil end

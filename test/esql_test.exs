@@ -36,6 +36,30 @@ defmodule ExoSQLTest do
     Logger.debug("\n#{ExoSQL.format_result(result)}")
   end
 
+  test "Select * from" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"}
+    }
+    {:ok, query} = ExoSQL.parse("SELECT * FROM A.users", context)
+    Logger.debug("Query is #{inspect query, pretty: true}")
+    {:ok, plan} = ExoSQL.Planner.plan(query, context)
+    Logger.debug("Plan is #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.Executor.execute(plan, context)
+    Logger.debug(inspect result, pretty: true)
+
+    assert result == %ExoSQL.Result{
+      columns: [
+        {"A", "users", "id"},
+        {"A", "users", "name"},
+        {"A", "users", "email"}
+        ],
+      rows: [
+        ["1", "David", "dmono@example.org"],
+        ["2", "Javier", "javier@example.org"],
+        ["3", "Patricio", "patricio@example.org"]
+      ]}
+  end
+
   test "Multiples tables" do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}
@@ -320,7 +344,7 @@ defmodule ExoSQLTest do
         ["https://serverboards.io/e404", "Serverboards"],
     ]}
 
-    {:ok, query} = ExoSQL.parse("
+    {:ok, result} = ExoSQL.parse("
         SELECT url, name
           FROM urls
       ORDER BY url ASC

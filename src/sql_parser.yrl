@@ -18,6 +18,7 @@ query -> select from join where groupby orderby: #{select => '$1', from => '$2',
 query -> select: #{select => '$1', from => [], join => [], where => nil, groupby => nil, orderby => []}.
 
 select -> 'SELECT' expr_list : '$2'.
+select -> 'SELECT' op : tag('$2', "*"), [{all_columns}].
 
 from -> 'FROM' table_list : '$2'.
 table_list -> table : [{table, '$1'}].

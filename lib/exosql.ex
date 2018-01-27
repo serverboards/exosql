@@ -87,4 +87,19 @@ defmodule ExoSQL do
 
     apply(db, :schema, [opts, table])
   end
+
+  def repl(context) do
+    input = IO.gets("exosql> ") |> String.trim
+    case input do
+      "" -> :eof
+      other ->
+        case query(input, context) do
+          {:ok, result} ->
+            IO.puts(format_result(result))
+          {:error, err} ->
+            Logger.error(inspect err)
+        end
+        repl(context)
+    end
+  end
 end
