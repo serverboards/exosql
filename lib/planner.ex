@@ -74,9 +74,13 @@ defmodule ExoSQL.Planner do
       {:execute, {db, table}, quals, columns}
     end
 
-    from_plan = Enum.reduce((tl from), (hd from), fn fr, acc ->
-      {:cross_join, fr, acc}
-    end)
+    from_plan = if from == [] do
+      %ExoSQL.Result{columns: ["?NONAME"], rows: [[1]]} # just one element
+    else
+      Enum.reduce((tl from), (hd from), fn fr, acc ->
+        {:cross_join, fr, acc}
+      end)
+    end
 
     join_plan = Enum.reduce(query.join, from_plan, fn
       {:inner_join, {from, expr}}, acc ->

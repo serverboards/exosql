@@ -17,7 +17,18 @@ defmodule ExoSQLTest do
     Logger.debug(inspect result, pretty: true)
   end
 
-  test "Another database" do
+  test "No from" do
+    context = %{}
+
+    {:ok, query} = ExoSQL.parse("SELECT 1 + 1", context)
+    {:ok, plan} = ExoSQL.Planner.plan(query, context)
+    Logger.debug("Plan is #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.Executor.execute(plan, context)
+    Logger.debug(inspect result, pretty: true)
+    assert result.rows == [[2]]
+  end
+
+  test "Simple WHERE" do
     context = %{
       "A" => {ExoSQL.Node, []}
     }

@@ -7,13 +7,14 @@ query
   join join_type.
 
 Terminals
-id comma dot lit int op open_par close_par
+id comma dot lit op open_par close_par
 'SELECT' 'FROM' 'INNER' 'CROSS' 'JOIN' 'ON' 'WHERE' 'GROUP' 'BY'
 .
 
 Rootsymbol query.
 
 query -> select from join where groupby: #{select => '$1', from => '$2', join => '$3', where => '$4', groupby => '$5'}.
+query -> select: #{select => '$1', from => [], join => [], where => nil, groupby => nil}.
 
 select -> 'SELECT' expr_list : '$2'.
 

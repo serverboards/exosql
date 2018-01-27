@@ -27,15 +27,32 @@ defmodule ExoSQL.Expr do
     r2 = run_expr(op2, cur)
     r1 && r2
   end
+  def run_expr({:op, {"or", op1, op2}}, cur) do
+    r1 = run_expr(op1, cur)
+    r2 = run_expr(op2, cur)
+    r1 || r2
+  end
+  def run_expr({:op, {"OR", op1, op2}}, cur) do
+    r1 = run_expr(op1, cur)
+    r2 = run_expr(op2, cur)
+    r1 || r2
+  end
 
   def run_expr({:op, {"=", op1, op2}}, cur), do: run_expr(op1, cur) == run_expr(op2, cur)
   def run_expr({:op, {"==", op1, op2}}, cur), do: run_expr(op1, cur) == run_expr(op2, cur)
+  def run_expr({:op, {"!=", op1, op2}}, cur), do: run_expr(op1, cur) != run_expr(op2, cur)
 
   def run_expr({:op, {">", op1, op2}}, cur) do
     {:ok, n1} = to_number(run_expr(op1, cur))
     {:ok, n2} = to_number(run_expr(op2, cur))
 
     n1 > n2
+  end
+  def run_expr({:op, {"<", op1, op2}}, cur) do
+    {:ok, n1} = to_number(run_expr(op1, cur))
+    {:ok, n2} = to_number(run_expr(op2, cur))
+
+    n1 < n2
   end
 
   def run_expr({:op, {">=", op1, op2}}, cur) do
@@ -44,12 +61,32 @@ defmodule ExoSQL.Expr do
 
     n1 >= n2
   end
+  def run_expr({:op, {"<=", op1, op2}}, cur) do
+    {:ok, n1} = to_number(run_expr(op1, cur))
+    {:ok, n2} = to_number(run_expr(op2, cur))
+
+    n1 <= n2
+  end
 
   def run_expr({:op, {"*", op1, op2}}, cur) do
     {:ok, n1} = to_number(run_expr(op1, cur))
     {:ok, n2} = to_number(run_expr(op2, cur))
 
     n1 * n2
+  end
+
+  def run_expr({:op, {"+", op1, op2}}, cur) do
+    {:ok, n1} = to_number(run_expr(op1, cur))
+    {:ok, n2} = to_number(run_expr(op2, cur))
+
+    n1 + n2
+  end
+
+  def run_expr({:op, {"-", op1, op2}}, cur) do
+    {:ok, n1} = to_number(run_expr(op1, cur))
+    {:ok, n2} = to_number(run_expr(op2, cur))
+
+    n1 - n2
   end
 
   def run_expr({:op, {"||", op1, op2}}, cur) do
