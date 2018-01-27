@@ -152,6 +152,28 @@ defmodule ExoSQL.Executor do
     } }
   end
 
+  def execute({:order_by, type, expr, from}, context) do
+    {:ok, data} = execute(from, context)
+
+    expr = case expr do
+      {:column, _} ->
+        simplify_expr_columns(expr, data.columns)
+      {:lit, n} ->
+        {:column, n}
+    end
+
+    rows = if type == :asc do
+      Enum.sort_by(data.rows, &ExoSQL.Expr.run_expr(expr, &1))
+    else
+      Enum.sort_by(data.rows, &ExoSQL.Expr.run_expr(expr, &1), &>=/2)
+    end
+
+    {:ok, %ExoSQL.Result{
+      columns: data.columns,
+      rows: rows,
+    }}
+  end
+
   def execute({:table_to_row, from}, context) do
     {:ok, data} = execute(from, context)
     {:ok, %ExoSQL.Result{

@@ -43,6 +43,7 @@ defmodule ExoSQL do
       where: nil,
       groupby: nil,
       join: nil,
+      orderby: [],
     ]
   end
 

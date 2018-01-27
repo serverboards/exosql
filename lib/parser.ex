@@ -17,7 +17,14 @@ defmodule ExoSQL.Parser do
     sql = String.to_charlist(sql)
     {:ok, lexed, _lines} = :sql_lexer.string(sql)
     {:ok, parsed} = :sql_parser.parse(lexed)
-    %{select: select, from: from, where: where, groupby: groupby, join: join} = parsed
+    %{
+      select: select,
+      from: from,
+      where: where,
+      groupby: groupby,
+      join: join,
+      orderby: orderby
+    } = parsed
     # Logger.debug(inspect parsed, pretty: true)
     # first resolve all tables
     # convert from to cross joins
@@ -47,12 +54,19 @@ defmodule ExoSQL.Parser do
       resolve_column(where, from, context)
     else nil end
 
+    # Resolve orderby
+    orderby = Enum.map(orderby, fn
+      {type, expr} ->
+        {type, resolve_column(expr, all_tables, context)}
+    end)
+
     {:ok, %ExoSQL.Query{
       select: select,
       from: from, # all the tables it gets data from, but use only the frist and the joins.
       where: where,
       groupby: groupby,
-      join: join
+      join: join,
+      orderby: orderby
     }}
   end
 

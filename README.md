@@ -40,6 +40,7 @@ end
 * WHERE
 * INNER JOIN
 * GROUP BY
+* ORDER BY
 * Some aggregation functions: COUNT, SUM, AVG
 
 Check the tests for current features available.
@@ -115,3 +116,14 @@ context = %{
     ["http://www.google.com", 302]
   ]}
 ```
+
+
+## Known BUGS
+
+* When doing `ORDER BY [column id], [column name]`, it reverses the order. To
+  avoid use one or the other, dont mix order by column name and result column
+  position.
+
+  This is becasue the planner does the ordering on column name first, then
+  the select which limits the columns and reorder them and then the ordering
+  by column position.

@@ -4,17 +4,18 @@ query
   from table_list
   where expr expr_list
   column table groupby
-  join join_type.
+  join join_type
+  orderby order_expr_list order_expr asc_desc.
 
 Terminals
 id comma dot lit op open_par close_par
-'SELECT' 'FROM' 'INNER' 'CROSS' 'JOIN' 'ON' 'WHERE' 'GROUP' 'BY'
+'SELECT' 'FROM' 'INNER' 'CROSS' 'JOIN' 'ON' 'WHERE' 'GROUP' 'BY' 'ORDER' 'ASC' 'DESC'
 .
 
 Rootsymbol query.
 
-query -> select from join where groupby: #{select => '$1', from => '$2', join => '$3', where => '$4', groupby => '$5'}.
-query -> select: #{select => '$1', from => [], join => [], where => nil, groupby => nil}.
+query -> select from join where groupby orderby: #{select => '$1', from => '$2', join => '$3', where => '$4', groupby => '$5', orderby => '$6'}.
+query -> select: #{select => '$1', from => [], join => [], where => nil, groupby => nil, orderby => []}.
 
 select -> 'SELECT' expr_list : '$2'.
 
@@ -34,6 +35,16 @@ where -> 'WHERE' expr : '$2'.
 
 groupby -> '$empty' : nil.
 groupby -> 'GROUP' 'BY' expr_list : '$3'.
+
+orderby -> '$empty' : [].
+orderby -> 'ORDER' 'BY' order_expr_list : '$3'.
+order_expr_list -> order_expr: ['$1'].
+order_expr_list -> order_expr comma order_expr_list: ['$1'] ++ '$3'.
+order_expr -> column asc_desc: {'$2', {column, '$1'}}.
+order_expr -> lit asc_desc: {ok, N} = 'Elixir.ExoSQL.Utils':to_number(unwrap('$1')), {'$2', {lit, N}}.
+asc_desc -> '$empty' : asc.
+asc_desc -> 'ASC' : asc.
+asc_desc -> 'DESC' : desc.
 
 expr_list -> expr : ['$1'].
 expr_list -> expr comma expr_list: ['$1'] ++ '$3'.

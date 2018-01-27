@@ -65,6 +65,7 @@ defmodule ExoSQL.Planner do
       query.where,
       query.select,
       query.groupby,
+      Enum.map(query.orderby, fn {_type, expr} -> expr end),
       Enum.map(query.join, fn {:inner_join, {_from, expr}} -> expr end),
     ]
     # Logger.debug("All expressions: #{inspect all_expressions}")
@@ -103,23 +104,36 @@ defmodule ExoSQL.Planner do
       where_plan
     end
 
+    order_plan = Enum.reduce(query.orderby, group_plan, fn
+      {_type, {:lit, _n}}, acc ->
+        acc
+      {type, expr}, acc ->
+        {:order_by, type, expr, acc}
+    end)
 
     select_plan = cond do
       # if grouping, special care on aggregate builtins
       query.groupby ->
         select = Enum.map(query.select, &fix_aggregates_select(&1, Enum.count(query.groupby)))
-        {:select, group_plan, select}
+        {:select, order_plan, select}
       # groups full table, do a table to row conversion, and then the ops
       has_aggregates(query.select) ->
-        table_in_a_row = {:table_to_row, group_plan}
+        table_in_a_row = {:table_to_row, order_plan}
         select = Enum.map(query.select, &fix_aggregates_select(&1, 0))
         {:select, table_in_a_row, select}
       true ->
-        {:select, group_plan, query.select}
+        {:select, order_plan, query.select}
     end
 
+    order_plan = Enum.reduce(query.orderby, select_plan, fn
+      {type, {:lit, n}}, acc ->
+        {:order_by, type, {:column, n-1}, acc}
+      {_type, _expr}, acc ->
+        acc
+    end)
 
-    plan = select_plan
+
+    plan = order_plan
 
     {:ok, plan}
   end

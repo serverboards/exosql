@@ -293,6 +293,86 @@ defmodule ExoSQLTest do
         ["https://serverboards.io", 200],
         ["http://www.serverboards.io", 301],
       ]}
+  end
+
+  test "Order by" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"},
+    }
+    {:ok, query} = ExoSQL.parse("
+      SELECT url, name
+        FROM urls
+    ORDER BY url
+      ", context)
+    Logger.debug("Query: #{inspect query, pretty: true}")
+    {:ok, plan} = ExoSQL.plan(query, context)
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.execute(plan, context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+
+
+    assert result == %ExoSQL.Result{
+      columns: [{"A", "urls", "url"}, {"A", "urls", "name"}],
+      rows: [
+        ["http://www.facebook.com", "Facebook"],
+        ["http://www.serverboards.io", "Serverboards"],
+        ["https://serverboards.io", "Serverboards"],
+        ["https://serverboards.io/e404", "Serverboards"],
+    ]}
+
+    {:ok, query} = ExoSQL.parse("
+        SELECT url, name
+          FROM urls
+      ORDER BY url ASC
+        ", context)
+    assert result == %ExoSQL.Result{
+      columns: [{"A", "urls", "url"}, {"A", "urls", "name"}],
+      rows: [
+        ["http://www.facebook.com", "Facebook"],
+        ["http://www.serverboards.io", "Serverboards"],
+        ["https://serverboards.io", "Serverboards"],
+        ["https://serverboards.io/e404", "Serverboards"],
+    ]}
+
+    {:ok, result} = ExoSQL.query("
+        SELECT url, name
+          FROM urls
+      ORDER BY url DESC
+      ", context)
+    assert result == %ExoSQL.Result{
+        columns: [{"A", "urls", "url"}, {"A", "urls", "name"}],
+        rows: [
+          ["https://serverboards.io/e404", "Serverboards"],
+          ["https://serverboards.io", "Serverboards"],
+          ["http://www.serverboards.io", "Serverboards"],
+          ["http://www.facebook.com", "Facebook"],
+    ]}
+  end
+
+  test "Sort by result order" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"},
+    }
+    # There is atrick here as if ask for url, name, url is at the 1st column of
+    # the origin table, but we want the number 2 of the result table
+    {:ok, query} = ExoSQL.parse("
+        SELECT name, url
+          FROM urls
+      ORDER BY 2
+      ", context)
+    Logger.debug("Query: #{inspect query, pretty: true}")
+    {:ok, plan} = ExoSQL.plan(query, context)
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.execute(plan, context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+    assert result == %ExoSQL.Result{
+        columns: [{"A", "urls", "name"}, {"A", "urls", "url"}],
+        rows: [
+          ["Facebook", "http://www.facebook.com"],
+          ["Serverboards", "http://www.serverboards.io"],
+          ["Serverboards", "https://serverboards.io"],
+          ["Serverboards", "https://serverboards.io/e404"],
+        ]}
 
   end
 end
