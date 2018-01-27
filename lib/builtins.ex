@@ -28,7 +28,21 @@ defmodule ExoSQL.Builtins do
     a <> b
   end
 
+  def not_(a) do
+    not bool(a)
+  end
 
+  def bool(nil), do: false
+  def bool(0), do: false
+  def bool(""), do: false
+  def bool(false), do: false
+  def bool(_), do: true
+
+  def lower(s), do: String.downcase(s)
+  def upper(s), do: String.upcase(s)
+  def to_string_(s), do: to_string(s)
+
+  ### Aggregate functions
   def is_aggregate("count"), do: true
   def is_aggregate("avg"), do: true
   def is_aggregate("sum"), do: true
