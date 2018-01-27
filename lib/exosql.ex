@@ -92,7 +92,7 @@ defmodule ExoSQL do
     input = IO.gets("exosql> ") |> String.trim
     case input do
       "" -> :eof
-      other ->
+      _other ->
         case query(input, context) do
           {:ok, result} ->
             IO.puts(format_result(result))

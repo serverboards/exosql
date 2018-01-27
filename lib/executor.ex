@@ -81,7 +81,7 @@ defmodule ExoSQL.Executor do
     extraquals = case expr do
       {:op, {"=", {:column, a}, {:column, b}}} ->
         idf = case a do
-          {^db2, ^tablename2, columnname} -> b
+          {^db2, ^tablename2, _columnname} -> b
           _other -> a
         end
         ids = simplify_expr_columns({:column, idf}, res1.columns)
