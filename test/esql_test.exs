@@ -398,4 +398,18 @@ defmodule ExoSQLTest do
           ["Serverboards", "https://serverboards.io/e404"],
         ]}
   end
+
+  test "Reflection on current context" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"},
+    }
+    {:ok, query} = ExoSQL.parse("SELECT * FROM self.tables", context)
+    Logger.debug("Query: #{inspect query, pretty: true}")
+    {:ok, plan} = ExoSQL.plan(query, context)
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.execute(plan, context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+
+    assert Enum.count(result.rows) > 0
+  end
 end

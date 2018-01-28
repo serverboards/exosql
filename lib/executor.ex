@@ -22,6 +22,23 @@ defmodule ExoSQL.Executor do
     {:ok, %ExoSQL.Result{ rows: rows, columns: columns}}
   end
 
+  def execute({:execute, {"self", "tables"}, _quals, _columns}, context) do
+    rows = Enum.flat_map(context, fn {db, _conf} ->
+      {:ok, tables} = ExoSQL.schema(db, context)
+      Enum.flat_map(tables, fn table ->
+        {:ok, %{ columns: columns}} = ExoSQL.schema(db, table, context)
+        Enum.map(columns, fn column ->
+          [db, table, column]
+        end)
+      end)
+    end)
+    # Logger.debug("Rows: #{inspect rows}")
+
+    {:ok, %{
+      columns: [{"self", "tables", "db"},{"self", "tables", "table"},{"self", "tables", "column"}],
+      rows: rows
+    }}
+  end
   def execute({:execute, {db, table}, quals, columns}, context) do
     {dbmod, context} = context[db]
     case apply(dbmod, :execute, [context, table, quals, columns]) do

@@ -41,7 +41,9 @@ end
 * INNER JOIN
 * GROUP BY
 * ORDER BY
-* Some aggregation functions: COUNT, SUM, AVG
+* Aggregation functions: COUNT, SUM, AVG
+* Builtin functions and operators: * / + - || or and round concat..
+* Basic Reflection over `self.tables`
 
 Check the tests for current features available.
 

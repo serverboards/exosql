@@ -77,10 +77,18 @@ defmodule ExoSQL do
 
   def format_result(res), do: ExoSQL.Utils.format_result(res)
 
+  def schema("self", _context) do
+    {:ok, ["tables"]}
+  end
   def schema(db, context) do
     {db, opts} = context[db]
 
     apply(db, :schema, [opts])
+  end
+  def schema("self", "tables", _context) do
+    {:ok, %{
+      columns: ["db", "table", "column"]
+    }}
   end
   def schema(db, table, context) do
     {db, opts} = context[db]
