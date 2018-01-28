@@ -344,7 +344,7 @@ defmodule ExoSQLTest do
         ["https://serverboards.io/e404", "Serverboards"],
     ]}
 
-    {:ok, result} = ExoSQL.parse("
+    {:ok, result} = ExoSQL.query("
         SELECT url, name
           FROM urls
       ORDER BY url ASC
@@ -397,6 +397,5 @@ defmodule ExoSQLTest do
           ["Serverboards", "https://serverboards.io"],
           ["Serverboards", "https://serverboards.io/e404"],
         ]}
-
   end
 end
