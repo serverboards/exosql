@@ -427,4 +427,31 @@ defmodule ExoSQLTest do
 
     assert Enum.count(result.rows) > 0
   end
+
+  test "Basic datetime support" do
+    context = %{}
+    {:ok, result} = ExoSQL.query("SELECT NOW()", context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+
+    {:ok, result} = ExoSQL.query("SELECT NOW() > TO_DATETIME(\"2018-01-30\")", context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+    assert result.rows == [[true]]
+
+    {:ok, result} = ExoSQL.query("SELECT NOW() > TO_DATETIME(\"2050-01-30 12:35:21Z\")", context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+    assert result.rows == [[false]]
+
+    {:ok, result} = ExoSQL.query("SELECT to_datetime(0) < NOW()", context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+    assert result.rows == [[true]]
+
+    {:ok, result} = ExoSQL.query("SELECT to_datetime(1517402656) == to_datetime(\"2018-01-31 12:44:16Z\")", context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+    assert result.rows == [[true]]
+
+    {:ok, result} = ExoSQL.query("SELECT 1517402656 == to_timestamp(to_datetime(\"2018-01-31 12:44:16Z\"))", context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+    assert result.rows == [[true]]
+
+  end
 end

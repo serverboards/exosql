@@ -54,6 +54,7 @@ expr -> column : {column, '$1'}.
 expr -> lit : {lit, unwrap('$1')}.
 expr -> open_par expr close_par : '$2'.
 expr -> expr op expr: {op, {unwrap('$2'), '$1', '$3'}}.
+expr -> id open_par close_par : {fn, {unwrap_d('$1'), []}}.
 expr -> id open_par expr_list close_par : {fn, {unwrap_d('$1'), '$3'}}.
 expr -> id open_par op close_par: tag('$3', "*"), {fn, {unwrap_d('$1'), [{lit, "*"}]}}.
 
