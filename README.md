@@ -119,6 +119,41 @@ context = %{
   ]}
 ```
 
+A Simple extractor can be:
+```elixir
+defmodule MyExtractor do
+  def schema(_config), do: {:ok, ["week"]}
+  def schema(_config, "week"), do: {:ok, %{ columns: ["id", "nr", "name", "weekend"] }}
+  def execute(_config, "week", _quals, _columns) do
+    {:ok, %{
+      columns: ["id", "nr", "name", "weekend"],
+      rows: [
+        [1, 0, "Sunday", true],
+        [2, 1, "Monday", false],
+        [3, 2, "Tuesday", false],
+        [4, 3, "Wednesday", false],
+        [5, 4, "Thursday", false],
+        [6, 5, "Friday", false],
+        [7, 6, "Saturday", true],
+      ]
+    }}
+  end
+end
+```
+
+And then a simple query:
+
+```elixir
+{:ok, res} = ExoSQL.query("SELECT * FROM week WHERE weekend", %{ "A" => {MyExtractor, []}})               
+ExoSQL.format_result(res)
+```
+
+|A.week.id | A.week.nr | A.week.name | A.week.weekend|
+|----------|-----------|-------------|---------------|
+|1         | 0         | Sunday      | true          |
+|7         | 6         | Saturday    | true          |
+
+
 
 ## Known BUGS
 
@@ -129,3 +164,6 @@ context = %{
   This is becasue the planner does the ordering on column name first, then
   the select which limits the columns and reorder them and then the ordering
   by column position.
+
+* There is no operator priority, so all your expressions should be surrounded
+  by parenthesis when there is ambiguity.
