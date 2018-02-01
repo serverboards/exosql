@@ -153,7 +153,28 @@ ExoSQL.format_result(res)
 |1         | 0         | Sunday      | true          |
 |7         | 6         | Saturday    | true          |
 
+## Related libraries
 
+There are other implemetnations of this very same idea:
+
+* [Postgres Foreign Data Wrappers] (FDW). Integrates any external
+  source with a postgres database. Can be programmed in C and Python. Postgres
+  FDW gave me the initial inspiration for ExoSQL.
+* [Apache Foundation's Drill]. Integrates NoSQL database and SQL databases.
+* [Apache Foundation's Calcite]. Java based library, very similar to ExoSQL,
+  with many many adapters. Many projects use parts of calcite, for example
+  Drill uses the SQL parser.
+
+If you know any other, please ping me and I will add it here.
+
+I develop ExoSQL as I needed an elixir solution for an existing project, and
+to learn how to create an SQL engine. ExoSQL is currently used in
+[Serverboards] KPI.
+
+[Postgres Foreign Data Wrappers]: https://wiki.postgresql.org/wiki/Foreign_data_wrappers
+[Apache Foundation's Drill]: https://drill.apache.org
+[Apache Foundation's Calcite]: https://calcite.apache.org
+[Serverboards]: https://serverboards.io
 
 ## Known BUGS
 
