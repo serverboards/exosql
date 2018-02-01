@@ -48,6 +48,11 @@ defmodule ExoSQL.Utils do
 
     data = for r <- res.rows do
       c = Enum.join(Enum.map( Enum.zip(widths, r), fn {w, r} ->
+        r = case r do
+          r when is_list(r) -> "[#{Enum.join(r, ", ")}]"
+          other -> other
+        end
+
         String.pad_trailing(to_string(r), w)
       end), " | ")
       [c, "\n"]

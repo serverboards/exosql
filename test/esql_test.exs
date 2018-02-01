@@ -452,6 +452,13 @@ defmodule ExoSQLTest do
     {:ok, result} = ExoSQL.query("SELECT 1517402656 == to_timestamp(to_datetime(\"2018-01-31 12:44:16Z\"))", context)
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
     assert result.rows == [[true]]
+  end
 
+  test "Query node proc" do
+    context = %{ "A" => {ExoSQL.Node, []}}
+    {:ok, result} = ExoSQL.query("SELECT * FROM proc", context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+
+    assert Enum.count(result.rows) > 0
   end
 end
