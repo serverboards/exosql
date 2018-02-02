@@ -40,36 +40,34 @@ defmodule ExoSQL.Builtins do
 
   def lower(s), do: String.downcase(s)
   def upper(s), do: String.upcase(s)
+
+  def to_string_(%DateTime{} = d), do: DateTime.to_iso8601(d)
   def to_string_(s), do: to_string(s)
 
   def now(), do: DateTime.utc_now()
-  def to_datetime(n) when is_number(n) do
-    {:ok, dt} = DateTime.from_unix(n)
-    dt
-  end
-  def to_datetime(n) when is_binary(n) do
-    if String.contains?(n, "-") do
-      case String.length(n) do
-        10 ->
-          n = "#{n} 00:00:00Z"
-          {:ok, td, 0} = DateTime.from_iso8601(n)
-          td
-        20 ->
-          {:ok, td, 0} = DateTime.from_iso8601(n)
-          td
-      end
-    else
-      {:ok, unixtime} = ExoSQL.Utils.to_number(n)
-      Logger.debug("To datetime #{inspect unixtime}")
-      to_datetime(unixtime)
-    end
-  end
-  def to_datetime(%DateTime{} = d), do: d
-  def to_datetime(other) do
-    raise ArgumentError, message: "cant convert #{inspect other} to date"
-  end
-  def to_char(%DateTime{} = d), do: DateTime.to_iso8601(d)
+  def to_datetime(other), do: ExoSQL.DateTime.to_datetime(other) 
   def to_timestamp(%DateTime{} = d), do: DateTime.to_unix(d)
+
+  @doc ~S"""
+  Convert datetime to string.
+
+  If no format is given, it is as to_string, which returns the ISO 8601.
+  Format allows these substitutions (subset from SQLITE):
+
+  %d day of month: 00
+  %H hour: 00-24
+  %m month: 01-12
+  %M minute: 00-59
+  %s seconds since 1970-01-01
+  %S seconds: 00-59
+  %Y year: 0000-9999
+  %i ISO 8601 format
+  %% %
+  """
+  def strftime(%DateTime{} = d), do: to_string_(d)
+  def strftime(%DateTime{} = d, format), do: ExoSQL.DateTime.strftime(d, format)
+  def strftime(other, format), do: strftime(to_datetime(other), format)
+
 
   ### Aggregate functions
   def is_aggregate("count"), do: true
