@@ -8,9 +8,9 @@ defmodule ExoSQL.Executor do
   """
   def execute({:select, from, columns}, context) do
     {:ok, %{ columns: rcolumns, rows: rows}} = execute(from, context)
-    # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}")
+    Logger.debug("Get #{inspect columns} from #{inspect rcolumns}. Context: #{inspect context}")
 
-    exprs = Enum.map(columns, &simplify_expr_columns(&1, rcolumns))
+    exprs = Enum.map(columns, &simplify_expr_columns(&1, rcolumns, context["__vars__"]))
     # Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs} / #{inspect columns}")
 
     rows = Enum.map(rows, fn row ->
@@ -40,8 +40,8 @@ defmodule ExoSQL.Executor do
     }}
   end
   def execute({:execute, {db, table}, quals, columns}, context) do
-    {dbmod, context} = context[db]
-    case apply(dbmod, :execute, [context, table, quals, columns]) do
+    {dbmod, ctx} = context[db]
+    case apply(dbmod, :execute, [ctx, table, quals, columns]) do
       {:ok, %{ columns: ^columns, rows: rows}} ->
         {:ok, %ExoSQL.Result{
           columns: Enum.map(columns, fn c -> {db, table, c} end),
@@ -62,7 +62,7 @@ defmodule ExoSQL.Executor do
     {:ok, %{ columns: columns, rows: rows }} = execute(from, context)
 
 
-    expr = simplify_expr_columns(expr, columns)
+    expr = simplify_expr_columns(expr, columns, context["__vars__"])
     rows = Enum.filter(rows, fn row ->
       ExoSQL.Expr.run_expr(expr, row)
     end)
@@ -101,7 +101,7 @@ defmodule ExoSQL.Executor do
           {^db2, ^tablename2, _columnname} -> b
           _other -> a
         end
-        ids = simplify_expr_columns({:column, idf}, res1.columns)
+        ids = simplify_expr_columns({:column, idf}, res1.columns, context["__vars__"])
         # Logger.debug("From ltable get #{inspect idf} #{inspect ids}")
         inids = Enum.reduce(res1.rows, [], fn row, acc ->
           [ExoSQL.Expr.run_expr(ids, row) | acc]
@@ -122,7 +122,7 @@ defmodule ExoSQL.Executor do
 
     columns = res1.columns ++ res2.columns
     # Logger.debug("Columns #{inspect columns}")
-    rexpr = simplify_expr_columns(expr, columns)
+    rexpr = simplify_expr_columns(expr, columns, context["__vars__"])
     rows = Enum.reduce( res1.rows, [], fn row1, acc ->
       nrows = Enum.map( res2.rows, fn row2 ->
         row = row1 ++ row2
@@ -147,7 +147,7 @@ defmodule ExoSQL.Executor do
   def execute({:group_by, from, groups}, context) do
     {:ok, data} = execute(from, context)
 
-    sgroups = Enum.map(groups, &simplify_expr_columns(&1, data.columns))
+    sgroups = Enum.map(groups, &simplify_expr_columns(&1, data.columns, context["__vars__"]))
     rows = Enum.reduce(data.rows, %{}, fn row, acc ->
       set = Enum.map(sgroups, &ExoSQL.Expr.run_expr( &1, row ))
       # Logger.debug("Which set for #{inspect row} by #{inspect sgroups}/#{inspect groups} (#{inspect data.columns}): #{inspect set}")
@@ -174,7 +174,7 @@ defmodule ExoSQL.Executor do
 
     expr = case expr do
       {:column, _} ->
-        simplify_expr_columns(expr, data.columns)
+        simplify_expr_columns(expr, data.columns, context["__vars__"])
       {:lit, n} ->
         {:column, n}
     end
@@ -209,37 +209,40 @@ defmodule ExoSQL.Executor do
   This operation is required to change expressions from column names to column
   positions, so that `ExoSQL.Expr` can perform its operations on rows.
   """
-  def simplify_expr_columns({:column, cn}, _names) when is_number(cn) do
+  def simplify_expr_columns({:column, cn}, _names, _vars) when is_number(cn) do
     {:column, cn}
   end
-  def simplify_expr_columns({:column, cn}, names) do
+  def simplify_expr_columns({:column, cn}, names, _vars) do
     i = Enum.find_index(names, &(&1 == cn))
     if i == nil do
       throw {:error, {:not_found, cn, :in, names}}
     end
     {:column, i}
   end
-  def simplify_expr_columns({:op, {op, op1, op2}}, names) do
-    op1 = simplify_expr_columns(op1, names)
-    op2 = simplify_expr_columns(op2, names)
+  def simplify_expr_columns({:var, cn}, _names, vars) do
+    {:lit, vars[cn]}
+  end
+  def simplify_expr_columns({:op, {op, op1, op2}}, names, vars) do
+    op1 = simplify_expr_columns(op1, names, vars)
+    op2 = simplify_expr_columns(op2, names, vars)
     {:op, {op, op1, op2}}
   end
-  def simplify_expr_columns({:fn, {f, params}}, names) do
-    params = Enum.map(params, &simplify_expr_columns(&1, names))
+  def simplify_expr_columns({:fn, {f, params}}, names, vars) do
+    params = Enum.map(params, &simplify_expr_columns(&1, names, vars))
     {:fn, {f, params}}
   end
-  def simplify_expr_columns(other, _names), do: other
+  def simplify_expr_columns(other, _names, _vars), do: other
 
-  def simplify_expr_columns_nofn({:column, cn}, names) do
-    i = Enum.find_index(names, &(&1 == cn))
-    {:column, i}
-  end
-  def simplify_expr_columns_nofn({:op, {op, op1, op2}}, names) do
-    op1 = simplify_expr_columns(op1, names)
-    op2 = simplify_expr_columns(op2, names)
-    {:op, {op, op1, op2}}
-  end
-  def simplify_expr_columns_nofn(other, _names), do: other
+  # def simplify_expr_columns_nofn({:column, cn}, names) do
+  #   i = Enum.find_index(names, &(&1 == cn))
+  #   {:column, i}
+  # end
+  # def simplify_expr_columns_nofn({:op, {op, op1, op2}}, names) do
+  #   op1 = simplify_expr_columns(op1, names)
+  #   op2 = simplify_expr_columns(op2, names)
+  #   {:op, {op, op1, op2}}
+  # end
+  # def simplify_expr_columns_nofn(other, _names), do: other
 
   def resolve_column_names(columns) do
     Enum.map(columns, fn

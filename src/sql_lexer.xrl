@@ -12,7 +12,7 @@ OPEN_PAR = \(
 CLOSE_PAR = \)
 QUOTED_STRING = ("(.|[^"])*"|'(.|[^"])*')
 %% "'
-
+VAR    =  \$[_a-zA-Z][_a-zA-Z0-9]*
 
 Rules.
 
@@ -28,5 +28,6 @@ Rules.
 {INT}{DOT}{INT} : {token, {lit, TokenLine, TokenChars}}.
 {INT}           : {token, {lit, TokenLine, TokenChars}}.
 {QUOTED_STRING} : {token, {lit, TokenLine, string:substr(TokenChars, 2, string:len(TokenChars)-2)}}.
+{VAR}           : {token, {var, TokenLine, string:substr(TokenChars, 2, string:len(TokenChars))}}.
 
 Erlang code.

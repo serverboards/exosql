@@ -8,7 +8,7 @@ query
   orderby order_expr_list order_expr asc_desc.
 
 Terminals
-id comma dot lit op open_par close_par
+id comma dot lit op open_par close_par var
 'SELECT' 'FROM' 'INNER' 'CROSS' 'JOIN' 'ON' 'WHERE' 'GROUP' 'BY' 'ORDER' 'ASC' 'DESC'
 .
 
@@ -52,6 +52,7 @@ expr_list -> expr comma expr_list: ['$1'] ++ '$3'.
 
 expr -> column : {column, '$1'}.
 expr -> lit : {lit, unwrap('$1')}.
+expr -> var : {var, unwrap('$1')}.
 expr -> open_par expr close_par : '$2'.
 expr -> expr op expr: {op, {unwrap('$2'), '$1', '$3'}}.
 expr -> id open_par close_par : {fn, {unwrap_d('$1'), []}}.

@@ -80,6 +80,8 @@ defmodule ExoSQL do
   def schema("self", _context) do
     {:ok, ["tables"]}
   end
+  # Hack to allow internal non database varaibles at context
+  def schema("__" <> _rest, _context), do: {:ok, []}
   def schema(db, context) do
     {db, opts} = context[db]
 

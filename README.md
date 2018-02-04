@@ -44,8 +44,15 @@ end
 * Aggregation functions: COUNT, SUM, AVG
 * Builtin functions and operators: * / + - || or and round concat..
 * Basic Reflection over `self.tables`
+* Variables
 
 Check the tests for current features available.
+
+## Variables
+
+Variables can be passed as a dictionary at `__vars__` inside the context, and
+referenced as `$name` at the SQL expression. This may change in the future
+to streamline it more with standard SQL (no need for `$`).
 
 ## INNER JOIN
 
@@ -188,3 +195,5 @@ to learn how to create an SQL engine. ExoSQL is currently used in
 
 * There is no operator priority, so all your expressions should be surrounded
   by parenthesis when there is ambiguity.
+
+* Can not use variables inside aggregation functions.

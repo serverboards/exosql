@@ -55,9 +55,13 @@ defmodule ExoSQL.Expr do
       {%DateTime{}, %DateTime{}} ->
         DateTime.compare(r1, r2) == :gt
       _ ->
-        {:ok, n1} = to_number(r1)
-        {:ok, n2} = to_number(r2)
-        n1 > n2
+        with {:ok, n1} <- to_number(r1),
+             {:ok, n2} <- to_number(r2) do
+           n1 > n2
+        else
+          {:error, _} ->
+            r1 > r2
+        end
     end
   end
   def run_expr({:op, {">=", op1, op2}}, cur) do
@@ -69,10 +73,14 @@ defmodule ExoSQL.Expr do
     case {r1, r2} do
       {%DateTime{}, %DateTime{}} ->
         DateTime.compare(r1, r2) == :eq
-      _ ->
-        {:ok, n1} = to_number(r1)
-        {:ok, n2} = to_number(r2)
-        n1 == n2
+      {a, b} ->
+        with {:ok, n1} <- to_number(r1),
+             {:ok, n2} <- to_number(r2) do
+          n1 >= n2
+        else
+          {:error, _} ->
+            a >= b
+        end
     end
   end
 

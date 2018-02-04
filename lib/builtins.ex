@@ -45,7 +45,7 @@ defmodule ExoSQL.Builtins do
   def to_string_(s), do: to_string(s)
 
   def now(), do: DateTime.utc_now()
-  def to_datetime(other), do: ExoSQL.DateTime.to_datetime(other) 
+  def to_datetime(other), do: ExoSQL.DateTime.to_datetime(other)
   def to_timestamp(%DateTime{} = d), do: DateTime.to_unix(d)
 
   @doc ~S"""
@@ -87,7 +87,7 @@ defmodule ExoSQL.Builtins do
 
   def sum(data, expr) do
   # Logger.debug("Sum of #{inspect data} by #{inspect expr}")
-    expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns)
+    expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
     # Logger.debug("Simplified expression #{inspect expr}")
     Enum.reduce(data.rows, 0, fn row, acc ->
       n = ExoSQL.Expr.run_expr(expr, row)
