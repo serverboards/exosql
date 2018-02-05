@@ -453,9 +453,9 @@ defmodule ExoSQLTest do
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
     assert result.rows == [[true]]
 
-    {:ok, result} = ExoSQL.query("SELECT strftime('2018-01-01T13:32:11Z', '%H:%M')", context)
+    {:ok, result} = ExoSQL.query("SELECT strftime('2018-02-05T09:51:45.489Z', '%H:%M')", context)
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
-    assert result.rows == [["13:32"]]
+    assert result.rows == [["09:51"]]
   end
 
   test "Query node proc" do
