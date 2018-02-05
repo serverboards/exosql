@@ -8,7 +8,7 @@ defmodule ExoSQL.Executor do
   """
   def execute({:select, from, columns}, context) do
     {:ok, %{ columns: rcolumns, rows: rows}} = execute(from, context)
-    Logger.debug("Get #{inspect columns} from #{inspect rcolumns}. Context: #{inspect context}")
+    # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}. Context: #{inspect context}")
 
     exprs = Enum.map(columns, &simplify_expr_columns(&1, rcolumns, context["__vars__"]))
     # Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs} / #{inspect columns}")
