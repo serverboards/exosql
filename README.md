@@ -1,5 +1,7 @@
 # ExoSQL
 
+[![Build Status](https://travis-ci.org/serverboards/exosql.svg?branch=master)](https://travis-ci.org/serverboards/exosql)
+
 **Not everything described here is working yet**
 
 Universal SQL engine for Elixir.
