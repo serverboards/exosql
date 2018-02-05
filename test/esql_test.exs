@@ -20,7 +20,7 @@ defmodule ExoSQLTest do
   test "No from" do
     context = %{}
 
-    {:ok, query} = ExoSQL.parse("SELECT 1 + 1", context)
+    {:ok, query} = ExoSQL.parse("SELECT 1 + '1'", context)
     {:ok, plan} = ExoSQL.Planner.plan(query, context)
     Logger.debug("Plan is #{inspect plan, pretty: true}")
     {:ok, result} = ExoSQL.Executor.execute(plan, context)
