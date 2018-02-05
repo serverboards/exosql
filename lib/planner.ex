@@ -71,7 +71,7 @@ defmodule ExoSQL.Planner do
     # Logger.debug("All expressions: #{inspect all_expressions}")
     from = for {db, table} <- query.from do
       columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
-      quals = []
+      quals = get_quals(db, table, query.where)
       {:execute, {db, table}, quals, columns}
     end
 
@@ -88,7 +88,8 @@ defmodule ExoSQL.Planner do
         # Logger.debug(inspect from)
         {db, table} = from
         columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
-        from = {:execute, from, [], columns}
+        quals = get_quals(db, table, [query.where, expr])
+        from = {:execute, from, quals, columns}
         {:inner_join, acc, from, expr}
     end)
 
@@ -183,4 +184,25 @@ defmodule ExoSQL.Planner do
   end
   def has_aggregates(l) when is_list(l), do: Enum.any?(l, &has_aggregates/1)
   def has_aggregates(_other), do: false
+
+
+  def get_quals(db, table, expressions) when is_list(expressions) do
+    Enum.flat_map(expressions, &(get_quals(db, table, &1)))
+  end
+  def get_quals(db, table, {:op, {op, {:column, {db, table, column}}, {:lit, value}}}) do
+    [[column, op, value]]
+  end
+  def get_quals(db, table, {:op, {op, {:lit, value}}, {:column, {db, table, column}}}) do
+    [[column, op, value]]
+  end
+  def get_quals(db, table, {:op, {op, {:column, {db, table, column}}, {:var, variable}}}) do
+    [[column, op, {:var, variable}]]
+  end
+  def get_quals(db, table, {:op, {op, {:var, variable}}, {:column, {db, table, column}}}) do
+    [[column, op, {:var, variable}]]
+  end
+  def get_quals(db, table, {:op, {"AND", op1, op2}}) do
+    Enum.flat_map([op1, op2], &(get_quals(db, table, &1)))
+  end
+  def get_quals(_db, _table, _expr), do: []
 end

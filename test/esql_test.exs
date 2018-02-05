@@ -489,5 +489,6 @@ defmodule ExoSQLTest do
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
 
     assert Enum.count(result.rows) > 0
+    flunk  1
   end
 end

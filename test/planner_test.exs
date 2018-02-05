@@ -37,7 +37,38 @@ defmodule PlannerTest do
     ExoSQL.explain(q, @context)
   end
 
-  test "Plan over several tables" do
+  test "Ask for quals" do
+    {:ok, parsed} = ExoSQL.parse("SELECT name, stock FROM products WHERE (stock > 0) AND (price <= 100)", @context)
+    Logger.debug("Parsed: #{inspect parsed, pretty: true}")
+    {:ok, plan} = ExoSQL.plan(parsed, @context)
+    Logger.debug("Parsed: #{inspect plan, pretty: true}")
+
+    {:execute, _from, quals, _columns} = plan |> elem(1) |> elem(1)
+    Logger.debug("quals: #{inspect quals}, should be stock > 0, price <= 100")
+
+    assert quals == [["stock", ">", "0"], ["price", "<=", "100"]]
+
+    # Maybe OR
+    {:ok, parsed} = ExoSQL.parse("SELECT name, stock>0 FROM products WHERE (stock > 0) OR (price <= 100)", @context)
+    Logger.debug("Parsed: #{inspect parsed, pretty: true}")
+    {:ok, plan} = ExoSQL.plan(parsed, @context)
+    Logger.debug("Parsed: #{inspect plan, pretty: true}")
+
+    {:execute, _from, quals, _columns} = plan |> elem(1) |> elem(1)
+    Logger.debug("quals: #{inspect quals}, should be []")
+
+    assert quals == []
+
+    #
+    {:ok, parsed} = ExoSQL.parse("SELECT name, stock FROM products WHERE (stock > $test) AND (price <= 100)", @context)
+    Logger.debug("Parsed: #{inspect parsed, pretty: true}")
+    {:ok, plan} = ExoSQL.plan(parsed, @context)
+    Logger.debug("Parsed: #{inspect plan, pretty: true}")
+
+    {:execute, _from, quals, _columns} = plan |> elem(1) |> elem(1)
+    Logger.debug("quals: #{inspect quals}, should be stock > $test, price <= 100")
+
+    assert quals == [["stock", ">", {:var, "test"}], ["price", "<=", "100"]]
 
   end
 end

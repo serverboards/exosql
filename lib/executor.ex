@@ -41,6 +41,15 @@ defmodule ExoSQL.Executor do
   end
   def execute({:execute, {db, table}, quals, columns}, context) do
     {dbmod, ctx} = context[db]
+
+    vars = Map.get(context, "__vars__", %{})
+    quals = Enum.map(quals, fn
+      [op1,op,{:var, variable}] ->
+        [op1, op, vars[variable]]
+      other -> other
+    end)
+
+
     case apply(dbmod, :execute, [ctx, table, quals, columns]) do
       {:ok, %{ columns: ^columns, rows: rows}} ->
         {:ok, %ExoSQL.Result{
