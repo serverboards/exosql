@@ -452,6 +452,10 @@ defmodule ExoSQLTest do
     {:ok, result} = ExoSQL.query("SELECT 1517402656 == to_timestamp(to_datetime(\"2018-01-31 12:44:16Z\"))", context)
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
     assert result.rows == [[true]]
+
+    {:ok, result} = ExoSQL.query("SELECT strftime('2018-01-01T13:32:11Z', '%H:%M')", context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+    assert result.rows == [["13:32"]]
   end
 
   test "Query node proc" do

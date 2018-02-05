@@ -7,6 +7,8 @@ defmodule ExoSQL.DateTime do
 
   @replacement_re ~r/%./
   def strftime(dt, format) do
+    dt = to_datetime(dt)
+
     Regex.replace(@replacement_re, format, fn
       "%%" -> "%"
       "%i" -> DateTime.to_iso8601(dt)

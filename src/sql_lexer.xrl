@@ -10,8 +10,8 @@ OP     = (<=|>=|==|!=|<>|-|\+|<|>|=|and|or|AND|OR|\|\||\*)
 SPACE  = [\n\t\s]+
 OPEN_PAR = \(
 CLOSE_PAR = \)
-QUOTED_STRING = ("(.|[^"])*"|'(.|[^"])*')
-%% "'
+QUOTED_STRING = ("([^"])*"|'([^'])*')
+%% "
 VAR    =  \$[_a-zA-Z][_a-zA-Z0-9]*
 
 Rules.
