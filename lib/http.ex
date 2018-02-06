@@ -14,7 +14,7 @@ defmodule ExoSQL.HTTP do
   def schema(_db, "request"), do: {:ok, %{ columns: ["url","status_code","body"]}}
 
   def execute(_db, "request", quals, columns) do
-    Logger.debug("Get request #{inspect quals} #{inspect columns}")
+    # Logger.debug("Get request #{inspect quals} #{inspect columns}")
 
     urls = Enum.find_value(quals, [], fn
       {:in, "url", urls} -> urls
