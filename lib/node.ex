@@ -30,7 +30,14 @@ defmodule ExoSQL.Node do
       ], rows: rows}}
   end
 
-  def execute(_config, "proc", _quals, _columns) do
+  def execute(_config, "proc", _quals, columns) do
+    known_columns = ["pid", "cmd", "args"]
+    for c <- columns do
+      if not c in known_columns do
+        raise MatchError, {:unknown_column, c}
+      end
+    end
+
     {:ok, proc} = File.ls("/proc/")
     # Keep only numeric procs
     proc = Enum.flat_map(proc, fn n ->
@@ -54,7 +61,7 @@ defmodule ExoSQL.Node do
     end)
 
     {:ok, %{
-      columns: ["pid", "cmd", "args"],
+      columns: known_columns,
       rows: rows
     }}
   end

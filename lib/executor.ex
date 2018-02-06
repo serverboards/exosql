@@ -49,8 +49,11 @@ defmodule ExoSQL.Executor do
       other -> other
     end)
 
+    scolumns = Enum.map(columns, fn {^db, ^table, column} ->
+      column
+    end)
 
-    case apply(dbmod, :execute, [ctx, table, quals, columns]) do
+    case apply(dbmod, :execute, [ctx, table, quals, scolumns]) do
       {:ok, %{ columns: ^columns, rows: rows}} ->
         {:ok, %ExoSQL.Result{
           columns: Enum.map(columns, fn c -> {db, table, c} end),
