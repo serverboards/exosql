@@ -490,4 +490,26 @@ defmodule ExoSQLTest do
 
     assert Enum.count(result.rows) > 0
   end
+
+
+  test "Aggregation on column only mentioned at aggregation" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"},
+    }
+
+    {:ok, query} = ExoSQL.parse(
+      """
+      SELECT SUM(price)
+        FROM products
+        WHERE stock > 1
+      """,
+      context)
+    Logger.debug("Query: #{inspect query, pretty: true}")
+    {:ok, plan} = ExoSQL.plan(query, context)
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.execute(plan, context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+
+    assert Enum.count(result.rows) > 0
+  end
 end

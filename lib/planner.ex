@@ -152,7 +152,9 @@ defmodule ExoSQL.Planner do
     get_table_columns_at_expr(db, table, op1) ++ get_table_columns_at_expr(db, table, op2)
   end
   def get_table_columns_at_expr(db, table, {:column, {db, table, _var} = res}), do: [res]
-  def get_table_columns_at_expr(db, table, {:fn, {_f, params}}), do: Enum.flat_map(params, &get_table_columns_at_expr(db, table, &1))
+  def get_table_columns_at_expr(db, table, {:fn, {_f, params}}) do
+    get_table_columns_at_expr(db, table, params)
+  end
   def get_table_columns_at_expr(_db, _table, _other), do: []
 
 

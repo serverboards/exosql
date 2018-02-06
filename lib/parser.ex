@@ -149,6 +149,11 @@ defmodule ExoSQL.Parser do
     {:op, {op, resolve_column(ex1, tables, context), resolve_column(ex2, tables, context)}}
   end
 
+  def resolve_column({:fn, {f, params}}, tables, context) do
+    params = Enum.map(params, &resolve_column(&1, tables, context))
+    {:fn, {f, params}}
+  end
+
   def resolve_column(other, _tables, _context) do
     other
   end
