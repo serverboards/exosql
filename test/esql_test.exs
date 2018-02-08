@@ -538,5 +538,22 @@ defmodule ExoSQLTest do
       context)
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
     assert result.rows == [["test"]]
+
+    {:ok, result} = ExoSQL.query(
+      """
+      SELECT SUBSTR("test-mystring", 2, 2)
+      """,
+      context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+    assert result.rows == [["st"]]
+
+    {:ok, result} = ExoSQL.query(
+      """
+      SELECT SUBSTR("test-mystring", 2, -2)
+      """,
+      context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+    assert result.rows == [["st-mystri"]]
+
   end
 end
