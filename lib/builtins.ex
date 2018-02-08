@@ -48,6 +48,16 @@ defmodule ExoSQL.Builtins do
   def to_datetime(other), do: ExoSQL.DateTime.to_datetime(other)
   def to_timestamp(%DateTime{} = d), do: DateTime.to_unix(d)
 
+  def substr(str, skip, len) do
+    {:ok, skip} = to_number(skip)
+    {:ok, len} = to_number(len)
+    if len < 0 do
+      String.slice(str, skip, String.length(str) + len)
+    else
+      String.slice(str, skip, skip + len)
+    end
+  end
+
   @doc ~S"""
   Convert datetime to string.
 

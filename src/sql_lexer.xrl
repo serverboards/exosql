@@ -1,6 +1,7 @@
 Definitions.
 
 INT    = [0-9]+
+MINUS  = -
 RESERVEDL = (select|where|from|inner|cross|join|on|group|by|order|asc|desc)
 RESERVEDU = (SELECT|WHERE|FROM|INNER|CROSS|JOIN|ON|GROUP|BY|ORDER|ASC|DESC)
 ID     = [_a-zA-Z][_a-zA-Z0-9]*
@@ -27,6 +28,8 @@ Rules.
 {CLOSE_PAR}     : {token, {close_par, TokenLine, TokenChars}}.
 {INT}{DOT}{INT} : {token, {lit, TokenLine, TokenChars}}.
 {INT}           : {token, {lit, TokenLine, TokenChars}}.
+{MINUS}{INT}{DOT}{INT} : {token, {lit, TokenLine, TokenChars}}.
+{MINUS}{INT}           : {token, {lit, TokenLine, TokenChars}}.
 {QUOTED_STRING} : {token, {lit, TokenLine, string:substr(TokenChars, 2, string:len(TokenChars)-2)}}.
 {VAR}           : {token, {var, TokenLine, string:substr(TokenChars, 2, string:len(TokenChars))}}.
 

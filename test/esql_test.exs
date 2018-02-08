@@ -512,4 +512,31 @@ defmodule ExoSQLTest do
 
     assert Enum.count(result.rows) > 0
   end
+
+  test "Substring" do
+    context = %{}
+    {:ok, result} = ExoSQL.query(
+      """
+      SELECT SUBSTR("test-mystring", 0, 4)
+      """,
+      context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+    assert result.rows == [["test"]]
+
+    {:ok, result} = ExoSQL.query(
+      """
+      SELECT SUBSTR("test-mystring", 5, 400)
+      """,
+      context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+    assert result.rows == [["mystring"]]
+
+    {:ok, result} = ExoSQL.query(
+      """
+      SELECT SUBSTR("test-mystring", 0, -9)
+      """,
+      context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+    assert result.rows == [["test"]]
+  end
 end
