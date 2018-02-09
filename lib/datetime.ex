@@ -5,22 +5,16 @@ defmodule ExoSQL.DateTime do
   Helpers for datetime
   """
 
-  @replacement_re ~r/%./
+  @replacement_re ~r/%i/
   def strftime(dt, format) do
     dt = to_datetime(dt)
 
-    Regex.replace(@replacement_re, format, fn
-      "%%" -> "%"
-      "%i" -> DateTime.to_iso8601(dt)
-      "%Y" -> "#{dt.year}"
-      "%m" -> String.pad_leading(to_string(dt.month), 2, "0")
-      "%d" -> String.pad_leading(to_string(dt.day), 2, "0")
-      "%H" -> String.pad_leading(to_string(dt.hour), 2, "0")
-      "%M" -> String.pad_leading(to_string(dt.minute), 2, "0")
-      "%S" -> String.pad_leading(to_string(dt.second), 2, "0")
-      "%s" -> to_string(DateTime.to_unix(dt))
-      other -> other
-    end)
+    # Simplifications, %i from sqlite is supported
+    format = format
+      |> String.replace("%i", "%FT%T%z")
+
+    res = Timex.format!(dt, format, :strftime)
+      |> String.replace("+0000", "Z")
   end
 
   def to_datetime(n) when is_number(n) do

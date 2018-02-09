@@ -62,7 +62,9 @@ defmodule ExoSQL.Builtins do
   Convert datetime to string.
 
   If no format is given, it is as to_string, which returns the ISO 8601.
-  Format allows these substitutions (subset from SQLITE):
+  Format allows all substitutions from
+  [Timex.format](https://hexdocs.pm/timex/Timex.Format.DateTime.Formatters.Strftime.html),
+  for example:
 
   %d day of month: 00
   %H hour: 00-24
@@ -72,6 +74,7 @@ defmodule ExoSQL.Builtins do
   %S seconds: 00-59
   %Y year: 0000-9999
   %i ISO 8601 format
+  %V Week number
   %% %
   """
   def strftime(%DateTime{} = d), do: to_string_(d)

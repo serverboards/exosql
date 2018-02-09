@@ -15,5 +15,6 @@ defmodule ExoSQL.BuiltinsTest do
     assert "01:02:03" == ExoSQL.Builtins.strftime(dt, "%H:%M:%S")
     assert "#{orig_time}" == ExoSQL.Builtins.strftime(dt, "%s")
     assert "%s #{orig_time}" == ExoSQL.Builtins.strftime(dt, "%%s %s")
+    assert "01" == ExoSQL.Builtins.strftime(dt, "%V")
   end
 end

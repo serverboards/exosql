@@ -4,7 +4,7 @@ defmodule ExoSQL.Mixfile do
   def project do
     [
       app: :exosql,
-      version: "0.2.13",
+      version: "0.2.14",
       elixir: "~> 1.5",
       start_permanent: Mix.env == :prod,
       deps: deps(),
@@ -40,6 +40,7 @@ PostgreSQL.
   defp deps do
     [
       {:ex_doc, ">= 0.0.0"},
+      {:timex, "~> 3.0"},
       {:csv, "~> 2.1"},
       {:httpoison, "~> 1.0"}
     ]
