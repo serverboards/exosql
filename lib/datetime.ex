@@ -28,6 +28,9 @@ defmodule ExoSQL.DateTime do
           n = "#{n} 00:00:00Z"
           {:ok, td, 0} = DateTime.from_iso8601(n)
           td
+        19 ->
+          {:ok, td, 0} = DateTime.from_iso8601(n <> "Z")
+          td
         20 ->
           {:ok, td, 0} = DateTime.from_iso8601(n)
           td

@@ -48,7 +48,12 @@ defmodule ExoSQL.Builtins do
   def to_datetime(other), do: ExoSQL.DateTime.to_datetime(other)
   def to_timestamp(%DateTime{} = d), do: DateTime.to_unix(d)
 
+  def substr(nil, _skip, _len) do
+    ""
+  end
   def substr(str, skip, len) do
+    str = to_string_(str) # force string
+    
     {:ok, skip} = to_number(skip)
     {:ok, len} = to_number(len)
     if len < 0 do
@@ -56,6 +61,9 @@ defmodule ExoSQL.Builtins do
     else
       String.slice(str, skip, len)
     end
+  end
+  def substr(str, skip) do
+    substr(str, skip, 10_000) # A upper limit on what to return, should be enought
   end
 
   @doc ~S"""
