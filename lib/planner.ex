@@ -142,33 +142,33 @@ defmodule ExoSQL.Planner do
   def plan(plan, _context), do: plan(plan)
 
   # Gets all the vars referenced in an expression that refer to a given table
-  def get_table_columns_at_expr(db, table, l) when is_list(l) do
+  defp get_table_columns_at_expr(db, table, l) when is_list(l) do
     # Logger.debug("Get columns at expr #{inspect table} #{inspect l}")
     res = Enum.flat_map(l, &get_table_columns_at_expr(db, table, &1))
     # Logger.debug("res #{inspect res}")
     res
   end
-  def get_table_columns_at_expr(db, table, {:op, {_op, op1, op2}}) do
+  defp get_table_columns_at_expr(db, table, {:op, {_op, op1, op2}}) do
     get_table_columns_at_expr(db, table, op1) ++ get_table_columns_at_expr(db, table, op2)
   end
-  def get_table_columns_at_expr(db, table, {:column, {db, table, _var} = res}), do: [res]
-  def get_table_columns_at_expr(db, table, {:fn, {_f, params}}) do
+  defp get_table_columns_at_expr(db, table, {:column, {db, table, _var} = res}), do: [res]
+  defp get_table_columns_at_expr(db, table, {:fn, {_f, params}}) do
     get_table_columns_at_expr(db, table, params)
   end
-  def get_table_columns_at_expr(_db, _table, _other), do: []
+  defp get_table_columns_at_expr(_db, _table, _other), do: []
 
 
   # If an aggregate function is found, rewrite it to be a real aggregate
   # The way to do it is set as first argument the column with the aggregated table
   # and the rest inside `{:pass, op}`, so its the real function that evaluates it
   # over the first argument
-  def fix_aggregates_select({:op, {op, op1, op2}}, aggregate_column) do
+  defp fix_aggregates_select({:op, {op, op1, op2}}, aggregate_column) do
     op1 = fix_aggregates_select(op1, aggregate_column)
     op2 = fix_aggregates_select(op2, aggregate_column)
 
     {:op, {op, op1, op2}}
   end
-  def fix_aggregates_select({:fn, {f, args}}, aggregate_column) do
+  defp fix_aggregates_select({:fn, {f, args}}, aggregate_column) do
     if ExoSQL.Builtins.is_aggregate(f) do
       args = for a <- args, do: {:pass, a}
       {:fn, {f, [ {:column, aggregate_column} | args]}}
@@ -176,35 +176,35 @@ defmodule ExoSQL.Planner do
       {:fn, {f, args}}
     end
   end
-  def fix_aggregates_select(other, _), do: other
+  defp fix_aggregates_select(other, _), do: other
 
-  def has_aggregates({:op, {_op, op1, op2}}) do
+  defp has_aggregates({:op, {_op, op1, op2}}) do
     has_aggregates(op1) or has_aggregates(op2)
   end
-  def has_aggregates({:fn, {f, _args}}) do
+  defp has_aggregates({:fn, {f, _args}}) do
     ExoSQL.Builtins.is_aggregate(f)
   end
-  def has_aggregates(l) when is_list(l), do: Enum.any?(l, &has_aggregates/1)
-  def has_aggregates(_other), do: false
+  defp has_aggregates(l) when is_list(l), do: Enum.any?(l, &has_aggregates/1)
+  defp has_aggregates(_other), do: false
 
 
-  def get_quals(db, table, expressions) when is_list(expressions) do
+  defp get_quals(db, table, expressions) when is_list(expressions) do
     Enum.flat_map(expressions, &(get_quals(db, table, &1)))
   end
-  def get_quals(db, table, {:op, {op, {:column, {db, table, column}}, {:lit, value}}}) do
+  defp get_quals(db, table, {:op, {op, {:column, {db, table, column}}, {:lit, value}}}) do
     [[column, op, value]]
   end
-  def get_quals(db, table, {:op, {op, {:lit, value}}, {:column, {db, table, column}}}) do
+  defp get_quals(db, table, {:op, {op, {:lit, value}}, {:column, {db, table, column}}}) do
     [[column, op, value]]
   end
-  def get_quals(db, table, {:op, {op, {:column, {db, table, column}}, {:var, variable}}}) do
+  defp get_quals(db, table, {:op, {op, {:column, {db, table, column}}, {:var, variable}}}) do
     [[column, op, {:var, variable}]]
   end
-  def get_quals(db, table, {:op, {op, {:var, variable}}, {:column, {db, table, column}}}) do
+  defp get_quals(db, table, {:op, {op, {:var, variable}}, {:column, {db, table, column}}}) do
     [[column, op, {:var, variable}]]
   end
-  def get_quals(db, table, {:op, {"AND", op1, op2}}) do
+  defp get_quals(db, table, {:op, {"AND", op1, op2}}) do
     Enum.flat_map([op1, op2], &(get_quals(db, table, &1)))
   end
-  def get_quals(_db, _table, _expr), do: []
+  defp get_quals(_db, _table, _expr), do: []
 end
