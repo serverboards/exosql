@@ -27,4 +27,9 @@ defmodule ExoSQL.BuiltinsTest do
     dt = ExoSQL.Builtins.to_datetime("2018-02-10T11:54:34")
     assert ExoSQL.Builtins.substr(dt, 0, 10) == "2018-02-10"
   end
+
+  test "IF test" do
+    assert ExoSQL.Builtins.if_(true, "test", 1) == "test"
+    assert ExoSQL.Builtins.if_(false, "test", 1) == 1
+  end
 end

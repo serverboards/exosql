@@ -32,6 +32,14 @@ defmodule ExoSQL.Builtins do
     not bool(a)
   end
 
+  def if_(cond_, then_, else_ \\ nil) do
+    if cond_ do
+      then_
+    else
+      else_
+    end
+  end
+
   def bool(nil), do: false
   def bool(0), do: false
   def bool(""), do: false
@@ -53,7 +61,7 @@ defmodule ExoSQL.Builtins do
   end
   def substr(str, skip, len) do
     str = to_string_(str) # force string
-    
+
     {:ok, skip} = to_number(skip)
     {:ok, len} = to_number(len)
     if len < 0 do
