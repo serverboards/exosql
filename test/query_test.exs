@@ -348,4 +348,14 @@ defmodule QueryTest do
     assert result.rows == [["st-mystri"]]
   end
 
+  
+  test "Query with if" do
+    res = analyze_query!("""
+      SELECT name, IF(ammount>20, "Gold", "Silver")
+        FROM users
+       INNER JOIN purchases ON user_id = users.id
+      """)
+    assert Enum.count(res.rows) >= 1
+  end
+
 end

@@ -14,6 +14,37 @@ defmodule ExoSQL.Builtins do
   """
   import ExoSQL.Utils, only: [to_number: 1, to_float: 1]
 
+  @functions %{
+    "round" => {ExoSQL.Builtins, :round},
+    "concat" => {ExoSQL.Builtins, :concat},
+    "not" => {ExoSQL.Builtins, :not_},
+    "if" => {ExoSQL.Builtins, :if_},
+    "bool" => {ExoSQL.Builtins, :bool},
+    "lower" => {ExoSQL.Builtins, :lower},
+    "upper" => {ExoSQL.Builtins, :upper},
+    "to_string" => {ExoSQL.Builtins, :to_string},
+    "to_datetime" => {ExoSQL.Builtins, :to_datetime},
+    "to_timestamp" => {ExoSQL.Builtins, :to_timestamp},
+    "substr" => {ExoSQL.Builtins, :substr},
+    "now" => {ExoSQL.Builtins, :now},
+    "strftime" => {ExoSQL.Builtins, :strftime},
+
+    ## Aggregates
+    "count" => {ExoSQL.Builtins, :count},
+    "sum" => {ExoSQL.Builtins, :sum},
+    "avg" => {ExoSQL.Builtins, :avg},
+    "max" => {ExoSQL.Builtins, :max},
+    "min" => {ExoSQL.Builtins, :min},
+  }
+  def call_function(name, args) do
+    case @functions[name] do
+      nil ->
+      raise BadFunctionError, {:builtin, name}
+    {mod, fun} ->
+      apply(mod, fun, args)
+    end
+  end
+
   def round(n, r) do
     {:ok, n} = to_float(n)
     {:ok, r} = to_number(r)
@@ -122,6 +153,31 @@ defmodule ExoSQL.Builtins do
       n = ExoSQL.Expr.run_expr(expr, row)
       {:ok, n} = ExoSQL.Utils.to_number(n)
       acc + n
+    end)
+  end
+
+  def max(data, expr) do
+    expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
+    Enum.reduce(data.rows, nil, fn row, acc ->
+      n = ExoSQL.Expr.run_expr(expr, row)
+      {:ok, n} = ExoSQL.Utils.to_number(n)
+      if not acc or n > acc do
+        n
+      else
+        acc
+      end
+    end)
+  end
+  def min(data, expr) do
+    expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
+    Enum.reduce(data.rows, nil, fn row, acc ->
+      n = ExoSQL.Expr.run_expr(expr, row)
+      {:ok, n} = ExoSQL.Utils.to_number(n)
+      if not acc or n < acc do
+        n
+      else
+        acc
+      end
     end)
   end
 end
