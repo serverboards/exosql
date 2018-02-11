@@ -14,12 +14,12 @@ defmodule ExoSQL.Parser do
   a proper Query struct.
   """
 
-  @doc ~S"""
+  ~S"""
   Parses from the yeec provided parse tree to a more realistic and complete parse
   tree with all data resolved.
   """
   defp real_parse(parsed, context) do
-    Logger.debug("Real parse #{inspect parsed}")
+    # Logger.debug("Real parse #{inspect parsed}")
     %{
       select: select,
       from: from,
@@ -169,13 +169,4 @@ defmodule ExoSQL.Parser do
   def resolve_column(other, _tables, _context) do
     other
   end
-
-  defp transform_subquery_columns_to_columns(subquery), do: transform_subquery_columns_to_columns(subquery, 1)
-  defp transform_subquery_columns_to_columns([{:column, {_db, _table, column}} | rest], count) do
-    [column | transform_subquery_columns_to_columns(rest, count + 1)]
-  end
-  defp transform_subquery_columns_to_columns([_other | rest], count) do
-    ["col_#{count}" | transform_subquery_columns_to_columns(rest, count + 1)]
-  end
-  defp transform_subquery_columns_to_columns([], _count), do: []
 end

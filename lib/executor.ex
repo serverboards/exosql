@@ -263,5 +263,5 @@ defmodule ExoSQL.Executor do
   defp resolve_column_names([_other | rest], count) do
     [{:tmp, :tmp, "col_#{count}"} | resolve_column_names(rest, count + 1)]
   end
-  defp resolve_column_names([], count), do: []
+  defp resolve_column_names([], _count), do: []
 end

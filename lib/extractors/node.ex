@@ -49,7 +49,7 @@ defmodule ExoSQL.Node do
 
     rows = Enum.map(proc, &({File.open("/proc/#{&1}/cmdline"), &1})) |> Enum.flat_map(fn
       {{:ok, fd}, pid} ->
-        data = case IO.read(fd, 1024) do
+        case IO.read(fd, 1024) do
           :eof ->
             []
           data ->
