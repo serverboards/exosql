@@ -120,21 +120,35 @@ defmodule ExoSQL.Parser do
     parsed
   end
 
+  @doc ~S"""
+  From the list of tables, and context, and an unknown column, return the
+  FQN of the column.
+  """
   def resolve_column({:column, {nil, nil, column}}, tables, context) do
-    matches = Enum.flat_map(tables, fn {db, table} ->
-      {:ok, table_schema} = ExoSQL.schema(db, table, context)
-      Enum.flat_map(table_schema.columns, fn name ->
-        if name == column do
-          [{:column, {db, table, name}}]
-        else
-          []
-        end
-      end)
+    matches = Enum.flat_map(tables, fn
+      {db, table} ->
+        {:ok, table_schema} = ExoSQL.schema(db, table, context)
+        Enum.flat_map(table_schema.columns, fn name ->
+          if name == column do
+            [{:column, {db, table, name}}]
+          else
+            []
+          end
+        end)
+      %ExoSQL.Query{} = q ->
+        columns = get_query_columns(q)
+        Enum.flat_map(columns, fn {db, table, name} ->
+          if name == column do
+            [{:column, {db, table, name}}]
+          else
+            []
+          end
+        end)
     end)
 
     case matches do
       [{:column, data}] -> {:column, data}
-      l when length(l) == 0 -> throw {:not_found, column}
+      l when length(l) == 0 -> throw {:not_found, {column, :in, tables}}
       _other -> throw {:ambiguous_column_name, column}
     end
   end
@@ -169,4 +183,13 @@ defmodule ExoSQL.Parser do
   def resolve_column(other, _tables, _context) do
     other
   end
+
+  defp get_query_columns(%ExoSQL.Query{ select: select }), do: get_column_names_or_alias(select, 1)
+  defp get_column_names_or_alias([{:column, column} | rest], count) do
+    [column | get_column_names_or_alias(rest, count + 1)]
+  end
+  defp get_column_names_or_alias([head | rest], count) do
+    [{:tmp, :tmp, "col_#{count}"} | get_column_names_or_alias(rest, count + 1)]
+  end
+  defp get_column_names_or_alias([], count), do: []
 end

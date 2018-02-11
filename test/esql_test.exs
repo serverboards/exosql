@@ -249,7 +249,7 @@ defmodule ExoSQLTest do
           {"A", "products"}],
         context)
     catch
-      {:not_found, "prix"} -> :ok
+      {:not_found, {"prix", :in, _}} -> :ok
       other -> flunk(inspect other)
     end
 
