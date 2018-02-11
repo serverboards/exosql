@@ -556,4 +556,39 @@ defmodule ExoSQLTest do
     assert result.rows == [["st-mystri"]]
 
   end
+
+  test "Json Pointer support" do
+    context = %{
+      "A" => {ExoSQL.Json, path: "test/data/json/"},
+    }
+
+    {:ok, query} = ExoSQL.parse(
+      """
+      SELECT tags, jp(tags/color)
+        FROM posts
+      """,
+      context)
+    Logger.debug("Query: #{inspect query, pretty: true}")
+    {:ok, plan} = ExoSQL.plan(query, context)
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.execute(plan, context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+
+    assert Enum.count(result.rows) > 0
+
+
+    {:ok, query} = ExoSQL.parse(
+      """
+      SELECT id, COUNT( jq(author/name) )
+        FROM posts
+      """,
+      context)
+    Logger.debug("Query: #{inspect query, pretty: true}")
+    {:ok, plan} = ExoSQL.plan(query, context)
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.execute(plan, context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+
+    assert Enum.count(result.rows) > 0
+  end
 end

@@ -53,7 +53,7 @@ defmodule ExoSQL.Builtins do
   end
   def substr(str, skip, len) do
     str = to_string_(str) # force string
-    
+
     {:ok, skip} = to_number(skip)
     {:ok, len} = to_number(len)
     if len < 0 do
@@ -90,6 +90,35 @@ defmodule ExoSQL.Builtins do
   def strftime(other, format), do: strftime(to_datetime(other), format)
 
 
+
+  ## Support for JSON Pointer (https://tools.ietf.org/html/rfc6901)
+  ## queries.
+  def jp(data, expr) do
+    path = jp_path(expr)
+    Logger.debug("JP #{inspect path} from #{inspect data}")
+
+    [[d]] = data
+    jp_walk(d, path)
+  end
+  defp jp_path({:op, {"/", a, b}}) do
+    jp_path(a) ++ jp_path(b)
+  end
+  defp jp_path({:column, {nil, nil, col}}), do: [col]
+  defp jp_walk(%{ key => value}, [key | rest]) do
+    jp_walk(value, rest)
+  end
+  defp jp_walk(%{ key => value}, [key]) do
+    value
+  end
+  defp jp_walk(_, _) do
+    nil
+  end
+
+  ## This functions should pass the data and the non resolved parameters
+  ## For example IF, JP
+  def is_no_resolve("jp"), do: true
+  def is_no_resolve(_other), do: false
+
   ### Aggregate functions
   def is_aggregate("count"), do: true
   def is_aggregate("avg"), do: true
@@ -116,4 +145,6 @@ defmodule ExoSQL.Builtins do
       acc + n
     end)
   end
+
+
 end

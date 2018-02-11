@@ -1,0 +1,3 @@
+["id","author","title","tags","content"]
+[1, {"name": "David", "last_name": "Moreno", "email": "dmoreno@serverboards.io"}, "Example post", [{"name": "test", "color": "blue"}, {"name": "test2", "color": "red"}], "..."]
+[2, {"name": "David", "last_name": "Moreno Montero", "email": "dmoreno@serverboards.io"}, "Another Example", [{"name": "test2", "color": "red"}, {"name": "test", "color": "blue"}], "..."]

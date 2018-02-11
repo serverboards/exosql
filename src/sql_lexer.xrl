@@ -7,7 +7,7 @@ RESERVEDU = (SELECT|WHERE|FROM|INNER|CROSS|JOIN|ON|GROUP|BY|ORDER|ASC|DESC)
 ID     = [_a-zA-Z][_a-zA-Z0-9]*
 COMMA  = ,
 DOT    = \.
-OP     = (<=|>=|==|!=|<>|-|\+|<|>|=|and|or|AND|OR|\|\||\*)
+OP     = (<=|>=|==|!=|<>|-|\+|<|>|=|and|or|AND|OR|\|\||\*|/)
 SPACE  = [\n\t\s]+
 OPEN_PAR = \(
 CLOSE_PAR = \)

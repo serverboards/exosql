@@ -240,7 +240,11 @@ defmodule ExoSQL.Executor do
     {:op, {op, op1, op2}}
   end
   def simplify_expr_columns({:fn, {f, params}}, names, vars) do
-    params = Enum.map(params, &simplify_expr_columns(&1, names, vars))
+    params = if ExoSQL.Builtins.is_no_resolve(f) do
+      params
+    else
+      Enum.map(params, &simplify_expr_columns(&1, names, vars))
+    end
     {:fn, {f, params}}
   end
   def simplify_expr_columns(other, _names, _vars), do: other

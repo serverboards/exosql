@@ -118,12 +118,20 @@ defmodule ExoSQL.Expr do
   end
 
   def run_expr({:fn, {fun, exprs}}, cur) when is_atom(fun) do
-    params = for e <- exprs, do: run_expr(e, cur)
+    params = if ExoSQL.Builtins.is_no_resolve(fun) do
+      [cur | exprs]
+    else
+      for e <- exprs, do: run_expr(e, cur)
+    end
     apply(ExoSQL.Builtins, fun, params)
   end
 
   def run_expr({:fn, {fun, exprs}}, cur) do
-    params = for e <- exprs, do: run_expr(e, cur)
+    params = if ExoSQL.Builtins.is_no_resolve(fun) do
+      [cur | exprs]
+    else
+      for e <- exprs, do: run_expr(e, cur)
+    end
     apply(ExoSQL.Builtins, String.to_existing_atom(String.downcase(fun)), params)
   end
   def run_expr({:pass, val}, _cur), do: val

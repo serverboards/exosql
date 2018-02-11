@@ -150,7 +150,13 @@ defmodule ExoSQL.Parser do
   end
 
   def resolve_column({:fn, {f, params}}, tables, context) do
-    params = Enum.map(params, &resolve_column(&1, tables, context))
+    Logger.info("IS nc #{inspect f} #{inspect ExoSQL.Builtins.is_no_resolve(String.downcase(f))}")
+    params = if ExoSQL.Builtins.is_no_resolve(String.downcase(f)) do
+      Logger.debug("Resolve #{inspect f}")
+      params
+    else
+      Enum.map(params, &resolve_column(&1, tables, context))
+    end
     {:fn, {f, params}}
   end
 
