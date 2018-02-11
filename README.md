@@ -43,6 +43,7 @@ end
 * INNER JOIN
 * GROUP BY
 * ORDER BY
+* nested SELECT at FROM (no alias yet)
 * Aggregation functions: COUNT, SUM, AVG
 * Builtin functions and operators: * / + - || or and round concat..
 * Basic Reflection over `self.tables`
