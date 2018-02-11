@@ -6,12 +6,6 @@ defmodule ExoSQLTest do
   doctest ExoSQL.Expr
   @moduletag :capture_log
 
-  @context %{
-    "A" => {ExoSQL.Csv, path: "test/data/csv/"},
-  }
-
-
-
   test "Get schema data" do
     context = %{
       "A" => {ExoSQL.Csv, path: "test/data/csv/"}

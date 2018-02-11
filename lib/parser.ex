@@ -188,8 +188,8 @@ defmodule ExoSQL.Parser do
   defp get_column_names_or_alias([{:column, column} | rest], count) do
     [column | get_column_names_or_alias(rest, count + 1)]
   end
-  defp get_column_names_or_alias([head | rest], count) do
+  defp get_column_names_or_alias([_head | rest], count) do
     [{:tmp, :tmp, "col_#{count}"} | get_column_names_or_alias(rest, count + 1)]
   end
-  defp get_column_names_or_alias([], count), do: []
+  defp get_column_names_or_alias([], _count), do: []
 end

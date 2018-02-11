@@ -5,7 +5,6 @@ defmodule ExoSQL.DateTime do
   Helpers for datetime
   """
 
-  @replacement_re ~r/%i/
   def strftime(dt, format) do
     dt = to_datetime(dt)
 
@@ -13,7 +12,7 @@ defmodule ExoSQL.DateTime do
     format = format
       |> String.replace("%i", "%FT%T%z")
 
-    res = Timex.format!(dt, format, :strftime)
+    Timex.format!(dt, format, :strftime)
       |> String.replace("+0000", "Z")
   end
 

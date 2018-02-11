@@ -20,7 +20,7 @@ defmodule QueryTest do
 
 
   test "Simple parse SQL" do
-    result = analyze_query!("SELECT A.products.name, A.products.price FROM A.products")
+    analyze_query!("SELECT A.products.name, A.products.price FROM A.products")
   end
 
   test "No from" do
@@ -40,7 +40,7 @@ defmodule QueryTest do
     context = %{
       "A" => {ExoSQL.Node, []}
     }
-    result = analyze_query!("SELECT A.passwd.uid, A.passwd.user, A.passwd.home FROM A.passwd WHERE A.passwd.uid >= 1001", context)
+    analyze_query!("SELECT A.passwd.uid, A.passwd.user, A.passwd.home FROM A.passwd WHERE A.passwd.uid >= 1001", context)
   end
 
   test "Select * from" do
@@ -66,7 +66,7 @@ defmodule QueryTest do
        WHERE (A.products.id = A.purchases.product_id)
          AND (A.purchases.user_id = A.users.id)
       """, @context)
-    result = analyze_query!("""
+    analyze_query!("""
       SELECT A.products.name, A.users.name
         FROM A.products, A.purchases, A.users
        WHERE (A.products.id = A.purchases.product_id)
@@ -99,7 +99,7 @@ defmodule QueryTest do
   end
 
   test "Aggregates" do
-    result = analyze_query!("""
+    analyze_query!("""
       SELECT A.products.name, COUNT(*), AVG(A.products.price * 1.21)
         FROM A.products, A.purchases
        WHERE A.products.id = A.purchases.product_id
@@ -348,7 +348,7 @@ defmodule QueryTest do
     assert result.rows == [["st-mystri"]]
   end
 
-  
+
   test "Query with if" do
     res = analyze_query!("""
       SELECT name, IF(ammount>20, "Gold", "Silver")

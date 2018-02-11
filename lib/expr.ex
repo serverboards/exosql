@@ -137,7 +137,7 @@ defmodule ExoSQL.Expr do
   * Otherwise, as is
   """
   def match_types(a, b) do
-    res = case {a, b} do
+    case {a, b} do
       {t1, t2} when is_number(t1) and is_number(t2) ->
         {a, b}
       {%DateTime{}, _} ->
