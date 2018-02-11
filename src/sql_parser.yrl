@@ -1,7 +1,7 @@
 Nonterminals
 query
   select
-  from table_list
+  from table_list table_like
   where expr expr_list
   column table groupby
   join join_type
@@ -21,11 +21,11 @@ select -> 'SELECT' expr_list : '$2'.
 select -> 'SELECT' op : tag('$2', "*"), [{all_columns}].
 
 from -> 'FROM' table_list : '$2'.
-table_list -> table : [{table, '$1'}].
-table_list -> table comma table_list : [{table, '$1'}] ++ '$3'.
+table_list -> table : ['$1'].
+table_list -> table comma table_list : ['$1'] ++ '$3'.
 
 join -> '$empty' : [].
-join -> join_type table 'ON' expr join : [{'$1', {{table, '$2'}, '$4'}}] ++ '$5'.
+join -> join_type table 'ON' expr join : [{'$1', {'$2', '$4'}}] ++ '$5'.
 
 join_type -> 'JOIN' : inner_join.
 join_type -> 'INNER' 'JOIN' : inner_join.
@@ -62,8 +62,10 @@ expr -> id open_par op close_par: tag('$3', "*"), {fn, {unwrap_d('$1'), [{lit, "
 column -> id dot id dot id : {unwrap('$1'), unwrap('$3'), unwrap('$5')}.
 column -> id dot id : {nil, unwrap('$1'), unwrap('$3')}.
 column -> id : {nil, nil, unwrap('$1')}.
-table -> id dot id : {unwrap('$1'), unwrap('$3')}.
-table -> id : {nil, unwrap('$1')}.
+
+table -> id dot id : {table, {unwrap('$1'), unwrap('$3')}}.
+table -> id : {table, {nil, unwrap('$1')}}.
+table -> open_par query close_par : {select, '$2'}.
 
 select -> column comma select: [unwrap('$1')] ++ '$3'.
 

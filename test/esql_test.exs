@@ -160,7 +160,7 @@ defmodule ExoSQLTest do
 
 
     Logger.debug(ExoSQL.format_result result)
-    assert result == %ExoSQL.Result{columns: ["?NONAME", "?NONAME"], rows: [[4, 16.0]]}
+    assert result == %ExoSQL.Result{columns: [{:tmp, :tmp, "col_1"}, {:tmp, :tmp, "col_2"}], rows: [[4, 16.0]]}
   end
 
 
@@ -554,6 +554,28 @@ defmodule ExoSQLTest do
       context)
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
     assert result.rows == [["st-mystri"]]
+  end
 
+  test "Nested SELECT" do
+    context = %{
+      "A" => {ExoSQL.Csv, path: "test/data/csv/"},
+    }
+
+    {:ok, query} = ExoSQL.parse(
+      """
+      SELECT * FROM (
+        SELECT user_id, SUM(ammount)
+          FROM purchases
+          GROUP BY user_id
+        ) ORDER BY 2
+      """,
+      context)
+    Logger.debug("Query: #{inspect query, pretty: true}")
+    {:ok, plan} = ExoSQL.plan(query, context)
+    Logger.debug("Plan: #{inspect plan, pretty: true}")
+    {:ok, result} = ExoSQL.execute(plan, context)
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+
+    assert Enum.count(result.rows) == 3
   end
 end

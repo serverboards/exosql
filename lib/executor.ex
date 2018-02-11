@@ -172,7 +172,7 @@ defmodule ExoSQL.Executor do
       group ++ [table]
     end)
 
-    columns = resolve_column_names(groups) ++ [{"group_by"}]
+    columns = resolve_column_names(groups) ++ ["group_by"]
     # Logger.debug("Grouped rows: #{inspect columns}\n #{inspect rows, pretty: true}")
 
     {:ok, %ExoSQL.Result{
@@ -256,10 +256,12 @@ defmodule ExoSQL.Executor do
   # end
   # def simplify_expr_columns_nofn(other, _names), do: other
 
-  def resolve_column_names(columns) do
-    Enum.map(columns, fn
-      {:column, col} -> col
-      _other -> "?NONAME"
-    end)
+  defp resolve_column_names(columns), do: resolve_column_names(columns, 1)
+  defp resolve_column_names([{:column, col} | rest], count) do
+    [col | resolve_column_names(rest, count + 1)]
   end
+  defp resolve_column_names([_other | rest], count) do
+    [{:tmp, :tmp, "col_#{count}"} | resolve_column_names(rest, count + 1)]
+  end
+  defp resolve_column_names([], count), do: []
 end

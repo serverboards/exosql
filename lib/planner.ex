@@ -69,11 +69,15 @@ defmodule ExoSQL.Planner do
       Enum.map(query.join, fn {:inner_join, {_from, expr}} -> expr end),
     ]
     # Logger.debug("All expressions: #{inspect all_expressions}")
-    from = for {db, table} <- query.from do
-      columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
-      quals = get_quals(db, table, query.where)
-      {:execute, {db, table}, quals, columns}
-    end
+    from = Enum.map(query.from, fn
+      {db, table} ->
+        columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
+        quals = get_quals(db, table, query.where)
+        {:execute, {db, table}, quals, columns}
+      %ExoSQL.Query{} = q ->
+        {:ok, q} = plan(q)
+        q
+    end)
 
     from_plan = if from == [] do
       %ExoSQL.Result{columns: ["?NONAME"], rows: [[1]]} # just one element

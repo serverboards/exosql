@@ -13,10 +13,13 @@ defmodule ExoSQL.Parser do
   convert an dprocess the structure using more context knowledge to return
   a proper Query struct.
   """
-  defp real_parse(sql, context) do
-    sql = String.to_charlist(sql)
-    {:ok, lexed, _lines} = :sql_lexer.string(sql)
-    {:ok, parsed} = :sql_parser.parse(lexed)
+
+  @doc ~S"""
+  Parses from the yeec provided parse tree to a more realistic and complete parse
+  tree with all data resolved.
+  """
+  defp real_parse(parsed, context) do
+    Logger.debug("Real parse #{inspect parsed}")
     %{
       select: select,
       from: from,
@@ -25,9 +28,7 @@ defmodule ExoSQL.Parser do
       join: join,
       orderby: orderby
     } = parsed
-    # Logger.debug(inspect parsed, pretty: true)
-    # first resolve all tables
-    # convert from to cross joins
+
     from = Enum.map(from, &resolve_table(&1, context))
 
     groupby = if groupby do
@@ -51,9 +52,13 @@ defmodule ExoSQL.Parser do
     # the resolve all expressions as we know which tables to use
     select = case select do
       [{:all_columns}] ->
-        Enum.flat_map(all_tables, fn {db, table} ->
-          {:ok, %{ columns: columns }} = ExoSQL.schema(db, table, context)
-          Enum.map(columns, &{:column, {db, table, &1}})
+        Enum.flat_map(all_tables, fn
+          %ExoSQL.Query{ select: select } ->
+            Enum.with_index(select) |> Enum.map(fn {_, col} -> {:column, col} end)
+          {db, table} ->
+            {:ok, %{ columns: columns }} = ExoSQL.schema(db, table, context)
+            # Enum.with_index(columns) |> Enum.map(fn {_, col} -> {:column, col} end)
+            Enum.map(columns, &{:column, {db, table, &1}})
         end)
       _other  ->
         Enum.map(select, &resolve_column(&1, all_tables, context))
@@ -85,7 +90,10 @@ defmodule ExoSQL.Parser do
   """
   def parse(sql, context) do
     try do
-      real_parse(sql, context)
+      sql = String.to_charlist(sql)
+      {:ok, lexed, _lines} = :sql_lexer.string(sql)
+      {:ok, parsed} = :sql_parser.parse(lexed)
+      real_parse(parsed, context)
     catch
       any -> {:error, any}
     end
@@ -107,6 +115,10 @@ defmodule ExoSQL.Parser do
     end
   end
   def resolve_table({:table, {_db, _name} = orig} , _context), do: orig
+  def resolve_table({:select, query}, context) do
+    {:ok, parsed} = real_parse(query, context)
+    parsed
+  end
 
   def resolve_column({:column, {nil, nil, column}}, tables, context) do
     matches = Enum.flat_map(tables, fn {db, table} ->
@@ -157,4 +169,13 @@ defmodule ExoSQL.Parser do
   def resolve_column(other, _tables, _context) do
     other
   end
+
+  defp transform_subquery_columns_to_columns(subquery), do: transform_subquery_columns_to_columns(subquery, 1)
+  defp transform_subquery_columns_to_columns([{:column, {_db, _table, column}} | rest], count) do
+    [column | transform_subquery_columns_to_columns(rest, count + 1)]
+  end
+  defp transform_subquery_columns_to_columns([_other | rest], count) do
+    ["col_#{count}" | transform_subquery_columns_to_columns(rest, count + 1)]
+  end
+  defp transform_subquery_columns_to_columns([], _count), do: []
 end

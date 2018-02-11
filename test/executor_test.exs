@@ -111,7 +111,7 @@ defmodule ExecutorTest do
         [{:fn, {"count", [{:column, 1}, {:lit, "*"}]}}]
       }
     {:ok, result} = ExoSQL.Executor.execute(plan, @context)
-    assert result == %ExoSQL.Result{columns: ["?NONAME"], rows: [[4]]}
+    assert result == %ExoSQL.Result{columns: [{:tmp, :tmp, "col_1"}], rows: [[4]]}
   end
 
   test "Execute complex aggregation" do
@@ -127,7 +127,7 @@ defmodule ExecutorTest do
       }
     {:ok, result} = ExoSQL.Executor.execute(plan, @context)
     assert result == %ExoSQL.Result{
-      columns: [{"A", "purchases", "product_id"}, "?NONAME"],
+      columns: [{"A", "purchases", "product_id"}, {:tmp, :tmp, "col_2"}],
       rows: [["1", 2], ["2", 2], ["3", 1], ["4", 1]]
     }
   end
@@ -169,7 +169,7 @@ defmodule ExecutorTest do
 
       {:ok, result} = ExoSQL.Executor.execute(plan, @context)
       assert result == %ExoSQL.Result{
-        columns: [{"A", "users", "name"}, "?NONAME"],
+        columns: [{"A", "users", "name"}, {:tmp, :tmp, "col_2"}],
         rows: [["David", 550], ["Javier", 1300], ["Patricio", 30]]
       }
       Logger.info ExoSQL.format_result(result)
