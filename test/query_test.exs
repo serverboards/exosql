@@ -358,4 +358,17 @@ defmodule QueryTest do
     assert Enum.count(res.rows) >= 1
   end
 
+  test "Query with format() and not top level aggregation" do
+    res = analyze_query!("""
+      SELECT name, format("%.2f €", SUM(ammount*price)) FROM purchases
+      INNER JOIN products ON products.id = product_id
+      GROUP BY name
+    """)
+
+    assert res == %ExoSQL.Result{
+      columns: [{"A", "products", "name"}, {:tmp, :tmp, "col_2"}],
+      rows: [
+        ["donut", "300.00 €"], ["lollipop", "1320.00 €"],
+        ["sugus", "60.00 €"], ["water", "200.00 €"]]}
+  end
 end

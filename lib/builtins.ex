@@ -28,6 +28,7 @@ defmodule ExoSQL.Builtins do
     "substr" => {ExoSQL.Builtins, :substr},
     "now" => {ExoSQL.Builtins, :now},
     "strftime" => {ExoSQL.Builtins, :strftime},
+    "format" => {ExoSQL.Builtins, :format},
 
     ## Aggregates
     "count" => {ExoSQL.Builtins, :count},
@@ -127,6 +128,32 @@ defmodule ExoSQL.Builtins do
   def strftime(%DateTime{} = d), do: to_string_(d)
   def strftime(%DateTime{} = d, format), do: ExoSQL.DateTime.strftime(d, format)
   def strftime(other, format), do: strftime(to_datetime(other), format)
+
+  @doc ~S"""
+  sprintf style formatting. Uses exprintf.
+  """
+  def format(str, args) when is_list(args) do
+    ExoSQL.Format.format(str, args)
+  end
+
+  @doc ~S"""
+  Very simple sprintf formatter. Knows this formats:
+
+  * %%
+  * %s
+  * %d
+  * %f (only two decimals)
+  * %.{ndec}f
+  """
+  def format(str, arg1), do: format(str, [arg1])
+  def format(str, arg1, arg2), do: format(str, [arg1, arg2])
+  def format(str, arg1, arg2, arg3), do: format(str, [arg1, arg2, arg3])
+  def format(str, arg1, arg2, arg3, arg4), do: format(str, [arg1, arg2, arg3, arg4])
+  def format(str, arg1, arg2, arg3, arg4, arg5), do: format(str, [arg1, arg2, arg3, arg4, arg5])
+  def format(str, arg1, arg2, arg3, arg4, arg5, arg6), do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6])
+  def format(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7), do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6, arg7])
+  def format(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8), do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8])
+  def format(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9), do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9])
 
 
   ### Aggregate functions
