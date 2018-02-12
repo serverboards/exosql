@@ -177,6 +177,7 @@ defmodule ExoSQL.Planner do
       args = for a <- args, do: {:pass, a}
       {:fn, {f, [ {:column, aggregate_column} | args]}}
     else
+      args = for a <- args, do: fix_aggregates_select(a, aggregate_column)
       {:fn, {f, args}}
     end
   end

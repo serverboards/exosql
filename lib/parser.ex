@@ -31,15 +31,16 @@ defmodule ExoSQL.Parser do
 
     from = Enum.map(from, &resolve_table(&1, context))
 
-    groupby = if groupby do
-      Enum.map(groupby, &resolve_column(&1, from, context))
-    else nil end
-
     all_tables = if join != [] do
       from ++ Enum.map(join, fn {_type, {table, _expr}} -> resolve_table(table, context) end)
     else
       from
     end
+
+    groupby = if groupby do
+      Enum.map(groupby, &resolve_column(&1, all_tables, context))
+    else nil end
+
     # Logger.debug("All tables #{inspect all_tables}")
     join = Enum.map(join, fn {type, {table, expr}} ->
       {type, {
