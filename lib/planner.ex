@@ -186,8 +186,14 @@ defmodule ExoSQL.Planner do
   defp has_aggregates({:op, {_op, op1, op2}}) do
     has_aggregates(op1) or has_aggregates(op2)
   end
-  defp has_aggregates({:fn, {f, _args}}) do
-    ExoSQL.Builtins.is_aggregate(f)
+  defp has_aggregates({:fn, {f, args}}) do
+    if not ExoSQL.Builtins.is_aggregate(f) do
+      Enum.reduce(args, false, fn arg, acc ->
+        acc or has_aggregates(arg)
+      end)
+    else
+      true
+    end
   end
   defp has_aggregates(l) when is_list(l), do: Enum.any?(l, &has_aggregates/1)
   defp has_aggregates(_other), do: false

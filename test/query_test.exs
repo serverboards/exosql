@@ -370,5 +370,12 @@ defmodule QueryTest do
       rows: [
         ["donut", "300.00 €"], ["lollipop", "1320.00 €"],
         ["sugus", "60.00 €"], ["water", "200.00 €"]]}
+
+    # No group by
+    res = analyze_query!("""
+      SELECT format("%d units sold", SUM(ammount)) FROM purchases
+    """)
+
+    assert Enum.count(res.rows) == 1
   end
 end
