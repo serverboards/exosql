@@ -97,7 +97,7 @@ defmodule ExoSQL.Builtins do
     {:ok, skip} = to_number(skip)
     {:ok, len} = to_number(len)
     if len < 0 do
-      String.slice(str, skip, String.length(str) + len - skip)
+      String.slice(str, skip, max(0, String.length(str) + len - skip))
     else
       String.slice(str, skip, len)
     end
