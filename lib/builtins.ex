@@ -34,8 +34,8 @@ defmodule ExoSQL.Builtins do
     "count" => {ExoSQL.Builtins, :count},
     "sum" => {ExoSQL.Builtins, :sum},
     "avg" => {ExoSQL.Builtins, :avg},
-    "max" => {ExoSQL.Builtins, :max},
-    "min" => {ExoSQL.Builtins, :min},
+    "max" => {ExoSQL.Builtins, :max_},
+    "min" => {ExoSQL.Builtins, :min_},
   }
   def call_function(name, args) do
     case @functions[name] do
@@ -183,7 +183,7 @@ defmodule ExoSQL.Builtins do
     end)
   end
 
-  def max(data, expr) do
+  def max_(data, expr) do
     expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
     Enum.reduce(data.rows, nil, fn row, acc ->
       n = ExoSQL.Expr.run_expr(expr, row)
@@ -195,7 +195,7 @@ defmodule ExoSQL.Builtins do
       end
     end)
   end
-  def min(data, expr) do
+  def min_(data, expr) do
     expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
     Enum.reduce(data.rows, nil, fn row, acc ->
       n = ExoSQL.Expr.run_expr(expr, row)
