@@ -391,5 +391,14 @@ defmodule QueryTest do
 
     assert Enum.count(res.rows) == 5
   end
-  
+
+  test "Width bucket to create histograms. Return all months." do
+    res = analyze_query!("""
+    SELECT n FROM
+      generate_series(12)
+    """)
+
+    assert Enum.count(res.rows) == 12
+  end
+
 end

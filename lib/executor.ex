@@ -39,7 +39,18 @@ defmodule ExoSQL.Executor do
       rows: rows
     }}
   end
+  def execute({:execute, {:fn, {function, params}}, quals, []}, context) do
+    res = ExoSQL.Expr.run_expr({:fn, {function, params}}, [])
+
+    res = %ExoSQL.Result{
+      columns: [{:tmp, function, function}],
+      rows: res.rows
+    }
+
+    {:ok, res}
+  end
   def execute({:execute, {db, table}, quals, columns}, context) do
+    Logger.debug("#{inspect {db, table, columns}}")
     {dbmod, ctx} = context[db]
 
     vars = Map.get(context, "__vars__", %{})

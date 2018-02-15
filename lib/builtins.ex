@@ -30,6 +30,7 @@ defmodule ExoSQL.Builtins do
     "strftime" => {ExoSQL.Builtins, :strftime},
     "format" => {ExoSQL.Builtins, :format},
     "width_bucket" => {ExoSQL.Builtins, :width_bucket},
+    "generate_series" => {ExoSQL.Builtins, :generate_series},
 
     ## Aggregates
     "count" => {ExoSQL.Builtins, :count},
@@ -173,6 +174,42 @@ defmodule ExoSQL.Builtins do
 
     ((n - start_) * nbuckets / (end_- start_))
       |> Kernel.round
+  end
+
+
+  @doc ~S"""
+  Generates a table with the series of numbers as given. Use for histograms
+  without holes.
+  """
+  def generate_series(end_), do: generate_series(1,end_,1)
+  def generate_series(start_,end_), do: generate_series(start_,end_,1)
+  def generate_series(start_,end_,step) do
+    import ExoSQL.Utils, only: [to_number!: 1]
+    start_ = to_number!(start_)
+    end_ = to_number!(end_)
+    step = to_number!(step)
+
+    if step < 0 and start_ < end_ do
+      raise ArgumentError, "Start, end and step invalid. Will never reach end."
+    end
+    if step >= 0 and start_ > end_ do
+      raise ArgumentError, "Start, end and step invalid. Will never reach end."
+    end
+
+    %{
+      columns: ["generate_series"],
+      rows: generate_series_range(start_, end_, step)
+    }
+  end
+  defp generate_series_range(current, stop, step) do
+    cond do
+      step > 0 and current > stop ->
+        []
+      step < 0 and current < stop ->
+        []
+      true ->
+        [ [current] | generate_series_range(current + step, stop, step)]
+    end
   end
 
   ### Aggregate functions

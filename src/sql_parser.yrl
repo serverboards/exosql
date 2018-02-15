@@ -1,7 +1,7 @@
 Nonterminals
 query
   select
-  from table_list table_like
+  from table_list
   where expr expr_list
   column table groupby
   join join_type
@@ -66,6 +66,7 @@ column -> id : {nil, nil, unwrap('$1')}.
 table -> id dot id : {table, {unwrap('$1'), unwrap('$3')}}.
 table -> id : {table, {nil, unwrap('$1')}}.
 table -> open_par query close_par : {select, '$2'}.
+table -> id open_par expr_list close_par : {fn, {unwrap_d('$1'), '$3'}}.
 
 select -> column comma select: [unwrap('$1')] ++ '$3'.
 

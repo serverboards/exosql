@@ -120,6 +120,7 @@ defmodule ExoSQL.Parser do
     {:ok, parsed} = real_parse(query, context)
     parsed
   end
+  def resolve_table({:fn, _function} = orig, context), do: orig
 
   @doc ~S"""
   From the list of tables, and context, and an unknown column, return the
@@ -127,6 +128,9 @@ defmodule ExoSQL.Parser do
   """
   def resolve_column({:column, {nil, nil, column}}, tables, context) do
     matches = Enum.flat_map(tables, fn
+      # FIXME, fixed name as function for return one column of function table. May use AS when implemented.
+      {:fn, {function, params}} ->
+        [{:column, {:tmp, function, function}}]
       {db, table} ->
         {:ok, table_schema} = ExoSQL.schema(db, table, context)
         Enum.flat_map(table_schema.columns, fn name ->
