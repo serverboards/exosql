@@ -43,7 +43,7 @@ defmodule ExoSQL.DateTime do
       end
     else
       {:ok, unixtime} = ExoSQL.Utils.to_number(n)
-      Logger.debug("To datetime #{inspect unixtime}")
+      # Logger.debug("To datetime #{inspect unixtime}")
       to_datetime(unixtime)
     end
   end

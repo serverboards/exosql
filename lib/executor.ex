@@ -50,7 +50,7 @@ defmodule ExoSQL.Executor do
     {:ok, res}
   end
   def execute({:execute, {db, table}, quals, columns}, context) do
-    Logger.debug("#{inspect {db, table, columns}}")
+    # Logger.debug("#{inspect {db, table, columns}}")
     {dbmod, ctx} = context[db]
 
     vars = Map.get(context, "__vars__", %{})
