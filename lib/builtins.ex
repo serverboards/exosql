@@ -29,6 +29,7 @@ defmodule ExoSQL.Builtins do
     "now" => {ExoSQL.Builtins, :now},
     "strftime" => {ExoSQL.Builtins, :strftime},
     "format" => {ExoSQL.Builtins, :format},
+    "width_bucket" => {ExoSQL.Builtins, :width_bucket},
 
     ## Aggregates
     "count" => {ExoSQL.Builtins, :count},
@@ -155,6 +156,24 @@ defmodule ExoSQL.Builtins do
   def format(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8), do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8])
   def format(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9), do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9])
 
+
+
+  @doc ~S"""
+  Returns to which bucket it belongs.
+
+  Only numbers, but datetimes can be transformed to unix datetime.
+  """
+  def width_bucket(n, start_, end_, nbuckets) do
+    import ExoSQL.Utils, only: [to_float!: 1, to_number!: 1]
+
+    n = to_float!(n)
+    start_ = to_float!(start_)
+    end_ = to_float!(end_)
+    nbuckets = to_number!(nbuckets)
+
+    ((n - start_) * nbuckets / (end_- start_))
+      |> Kernel.round
+  end
 
   ### Aggregate functions
   def is_aggregate("count"), do: true

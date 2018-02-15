@@ -9,7 +9,9 @@ defmodule QueryTest do
   }
 
   def analyze_query!(query, context \\ @context) do
+    Logger.debug("Query is #{inspect query, pretty: true}")
     {:ok, parsed} = ExoSQL.parse(query, context)
+    Logger.debug("Parsed is #{inspect parsed, pretty: true}")
     {:ok, plan} = ExoSQL.Planner.plan(parsed)
     Logger.debug("Plan is #{inspect plan, pretty: true}")
     {:ok, result} = ExoSQL.Executor.execute(plan, context)
@@ -378,4 +380,16 @@ defmodule QueryTest do
 
     assert Enum.count(res.rows) == 1
   end
+
+  test "Width bucket to create histograms. Sales by month." do
+    res = analyze_query!("""
+    SELECT col_1, sum(ammount) FROM
+      (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+       FROM purchases)
+      GROUP BY col_1
+    """)
+
+    assert Enum.count(res.rows) == 5
+  end
+  
 end

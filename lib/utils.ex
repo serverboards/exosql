@@ -18,6 +18,10 @@ defmodule ExoSQL.Utils do
       {:error, :bad_number}
     end
   end
+  def to_number!(n) do
+    {:ok, number} = to_number(n)
+    number
+  end
   def to_float(n) when is_number(n), do: {:ok, n + 0.0} # Maybe better way??
   def to_float(n) when is_binary(n) do # Weak typing
     {n, rem} = Float.parse(n)
@@ -26,6 +30,10 @@ defmodule ExoSQL.Utils do
     else
       {:error, :bad_number}
     end
+  end
+  def to_float!(n) do
+    {:ok, number} = to_float(n)
+    number
   end
 
   def format_result(res) do
