@@ -121,6 +121,7 @@ defmodule ExoSQL.Parser do
     parsed
   end
   def resolve_table({:fn, _function} = orig, context), do: orig
+  def resolve_table({:alias, {_table, alias_}}, context), do: {:tmp, alias_}
 
   @doc ~S"""
   From the list of tables, and context, and an unknown column, return the

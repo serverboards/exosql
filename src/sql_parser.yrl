@@ -3,13 +3,15 @@ query
   select
   from table_list
   where expr expr_list
-  column table groupby
+  column table tableid groupby
   join join_type
   orderby order_expr_list order_expr asc_desc.
 
 Terminals
 id comma dot lit op open_par close_par var
-'SELECT' 'FROM' 'INNER' 'CROSS' 'JOIN' 'ON' 'WHERE' 'GROUP' 'BY' 'ORDER' 'ASC' 'DESC'
+'SELECT' 'FROM' 'AS'
+'OUTER' 'LEFT' 'INNER' 'CROSS' 'JOIN' 'ON'
+'WHERE' 'GROUP' 'BY' 'ORDER' 'ASC' 'DESC'
 .
 
 Rootsymbol query.
@@ -30,6 +32,8 @@ join -> join_type table 'ON' expr join : [{'$1', {'$2', '$4'}}] ++ '$5'.
 join_type -> 'JOIN' : inner_join.
 join_type -> 'INNER' 'JOIN' : inner_join.
 join_type -> 'CROSS' 'JOIN' : cross_join.
+join_type -> 'LEFT' 'JOIN' : left_join.
+join_type -> 'LEFT' 'OUTER' 'JOIN' : left_join.
 
 where -> '$empty' : nil.
 where -> 'WHERE' expr : '$2'.
@@ -63,10 +67,12 @@ column -> id dot id dot id : {unwrap('$1'), unwrap('$3'), unwrap('$5')}.
 column -> id dot id : {nil, unwrap('$1'), unwrap('$3')}.
 column -> id : {nil, nil, unwrap('$1')}.
 
-table -> id dot id : {table, {unwrap('$1'), unwrap('$3')}}.
-table -> id : {table, {nil, unwrap('$1')}}.
-table -> open_par query close_par : {select, '$2'}.
-table -> id open_par expr_list close_par : {fn, {unwrap_d('$1'), '$3'}}.
+table -> tableid 'AS' id : {alias, {'$1', unwrap('$3')}}.
+table -> tableid : '$1'.
+tableid -> id dot id : {table, {unwrap('$1'), unwrap('$3')}}.
+tableid -> id : {table, {nil, unwrap('$1')}}.
+tableid -> open_par query close_par : {select, '$2'}.
+tableid -> id open_par expr_list close_par : {fn, {unwrap_d('$1'), '$3'}}.
 
 select -> column comma select: [unwrap('$1')] ++ '$3'.
 

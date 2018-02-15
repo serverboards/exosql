@@ -394,11 +394,24 @@ defmodule QueryTest do
 
   test "Width bucket to create histograms. Return all months." do
     res = analyze_query!("""
-    SELECT n FROM
-      generate_series(12)
+    SELECT generate_series FROM
+      generate_series(12) AS months
     """)
 
     assert Enum.count(res.rows) == 12
+
+    res = analyze_query!("""
+    SELECT month, sum(ammount) FROM
+      generate_series(12) AS month
+      LEFT OUTER JOIN
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS hmonth, ammount
+         FROM purchases)
+      ON
+        month = hmonth
+    """)
+
+    assert Enum.count(res.rows) == 12
+
   end
 
 end
