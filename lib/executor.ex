@@ -151,6 +151,9 @@ defmodule ExoSQL.Executor do
   def execute({:left_join, table1, table2, expr}, context) do
     execute_join(table1, table2, expr, context, :left)
   end
+  def execute({:right_join, table1, table2, expr}, context) do
+    execute_join(table2, table1, expr, context, :left)
+  end
 
   def execute_join(table1, table2, expr, context, no_match_strategy) do
     {:ok, res1} = execute(table1, context)

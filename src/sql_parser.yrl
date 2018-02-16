@@ -10,7 +10,7 @@ query
 Terminals
 id comma dot lit op open_par close_par var
 'SELECT' 'FROM' 'AS'
-'OUTER' 'LEFT' 'INNER' 'CROSS' 'JOIN' 'ON'
+'OUTER' 'LEFT' 'RIGHT' 'INNER' 'CROSS' 'JOIN' 'ON'
 'WHERE' 'GROUP' 'BY' 'ORDER' 'ASC' 'DESC'
 .
 
@@ -34,6 +34,8 @@ join_type -> 'INNER' 'JOIN' : inner_join.
 join_type -> 'CROSS' 'JOIN' : cross_join.
 join_type -> 'LEFT' 'JOIN' : left_join.
 join_type -> 'LEFT' 'OUTER' 'JOIN' : left_join.
+join_type -> 'RIGHT' 'JOIN' : right_join.
+join_type -> 'RIGHT' 'OUTER' 'JOIN' : right_join.
 
 where -> '$empty' : nil.
 where -> 'WHERE' expr : '$2'.
