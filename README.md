@@ -2,8 +2,6 @@
 
 [![Build Status](https://travis-ci.org/serverboards/exosql.svg?branch=master)](https://travis-ci.org/serverboards/exosql)
 
-**Not everything described here is working yet**
-
 Universal SQL engine for Elixir.
 
 This library implements the SQL engine to perform queries on user provided
@@ -41,9 +39,12 @@ end
 * SELECT over several tables
 * WHERE
 * INNER JOIN
+* LEFT JOIN
+* RIGHT JOIN
 * GROUP BY
 * ORDER BY
 * nested SELECT at FROM (no alias yet)
+* `generate_series` function tables
 * Aggregation functions: COUNT, SUM, AVG
 * Builtin functions and operators: * / + - || or and round concat..
 * Basic Reflection over `self.tables`
