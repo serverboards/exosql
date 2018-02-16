@@ -392,13 +392,79 @@ defmodule QueryTest do
     assert Enum.count(res.rows) == 5
   end
 
+  test "Select from generate_series" do
+    res = analyze_query!("SELECT generate_series FROM generate_series(1,12,2)")
+
+    assert Enum.count(res.rows) == 6
+
+    res = analyze_query!("SELECT month FROM generate_series(1,12,2) AS month")
+
+    assert res.columns == [{:tmp, "month", "month"}]
+    assert Enum.count(res.rows) == 6
+  end
+
+  test "Fail get non existant column" do
+    try do
+      analyze_query!("SELECT nope FROM (SELECT 1)")
+      flunk "Should fail bad query"
+    rescue
+      MatchError ->
+        nil
+    end
+    try do
+      analyze_query!("SELECT nope FROM generate_series(1,12,2)")
+      flunk "Should fail bad query, generate_series has one column generate_series"
+    rescue
+      MatchError ->
+        nil
+    end
+  end
+
   test "Width bucket to create histograms. Return all months." do
     res = analyze_query!("""
-    SELECT n FROM
-      generate_series(12)
+    SELECT months FROM
+      generate_series(12) AS months
     """)
 
     assert Enum.count(res.rows) == 12
+
+    res = analyze_query!("""
+    SELECT month, sum(ammount) FROM
+      generate_series(12) AS month
+      JOIN
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+         FROM purchases)
+      ON
+        month = col_1
+      GROUP BY month
+    """)
+
+    assert Enum.count(res.rows) == 5 # innner join
+
+    res = analyze_query!("""
+    SELECT month, sum(ammount) FROM
+      generate_series(12) AS month
+      LEFT OUTER JOIN
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+         FROM purchases)
+      ON
+        month = col_1
+      GROUP BY month
+    """)
+
+    assert Enum.count(res.rows) == 12 # outer join
+    res = analyze_query!("""
+    SELECT month, sum(ammount) FROM
+      (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+        FROM purchases)
+      RIGHT OUTER JOIN
+        generate_series(12) AS month
+      ON
+        month = col_1
+      GROUP BY month
+    """)
+
+    assert Enum.count(res.rows) == 12 # outer join
   end
 
 end

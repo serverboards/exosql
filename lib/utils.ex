@@ -5,6 +5,7 @@ defmodule ExoSQL.Utils do
   Various assorted utility functions.
   """
 
+  def to_number(nil), do: {:error, nil}
   def to_number(n) when is_number(n), do: {:ok, n}
   def to_number(n) when is_binary(n) do # Weak typing
     {n, rem} = if String.contains?(n, ".") do

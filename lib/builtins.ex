@@ -234,7 +234,10 @@ defmodule ExoSQL.Builtins do
     # Logger.debug("Simplified expression #{inspect expr}")
     Enum.reduce(data.rows, 0, fn row, acc ->
       n = ExoSQL.Expr.run_expr(expr, row)
-      {:ok, n} = ExoSQL.Utils.to_number(n)
+      n = case ExoSQL.Utils.to_number(n) do
+        {:ok, n} -> n
+        {:error, nil} -> 0
+      end
       acc + n
     end)
   end

@@ -49,22 +49,52 @@ defmodule ExoSQL.Executor do
 
     {:ok, res}
   end
+  # alias select needs to rename quals and columns to the final, and back to aliased
+  def execute({:execute, {:alias, {{:fn, {function, params}}, alias_}}, quals, columns}, context) do
+    {:ok, res} = execute({:execute, {:fn, {function, params}}, quals, columns}, context)
+    columns = Enum.map(res.columns, fn {_db, _table, column} ->
+      {:tmp, alias_, alias_}
+    end)
+    {:ok, %ExoSQL.Result{
+      columns: columns,
+      rows: res.rows
+    }}
+  end
+  def execute({:execute, {:alias, {table, alias_}}, quals, columns}, context) do
+    {:ok, res} = execute({:execute, table, quals, columns}, context)
+    columns = Enum.map(res.columns, fn {_db, _table, column} ->
+      {:tmp, alias_, column}
+    end)
+    {:ok, %ExoSQL.Result{
+      columns: columns,
+      rows: res.rows
+    }}
+  end
   def execute({:execute, {db, table}, quals, columns}, context) do
     # Logger.debug("#{inspect {db, table, columns}}")
     {dbmod, ctx} = context[db]
 
-    vars = Map.get(context, "__vars__", %{})
-    quals = Enum.map(quals, fn
-      [op1,op,{:var, variable}] ->
-        [op1, op, vars[variable]]
-      other -> other
-    end)
+    quals = quals_with_vars(quals, Map.get(context, "__vars__", %{}))
 
     scolumns = Enum.map(columns, fn {^db, ^table, column} ->
       column
     end)
 
-    case apply(dbmod, :execute, [ctx, table, quals, scolumns]) do
+    data = apply(dbmod, :execute, [ctx, table, quals, scolumns])
+    column_reselect(data, columns, db, table, context)
+  end
+
+  def quals_with_vars(quals, vars) do
+    Enum.map(quals, fn
+      [op1,op,{:var, variable}] ->
+        [op1, op, vars[variable]]
+      other -> other
+    end)
+  end
+
+  # common data that given a result, reorders the columns as required
+  def column_reselect(data, columns, db, table, context) do
+    case data do
       {:ok, %{ columns: ^columns, rows: rows}} ->
         {:ok, %ExoSQL.Result{
           columns: Enum.map(columns, fn c -> {db, table, c} end),
@@ -112,30 +142,35 @@ defmodule ExoSQL.Executor do
   # second table with all the join ids (a {:in, "id", [1,2,3,4]} or similar)
   # and then does the full join and filter
   def execute({:inner_join, table1, table2, expr}, context) do
+    execute_join(table1, table2, expr, context, :empty)
+  end
+
+  # An left outer join is as the inner join, but instead of
+  # collapsing the non matching rows, generates a null one for
+  # the right side
+  def execute({:left_join, table1, table2, expr}, context) do
+    execute_join(table1, table2, expr, context, :left)
+  end
+  def execute({:right_join, table1, table2, expr}, context) do
+    execute_join(table2, table1, expr, context, :left)
+  end
+
+  def execute_join(table1, table2, expr, context, no_match_strategy) do
     {:ok, res1} = execute(table1, context)
 
     # calculate extraquals with the {:in, "id", [...]} form, or none and
     # do a full query
     # if it follows the canonical form, then all OK
-    {:execute, {db2, tablename2}, quals2, columns2} = table2
-    extraquals = case expr do
-      {:op, {"=", {:column, a}, {:column, b}}} ->
-        idf = case a do
-          {^db2, ^tablename2, _columnname} -> b
-          _other -> a
-        end
-        ids = simplify_expr_columns({:column, idf}, res1.columns, context["__vars__"])
-        # Logger.debug("From ltable get #{inspect idf} #{inspect ids}")
-        inids = Enum.reduce(res1.rows, [], fn row, acc ->
-          [ExoSQL.Expr.run_expr(ids, row) | acc]
-        end) |> Enum.uniq
-        # Logger.debug("inids #{inspect inids}")
-        {_db, _table, columnname} = idf
-        [{:in, columnname, inids}]
-      _expr ->
-        []
+    table2 = case table2 do
+      {:execute, from2, quals2, columns2} ->
+        extraquals = get_extra_quals(res1, expr, context)
+        {:execute, from2, quals2, columns2} = table2
+
+        {:execute, from2, quals2 ++ extraquals, columns2}
+      other -> # sorry no qual optimization yet TODO
+        other
     end
-    table2 = {:execute, {db2, tablename2}, quals2 ++ extraquals, columns2}
+
 
     # Now we get the final table2. As always if the quals are ignored it is just
     # less efficient.
@@ -146,15 +181,20 @@ defmodule ExoSQL.Executor do
     columns = res1.columns ++ res2.columns
     # Logger.debug("Columns #{inspect columns}")
     rexpr = simplify_expr_columns(expr, columns, context["__vars__"])
+    empty_row2 = Enum.map(res2.columns, fn _ -> nil end)
     rows = Enum.reduce( res1.rows, [], fn row1, acc ->
       nrows = Enum.map( res2.rows, fn row2 ->
         row = row1 ++ row2
-        if ExoSQL.Expr.run_expr(rexpr, row) do
-          row
-        else
-          nil
+        cond do
+          ExoSQL.Expr.run_expr(rexpr, row) ->
+            row
+          no_match_strategy == :empty ->
+            nil
+          no_match_strategy == :left ->
+            row1 ++ empty_row2
         end
       end) |> Enum.filter(&(&1 != nil))
+
       # Logger.debug("Test row #{inspect nrow} #{inspect rexpr}")
       nrows ++ acc
     end)
@@ -166,6 +206,33 @@ defmodule ExoSQL.Executor do
       rows: rows
     }}
   end
+  def get_extra_quals(res1, expr, context) do
+    case expr do
+      {:op, {"=", {:column, a}, {:column, b}}} ->
+        res1_contains_a = Enum.find(res1.columns, fn
+          ^a -> true
+          _ -> false
+        end)
+
+        {idf, idt} = if res1_contains_a do
+          {a, b}
+        else
+          {b, a}
+        end
+
+        ids = simplify_expr_columns({:column, idf}, res1.columns, context["__vars__"])
+        # Logger.debug("From ltable get #{inspect idf} #{inspect ids}")
+        inids = Enum.reduce(res1.rows, [], fn row, acc ->
+          [ExoSQL.Expr.run_expr(ids, row) | acc]
+        end) |> Enum.uniq
+        # Logger.debug("inids #{inspect inids}")
+        {_db, _table, columnname} = idt
+        [{:in, columnname, inids}]
+      _expr ->
+        []
+    end
+  end
+
 
   def execute({:group_by, from, groups}, context) do
     {:ok, data} = execute(from, context)
