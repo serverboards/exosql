@@ -66,7 +66,7 @@ defmodule ExoSQL.Planner do
       query.select,
       query.groupby,
       Enum.map(query.orderby, fn {_type, expr} -> expr end),
-      Enum.map(query.join, fn {:inner_join, {_from, expr}} -> expr end),
+      Enum.map(query.join, fn {_join, {_from, expr}} -> expr end),
     ]
     # Logger.debug("All expressions: #{inspect all_expressions}")
     from = Enum.map(query.from, fn
@@ -88,16 +88,16 @@ defmodule ExoSQL.Planner do
     end
 
     join_plan = Enum.reduce(query.join, from_plan, fn
-      {:inner_join, {%ExoSQL.Query{} = q, expr}}, acc ->
+      {join_type, {%ExoSQL.Query{} = q, expr}}, acc ->
         # Logger.debug(inspect from)
-        from = {:execute, q, [], []}
-        {:inner_join, acc, from, expr}
-      {:inner_join, {{db, table}, expr}}, acc ->
+        {:ok, from} = plan(q)
+        {join_type, acc, from, expr}
+      {join_type, {{db, table}, expr}}, acc ->
         # Logger.debug(inspect from)
         columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
         quals = get_quals(db, table, [query.where, expr])
         from = {:execute, {db, table}, quals, columns}
-        {:inner_join, acc, from, expr}
+        {join_type, acc, from, expr}
     end)
 
     where_plan = if query.where do

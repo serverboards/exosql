@@ -436,10 +436,23 @@ defmodule QueryTest do
          FROM purchases)
       ON
         month = col_1
+      GROUP BY month
     """)
 
-    assert Enum.count(res.rows) == 12
+    assert Enum.count(res.rows) == 5 # innner join
 
+    res = analyze_query!("""
+    SELECT month, sum(ammount) FROM
+      generate_series(12) AS month
+      LEFT OUTER JOIN
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+         FROM purchases)
+      ON
+        month = col_1
+      GROUP BY month
+    """)
+
+    assert Enum.count(res.rows) == 12 # outer join
   end
 
 end
