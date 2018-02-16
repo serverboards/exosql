@@ -88,12 +88,15 @@ defmodule ExoSQL.Planner do
     end
 
     join_plan = Enum.reduce(query.join, from_plan, fn
-      {:inner_join, {from, expr}}, acc ->
+      {:inner_join, {%ExoSQL.Query{} = q, expr}}, acc ->
         # Logger.debug(inspect from)
-        {db, table} = from
+        from = {:execute, q, [], []}
+        {:inner_join, acc, from, expr}
+      {:inner_join, {{db, table}, expr}}, acc ->
+        # Logger.debug(inspect from)
         columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
         quals = get_quals(db, table, [query.where, expr])
-        from = {:execute, from, quals, columns}
+        from = {:execute, {db, table}, quals, columns}
         {:inner_join, acc, from, expr}
     end)
 

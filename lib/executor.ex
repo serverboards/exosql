@@ -11,7 +11,7 @@ defmodule ExoSQL.Executor do
     # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}. Context: #{inspect context}")
 
     exprs = Enum.map(columns, &simplify_expr_columns(&1, rcolumns, context["__vars__"]))
-    # Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs} / #{inspect columns}")
+    Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs} / #{inspect columns}")
 
     rows = Enum.map(rows, fn row ->
       Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, row) )
@@ -49,22 +49,52 @@ defmodule ExoSQL.Executor do
 
     {:ok, res}
   end
+  # alias select needs to rename quals and columns to the final, and back to aliased
+  def execute({:execute, {:alias, {{:fn, {function, params}}, alias_}}, quals, columns}, context) do
+    {:ok, res} = execute({:execute, {:fn, {function, params}}, quals, columns}, context)
+    columns = Enum.map(res.columns, fn {_db, _table, column} ->
+      {:tmp, alias_, alias_}
+    end)
+    {:ok, %ExoSQL.Result{
+      columns: columns,
+      rows: res.rows
+    }}
+  end
+  def execute({:execute, {:alias, {table, alias_}}, quals, columns}, context) do
+    {:ok, res} = execute({:execute, table, quals, columns}, context)
+    columns = Enum.map(res.columns, fn {_db, _table, column} ->
+      {:tmp, alias_, column}
+    end)
+    {:ok, %ExoSQL.Result{
+      columns: columns,
+      rows: res.rows
+    }}
+  end
   def execute({:execute, {db, table}, quals, columns}, context) do
     # Logger.debug("#{inspect {db, table, columns}}")
     {dbmod, ctx} = context[db]
 
-    vars = Map.get(context, "__vars__", %{})
-    quals = Enum.map(quals, fn
-      [op1,op,{:var, variable}] ->
-        [op1, op, vars[variable]]
-      other -> other
-    end)
+    quals = quals_with_vars(quals, Map.get(context, "__vars__", %{}))
 
     scolumns = Enum.map(columns, fn {^db, ^table, column} ->
       column
     end)
 
-    case apply(dbmod, :execute, [ctx, table, quals, scolumns]) do
+    data = apply(dbmod, :execute, [ctx, table, quals, scolumns])
+    column_reselect(data, columns, db, table, context)
+  end
+
+  def quals_with_vars(quals, vars) do
+    Enum.map(quals, fn
+      [op1,op,{:var, variable}] ->
+        [op1, op, vars[variable]]
+      other -> other
+    end)
+  end
+
+  # common data that given a result, reorders the columns as required
+  def column_reselect(data, columns, db, table, context) do
+    case data do
       {:ok, %{ columns: ^columns, rows: rows}} ->
         {:ok, %ExoSQL.Result{
           columns: Enum.map(columns, fn c -> {db, table, c} end),

@@ -396,6 +396,11 @@ defmodule QueryTest do
     res = analyze_query!("SELECT generate_series FROM generate_series(1,12,2)")
 
     assert Enum.count(res.rows) == 6
+
+    res = analyze_query!("SELECT month FROM generate_series(1,12,2) AS month")
+
+    assert res.columns == [{:tmp, "month", "month"}]
+    assert Enum.count(res.rows) == 6
   end
 
   test "Fail get non existant column" do
@@ -417,7 +422,7 @@ defmodule QueryTest do
 
   test "Width bucket to create histograms. Return all months." do
     res = analyze_query!("""
-    SELECT generate_series FROM
+    SELECT months FROM
       generate_series(12) AS months
     """)
 
@@ -426,11 +431,11 @@ defmodule QueryTest do
     res = analyze_query!("""
     SELECT month, sum(ammount) FROM
       generate_series(12) AS month
-      LEFT OUTER JOIN
-        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS hmonth, ammount
+      JOIN
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
          FROM purchases)
       ON
-        month = hmonth
+        month = col_1
     """)
 
     assert Enum.count(res.rows) == 12
