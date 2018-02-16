@@ -392,6 +392,29 @@ defmodule QueryTest do
     assert Enum.count(res.rows) == 5
   end
 
+  test "Select from generate_series" do
+    res = analyze_query!("SELECT generate_series FROM generate_series(1,12,2)")
+
+    assert Enum.count(res.rows) == 6
+  end
+
+  test "Fail get non existant column" do
+    try do
+      analyze_query!("SELECT nope FROM (SELECT 1)")
+      flunk "Should fail bad query"
+    rescue
+      MatchError ->
+        nil
+    end
+    try do
+      analyze_query!("SELECT nope FROM generate_series(1,12,2)")
+      flunk "Should fail bad query, generate_series has one column generate_series"
+    rescue
+      MatchError ->
+        nil
+    end
+  end
+
   test "Width bucket to create histograms. Return all months." do
     res = analyze_query!("""
     SELECT generate_series FROM
