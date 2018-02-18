@@ -36,17 +36,18 @@ end
 ## Features
 
 * **SELECT over external databases**
-* SELECT over several tables
-* WHERE
-* INNER JOIN
-* LEFT JOIN
-* RIGHT JOIN
-* GROUP BY
-* ORDER BY
-* nested SELECT at FROM (no alias yet)
+* `SELECT` over several tables
+* `WHERE`
+* `INNER JOIN`
+* `LEFT JOIN`
+* `RIGHT JOIN`
+* `GROUP BY`
+* `ORDER BY`
+* table and column alias with `AS`
+* nested `SELECT` at `FROM`
 * `generate_series` function tables
 * Aggregation functions: COUNT, SUM, AVG
-* Builtin functions and operators: * / + - || or and round concat..
+* Builtin functions and operators: * / + - || or and; round concat...
 * Basic Reflection over `self.tables`
 * Variables
 
@@ -193,7 +194,7 @@ to learn how to create an SQL engine. ExoSQL is currently used in
   avoid use one or the other, dont mix order by column name and result column
   position.
 
-  This is becasue the planner does the ordering on column name first, then
+  This is because the planner does the ordering on column name first, then
   the select which limits the columns and reorder them and then the ordering
   by column position.
 
