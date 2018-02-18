@@ -50,16 +50,6 @@ defmodule ExoSQL.Executor do
     {:ok, res}
   end
   # alias select needs to rename quals and columns to the final, and back to aliased
-  def execute({:execute, {:alias, {{:fn, {function, params}}, alias_}}, quals, columns}, context) do
-    {:ok, res} = execute({:execute, {:fn, {function, params}}, quals, columns}, context)
-    columns = Enum.map(res.columns, fn {_db, _table, column} ->
-      {:tmp, alias_, alias_}
-    end)
-    {:ok, %ExoSQL.Result{
-      columns: columns,
-      rows: res.rows
-    }}
-  end
   def execute({:execute, {:alias, {table, alias_}}, quals, columns}, context) do
     {:ok, res} = execute({:execute, table, quals, columns}, context)
     columns = Enum.map(res.columns, fn {_db, _table, column} ->
@@ -176,7 +166,7 @@ defmodule ExoSQL.Executor do
     # less efficient.
     {:ok, res2} = execute(table2, context)
 
-    # Logger.debug("Inner join of\n\n#{inspect table1, pretty: true}\n\n#{inspect table2, pretty: true}\n\n#{inspect expr}")
+    # Logger.debug("Left join of\n\n#{inspect res1, pretty: true}\n\n#{inspect res2, pretty: true}\n\n#{inspect expr}")
 
     columns = res1.columns ++ res2.columns
     # Logger.debug("Columns #{inspect columns}")
@@ -185,21 +175,23 @@ defmodule ExoSQL.Executor do
     rows = Enum.reduce( res1.rows, [], fn row1, acc ->
       nrows = Enum.map( res2.rows, fn row2 ->
         row = row1 ++ row2
-        cond do
-          ExoSQL.Expr.run_expr(rexpr, row) ->
-            row
-          no_match_strategy == :empty ->
-            nil
-          no_match_strategy == :left ->
-            row1 ++ empty_row2
+        if ExoSQL.Expr.run_expr(rexpr, row) do
+          row
+        else
+          nil
         end
       end) |> Enum.filter(&(&1 != nil))
 
+      nrows = if nrows == [] and no_match_strategy == :left do
+        [row1 ++ empty_row2]
+      else
+        nrows
+      end
       # Logger.debug("Test row #{inspect nrow} #{inspect rexpr}")
       nrows ++ acc
     end)
 
-    # Logger.debug("Result #{inspect rows, pretty: true}")
+    # Logger.debug("Result #{inspect no_match_strategy} #{inspect rows, pretty: true}")
 
     {:ok, %ExoSQL.Result{
       columns: columns,
@@ -289,6 +281,17 @@ defmodule ExoSQL.Executor do
     }}
   end
 
+  # alias of fn renames the table and the column inside
+  def execute({:alias, {:fn, {function, params}}, alias_}, context) do
+    res = ExoSQL.Expr.run_expr({:fn, {function, params}}, [])
+    columns = Enum.map(res.columns, fn column ->
+      {:tmp, alias_, alias_}
+    end)
+    {:ok, %ExoSQL.Result{
+      columns: columns,
+      rows: res.rows
+    }}
+  end
   def execute({:alias, from, alias_}, context) do
     {:ok, data} = execute(from, context)
     columns = Enum.map(data.columns, fn {_db, _table, column} ->

@@ -69,21 +69,8 @@ defmodule ExoSQL.Planner do
       Enum.map(query.join, fn {_join, {_from, expr}} -> expr end),
     ]
     # Logger.debug("All expressions: #{inspect all_expressions}")
-    from = Enum.map(query.from, fn
-      {:alias, {{db, table}, alias_}} ->
-        columns = Enum.uniq(get_table_columns_at_expr(:tmp, alias_, all_expressions))
-        columns = Enum.map(columns, fn {:tmp, ^alias_, column} -> {db, table, column} end)
-        quals = get_quals(db, table, query.where)
-        ex = {:execute, {db, table}, quals, columns}
-        {:alias, ex, alias_}
-      {db, table} ->
-        columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
-        quals = get_quals(db, table, query.where)
-        {:execute, {db, table}, quals, columns}
-      %ExoSQL.Query{} = q ->
-        {:ok, q} = plan(q)
-        q
-    end)
+    # Logger.debug("From #{inspect query.from, pretty: true}")
+    from = Enum.map(query.from, &plan_execute(&1, query.where, all_expressions))
 
     from_plan = if from == [] do
       %ExoSQL.Result{columns: ["?NONAME"], rows: [[1]]} # just one element
@@ -94,15 +81,8 @@ defmodule ExoSQL.Planner do
     end
 
     join_plan = Enum.reduce(query.join, from_plan, fn
-      {join_type, {%ExoSQL.Query{} = q, expr}}, acc ->
-        # Logger.debug(inspect from)
-        {:ok, from} = plan(q)
-        {join_type, acc, from, expr}
-      {join_type, {{db, table}, expr}}, acc ->
-        # Logger.debug(inspect from)
-        columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
-        quals = get_quals(db, table, [query.where, expr])
-        from = {:execute, {db, table}, quals, columns}
+      {join_type, {toplan, expr}}, acc ->
+        from = plan_execute(toplan, expr, all_expressions)
         {join_type, acc, from, expr}
     end)
 
@@ -153,6 +133,31 @@ defmodule ExoSQL.Planner do
   end
 
   def plan(plan, _context), do: plan(plan)
+
+  defp plan_execute({:alias, {{:fn, {function, params}}, alias_}}, where, all_expressions) do
+    ex = {:fn, {function, params}}
+    {:alias, ex, alias_}
+  end
+  defp plan_execute({:alias, {{db, table}, alias_}}, where, all_expressions) do
+    columns = Enum.uniq(get_table_columns_at_expr(:tmp, alias_, all_expressions))
+    columns = Enum.map(columns, fn {:tmp, ^alias_, column} -> {db, table, column} end)
+    quals = get_quals(db, table, where)
+    ex = {:execute, {db, table}, quals, columns}
+    {:alias, ex, alias_}
+  end
+  defp plan_execute({:alias, {%ExoSQL.Query{} = q, alias_}}, where, all_expressions) do
+    {:ok, ex} = plan(q)
+    {:alias, ex, alias_}
+  end
+  defp plan_execute({db, table}, where, all_expressions) do
+    columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
+    quals = get_quals(db, table, where)
+    {:execute, {db, table}, quals, columns}
+  end
+  defp plan_execute(%ExoSQL.Query{} = q, where, all_expressions) do
+    {:ok, q} = plan(q)
+    q
+  end
 
   # Gets all the vars referenced in an expression that refer to a given table
   defp get_table_columns_at_expr(db, table, l) when is_list(l) do

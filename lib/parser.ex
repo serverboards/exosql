@@ -100,7 +100,7 @@ defmodule ExoSQL.Parser do
       sql = String.to_charlist(sql)
       {:ok, lexed, _lines} = :sql_lexer.string(sql)
       {:ok, parsed} = :sql_parser.parse(lexed)
-      Logger.debug("Yeec parsed: #{inspect parsed, pretty: true}")
+      # Logger.debug("Yeec parsed: #{inspect parsed, pretty: true}")
       real_parse(parsed, context)
     catch
       any -> {:error, any}
@@ -258,6 +258,9 @@ defmodule ExoSQL.Parser do
   defp get_query_columns(%ExoSQL.Query{ select: select }), do: get_column_names_or_alias(select, 1)
   defp get_column_names_or_alias([{:column, column} | rest], count) do
     [column | get_column_names_or_alias(rest, count + 1)]
+  end
+  defp get_column_names_or_alias([{:alias, {_column, alias_}} | rest], count) do
+    [{:tmp, :tmp, alias_} | get_column_names_or_alias(rest, count + 1)]
   end
   defp get_column_names_or_alias([_head | rest], count) do
     [{:tmp, :tmp, "col_#{count}"} | get_column_names_or_alias(rest, count + 1)]

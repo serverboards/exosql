@@ -420,14 +420,16 @@ defmodule QueryTest do
     end
   end
 
-  test "Width bucket to create histograms. Return all months." do
+  test "Width bucket to create histograms with alias." do
     res = analyze_query!("""
     SELECT months FROM
       generate_series(12) AS months
     """)
 
     assert Enum.count(res.rows) == 12
+  end
 
+  test "Width bucket to create histograms. INNER JOIN. 5 months." do
     res = analyze_query!("""
     SELECT month, sum(ammount) FROM
       generate_series(12) AS month
@@ -440,13 +442,30 @@ defmodule QueryTest do
     """)
 
     assert Enum.count(res.rows) == 5 # innner join
+  end
 
+  test "Width bucket to create histograms. LEFT JOIN Return all months." do
     res = analyze_query!("""
     SELECT month, sum(ammount) FROM
       generate_series(12) AS month
       LEFT OUTER JOIN
         (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
          FROM purchases)
+      ON
+        month = col_1
+      GROUP BY month
+    """)
+
+    assert Enum.count(res.rows) == 12 # outer join
+  end
+
+  test "Width bucket to create histograms. RIGHT JOIN. Return all months." do
+    res = analyze_query!("""
+    SELECT month, sum(ammount) FROM
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+        FROM purchases)
+      RIGHT OUTER JOIN
+        generate_series(12) AS month
       ON
         month = col_1
       GROUP BY month
@@ -464,16 +483,24 @@ defmodule QueryTest do
     assert res.columns == [{:tmp, "us", "first_name"}]
   end
 
+  test "Function table with alias" do
+    res = analyze_query!("""
+      SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, ammount
+        FROM purchases
+      """)
+    assert res.columns == [{:tmp, :tmp, "month"}, {"A", "purchases", "ammount"}]
+  end
+
   test "Width bucket, table alias and column alias" do
     res = analyze_query!("""
-    SELECT month, sum(ammount) FROM
+    SELECT month.month, sum(ammount) FROM
       (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, ammount
         FROM purchases) AS hist
       RIGHT OUTER JOIN
         generate_series(12) AS month
       ON
-        month = hist.month
-      GROUP BY month
+        month.month = hist.month
+      GROUP BY month.month
     """)
 
     assert Enum.count(res.rows) == 12 # outer join
