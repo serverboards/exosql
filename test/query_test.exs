@@ -506,4 +506,23 @@ defmodule QueryTest do
     assert Enum.count(res.rows) == 12 # outer join
   end
 
+  test "Ambigous name in query, not smart enough for group removes columns. (FIXME)" do
+    try do
+      analyze_query!("""
+      SELECT month, sum(ammount) FROM
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, ammount
+          FROM purchases) AS hist
+        RIGHT OUTER JOIN
+          generate_series(12) AS month
+        ON
+          month.month = hist.month
+        GROUP BY month.month
+      """)
+      flunk "Should fail because of ambigous column. Actually should not if someday the parer is smarter about to use only group columns on select"
+    rescue
+      MatchError -> :ok
+    end
+  end
+
+
 end

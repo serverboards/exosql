@@ -212,10 +212,16 @@ defmodule ExoSQL.Parser do
   FQN of the column.
   """
   def resolve_column({:column, {nil, nil, column}}, schema) do
-    found = Enum.find(schema, fn
+    found = Enum.filter(schema, fn
       {db, table, ^column} -> true
       other -> false
     end)
+
+    found = case found do
+      [one] -> one
+      [] -> throw {:not_found, column, :in, schema}
+      _many -> throw {:ambiguous_column, column, :in, schema}
+    end
 
     if found do
       {:column, found}
