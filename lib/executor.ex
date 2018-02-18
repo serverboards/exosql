@@ -302,6 +302,9 @@ defmodule ExoSQL.Executor do
   def simplify_expr_columns({:column, cn}, _names, _vars) when is_number(cn) do
     {:column, cn}
   end
+  def simplify_expr_columns({:alias, {expr, _}}, names, vars) do
+    simplify_expr_columns(expr, names, vars)
+  end
   def simplify_expr_columns({:column, cn}, names, _vars) do
     i = Enum.find_index(names, &(&1 == cn))
     if i == nil do
@@ -337,6 +340,9 @@ defmodule ExoSQL.Executor do
   defp resolve_column_names(columns), do: resolve_column_names(columns, 1)
   defp resolve_column_names([{:column, col} | rest], count) do
     [col | resolve_column_names(rest, count + 1)]
+  end
+  defp resolve_column_names([{:alias, {_, name}} | rest], count) do
+    [{:tmp, :tmp, name} | resolve_column_names(rest, count + 1)]
   end
   defp resolve_column_names([_other | rest], count) do
     [{:tmp, :tmp, "col_#{count}"} | resolve_column_names(rest, count + 1)]

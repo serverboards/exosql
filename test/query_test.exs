@@ -9,7 +9,7 @@ defmodule QueryTest do
   }
 
   def analyze_query!(query, context \\ @context) do
-    Logger.debug("Query is #{inspect query, pretty: true}")
+    Logger.debug("Query is:\n\n#{query}")
     {:ok, parsed} = ExoSQL.parse(query, context)
     Logger.debug("Parsed is #{inspect parsed, pretty: true}")
     {:ok, plan} = ExoSQL.Planner.plan(parsed)
@@ -453,14 +453,26 @@ defmodule QueryTest do
     """)
 
     assert Enum.count(res.rows) == 12 # outer join
+  end
+
+  test "Simple column alias as" do
+    res = analyze_query!("""
+      SELECT name AS first_name
+        FROM users
+      """)
+
+    assert res.columns == [{:tmp, :tmp, "first_name"}]
+  end
+
+  test "Width bucket, table alias and column alias" do
     res = analyze_query!("""
     SELECT month, sum(ammount) FROM
-      (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
-        FROM purchases)
+      (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, ammount
+        FROM purchases) AS hist
       RIGHT OUTER JOIN
         generate_series(12) AS month
       ON
-        month = col_1
+        month = hist.month
       GROUP BY month
     """)
 

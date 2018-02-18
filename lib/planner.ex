@@ -162,6 +162,9 @@ defmodule ExoSQL.Planner do
   defp get_table_columns_at_expr(db, table, {:fn, {_f, params}}) do
     get_table_columns_at_expr(db, table, params)
   end
+  defp get_table_columns_at_expr(db, table, {:alias, {expr, _alias}}) do
+    get_table_columns_at_expr(db, table, expr)
+  end
   defp get_table_columns_at_expr(_db, _table, _other), do: []
 
 

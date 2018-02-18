@@ -1,6 +1,6 @@
 Nonterminals
 query
-  select
+  select select_expr select_expr_list
   from table_list
   where expr expr_list
   column table tableid groupby
@@ -19,8 +19,13 @@ Rootsymbol query.
 query -> select from join where groupby orderby: #{select => '$1', from => '$2', join => '$3', where => '$4', groupby => '$5', orderby => '$6'}.
 query -> select: #{select => '$1', from => [], join => [], where => nil, groupby => nil, orderby => []}.
 
-select -> 'SELECT' expr_list : '$2'.
+select -> 'SELECT' select_expr_list : '$2'.
 select -> 'SELECT' op : tag('$2', "*"), [{all_columns}].
+
+select_expr_list -> select_expr : ['$1'].
+select_expr_list -> select_expr comma select_expr_list: ['$1'] ++ '$3'.
+select_expr -> expr: '$1'.
+select_expr -> expr 'AS' id: {alias, {'$1', unwrap('$3')}}.
 
 from -> 'FROM' table_list : '$2'.
 table_list -> table : ['$1'].
