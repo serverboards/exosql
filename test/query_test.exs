@@ -458,10 +458,10 @@ defmodule QueryTest do
   test "Simple column alias as" do
     res = analyze_query!("""
       SELECT name AS first_name
-        FROM users
+        FROM users AS us
       """)
 
-    assert res.columns == [{:tmp, :tmp, "first_name"}]
+    assert res.columns == [{:tmp, "us", "first_name"}]
   end
 
   test "Width bucket, table alias and column alias" do

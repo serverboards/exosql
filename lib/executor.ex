@@ -11,7 +11,7 @@ defmodule ExoSQL.Executor do
     # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}. Context: #{inspect context}")
 
     exprs = Enum.map(columns, &simplify_expr_columns(&1, rcolumns, context["__vars__"]))
-    # Logger.debug("From #{inspect {rcolumns, rows}} get #{inspect exprs} / #{inspect columns}")
+    # Logger.debug("From #{inspect rcolumns} get #{inspect exprs} / #{inspect columns}")
 
     rows = Enum.map(rows, fn row ->
       Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, row) )
@@ -289,6 +289,17 @@ defmodule ExoSQL.Executor do
     }}
   end
 
+  def execute({:alias, from, alias_}, context) do
+    {:ok, data} = execute(from, context)
+    columns = Enum.map(data.columns, fn {_db, _table, column} ->
+      {:tmp, alias_, column}
+    end)
+    {:ok, %ExoSQL.Result{
+      columns: columns,
+      rows: data.rows
+    }}
+  end
+
   def execute(%ExoSQL.Result{} = res, _context), do: {:ok, res}
   def execute(%{ rows: rows, columns: columns}, _context), do: {:ok, %ExoSQL.Result{ rows: rows, columns: columns }}
 
@@ -341,8 +352,9 @@ defmodule ExoSQL.Executor do
   defp resolve_column_names([{:column, col} | rest], count) do
     [col | resolve_column_names(rest, count + 1)]
   end
-  defp resolve_column_names([{:alias, {_, name}} | rest], count) do
-    [{:tmp, :tmp, name} | resolve_column_names(rest, count + 1)]
+  defp resolve_column_names([{:alias, {oldcol, name}} | rest], count) do
+    [{_db, table, _column}] = resolve_column_names([oldcol], 1) # to keep the table name
+    [{:tmp, table, name} | resolve_column_names(rest, count + 1)]
   end
   defp resolve_column_names([_other | rest], count) do
     [{:tmp, :tmp, "col_#{count}"} | resolve_column_names(rest, count + 1)]

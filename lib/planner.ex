@@ -70,6 +70,12 @@ defmodule ExoSQL.Planner do
     ]
     # Logger.debug("All expressions: #{inspect all_expressions}")
     from = Enum.map(query.from, fn
+      {:alias, {{db, table}, alias_}} ->
+        columns = Enum.uniq(get_table_columns_at_expr(:tmp, alias_, all_expressions))
+        columns = Enum.map(columns, fn {:tmp, ^alias_, column} -> {db, table, column} end)
+        quals = get_quals(db, table, query.where)
+        ex = {:execute, {db, table}, quals, columns}
+        {:alias, ex, alias_}
       {db, table} ->
         columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
         quals = get_quals(db, table, query.where)
