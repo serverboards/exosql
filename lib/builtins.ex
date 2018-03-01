@@ -134,7 +134,15 @@ defmodule ExoSQL.Builtins do
   def strftime(other, format), do: strftime(to_datetime(other), format)
 
   @doc ~S"""
-  sprintf style formatting. Uses exprintf.
+  sprintf style formatting.
+
+  Known interpolations:
+
+  %d - Integer
+  %f - Float, 2 digits
+  %.Nf - Float N digits
+  %k - integer with k, M sufix
+  %.k - float with k, M sufix, uses float part
   """
   def format(str, args) when is_list(args) do
     ExoSQL.Format.format(str, args)

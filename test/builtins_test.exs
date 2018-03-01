@@ -97,4 +97,18 @@ defmodule ExoSQL.BuiltinsTest do
     assert ExoSQL.Builtins.urlparse("https://en.wikipedia.org/", "domain") == "wikipedia"
 
   end
+
+  test "format test" do
+    assert ExoSQL.Builtins.format("%d €", 2.22) == "2 €"
+    assert ExoSQL.Builtins.format("%.2f €", 2) == "2.00 €"
+    assert ExoSQL.Builtins.format("%k €", 2) == "2 €"
+    assert ExoSQL.Builtins.format("%k €", 2.33) == "2 €"
+    assert ExoSQL.Builtins.format("%.k €", 2) == "2.00 €"
+    assert ExoSQL.Builtins.format("%k €", 2000) == "2k €"
+    assert ExoSQL.Builtins.format("%k €", 22_000) == "22k €"
+    assert ExoSQL.Builtins.format("%k €", 222_000) == "222k €"
+    assert ExoSQL.Builtins.format("%k €", 2_000_000) == "2M €"
+    assert ExoSQL.Builtins.format("%.k €", 2_200_000) == "2.20M €"
+    assert ExoSQL.Builtins.format("%.k €", 200_000) == "0.20M €"
+  end
 end
