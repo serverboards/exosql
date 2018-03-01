@@ -524,5 +524,21 @@ defmodule QueryTest do
     end
   end
 
+  test "Some ops" do
+    res = analyze_query!("SELECT 1 + 1")
+    assert res.rows == [[2]]
+
+    res = analyze_query!("SELECT 2 * 3")
+    assert res.rows == [[6]]
+
+    res = analyze_query!("SELECT 10 / 2")
+    assert res.rows == [[5]]
+
+    res = analyze_query!("SELECT 2 * 100 / 10")
+    assert res.rows === [[20.0]]
+
+    res = analyze_query!("SELECT round(2 * 100 / 10)")
+    assert res.rows === [[20]]
+  end
 
 end

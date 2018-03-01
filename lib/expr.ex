@@ -96,6 +96,13 @@ defmodule ExoSQL.Expr do
     n1 * n2
   end
 
+  def run_expr({:op, {"/", op1, op2}}, cur) do
+    {:ok, n1} = to_number(run_expr(op1, cur))
+    {:ok, n2} = to_number(run_expr(op2, cur))
+
+    n1 / n2
+  end
+
   def run_expr({:op, {"+", op1, op2}}, cur) do
     {:ok, n1} = to_number(run_expr(op1, cur))
     {:ok, n2} = to_number(run_expr(op2, cur))

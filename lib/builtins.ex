@@ -50,6 +50,22 @@ defmodule ExoSQL.Builtins do
     end
   end
 
+
+  def round(n) do
+    {:ok, n} = to_float(n)
+
+    Kernel.round(n)
+  end
+  def round(n, 0) do
+    {:ok, n} = to_float(n)
+
+    Kernel.round(n)
+  end
+  def round(n, "0") do
+    {:ok, n} = to_float(n)
+
+    Kernel.round(n)
+  end
   def round(n, r) do
     {:ok, n} = to_float(n)
     {:ok, r} = to_number(r)
