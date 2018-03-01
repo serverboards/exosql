@@ -16,6 +16,13 @@ defmodule ExoSQL.BuiltinsTest do
     assert "#{orig_time}" == ExoSQL.Builtins.strftime(dt, "%s")
     assert "%s #{orig_time}" == ExoSQL.Builtins.strftime(dt, "%%s %s")
     assert "01" == ExoSQL.Builtins.strftime(dt, "%V")
+
+    # all formats
+    dt = ExoSQL.DateTime.to_datetime("2018-02-22")
+    assert dt == ExoSQL.DateTime.to_datetime("2018-02-22 00:00")
+    assert dt == ExoSQL.DateTime.to_datetime("2018-02-22T00:00")
+    assert dt == ExoSQL.DateTime.to_datetime("2018-02-22T00:00:00")
+    assert dt == ExoSQL.DateTime.to_datetime("2018-02-22 00:00:00")
   end
 
   test "String substr" do
