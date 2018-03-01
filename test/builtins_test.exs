@@ -81,11 +81,20 @@ defmodule ExoSQL.BuiltinsTest do
     assert ExoSQL.Builtins.urlparse(email2, "user") == "connect"
 
     parsed = ExoSQL.Builtins.urlparse(urlq)
-    Logger.debug(inspect parsed)
+    # Logger.debug(inspect parsed)
     assert ExoSQL.Builtins.jp(parsed, "host") == "serverboards.io"
     assert ExoSQL.Builtins.jp(parsed, "query/q") == "test"
     assert ExoSQL.Builtins.urlparse(urlq, "query/utm_campaign") == "exosql"
 
     assert ExoSQL.Builtins.urlparse(nil, "query/utm_campaign") == nil
+
+
+    assert ExoSQL.Builtins.urlparse("https://www.google.com", "domain") == "google"
+    assert ExoSQL.Builtins.urlparse("https://linktr.ee", "domain") == "linktr"
+    assert ExoSQL.Builtins.urlparse("https://www.google.co.uk", "domain") == "google"
+    assert ExoSQL.Builtins.urlparse("https://beta.serverboards.io", "domain") == "serverboards"
+    assert ExoSQL.Builtins.urlparse("https://www.csail.mit.edu/", "domain") == "mit"
+    assert ExoSQL.Builtins.urlparse("https://en.wikipedia.org/", "domain") == "wikipedia"
+
   end
 end

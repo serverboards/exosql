@@ -252,6 +252,7 @@ defmodule ExoSQL.Builtins do
       "path" => parsed.path,
       "query" => query,
       "user" => parsed.userinfo,
+      "domain" => get_domain(parsed.host)
     }
 
     if what do
@@ -261,6 +262,33 @@ defmodule ExoSQL.Builtins do
     end
   end
 
+  @doc ~S"""
+  Gets the domain from the domain name.
+
+  This means "google" from "www.google.com" or "google" from "www.google.co.uk"
+
+  The algorithm disposes the tld (.uk) and the skips unwanted names (.co).
+  Returns the first thats rest, or a default that is originally the full domain
+  name or then each disposed part.
+  """
+  def get_domain(nil), do: nil
+  def get_domain(hostname) do
+    [tld | rparts] = hostname |> String.split(".") |> Enum.reverse
+
+    # always remove last part
+    get_domainr(rparts, hostname)
+  end
+
+  # list of strings that are never domains.
+  defp get_domainr([ head | rest], candidate) do
+    nodomains = ~w(com org net www co)
+    if head in nodomains do
+      get_domainr(rest, candidate)
+    else
+      head
+    end
+  end
+  defp get_domainr([], candidate), do: candidate
 
   @doc ~S"""
   Performs a JSON Pointer search on JSON data.
