@@ -31,6 +31,8 @@ defmodule ExoSQL.Builtins do
     "format" => {ExoSQL.Builtins, :format},
     "width_bucket" => {ExoSQL.Builtins, :width_bucket},
     "generate_series" => {ExoSQL.Builtins, :generate_series},
+    "urlparse" => {ExoSQL.Builtins, :urlparse},
+    "jp" => {ExoSQL.Builtins, :jp},
 
     ## Aggregates
     "count" => {ExoSQL.Builtins, :count},
@@ -211,6 +213,69 @@ defmodule ExoSQL.Builtins do
         [ [current] | generate_series_range(current + step, stop, step)]
     end
   end
+
+
+  @doc ~S"""
+  Parses an URL and return some part of it.
+
+  If not what is provided, returns a JSON object with:
+  * host
+  * port
+  * scheme
+  * path
+  * query
+  * user
+
+  If what is passed, it performs a JSON Pointer search (jp function).
+
+  It must receive a url with scheme://server or the result may not be well
+  formed.
+
+  For example, for emails, just use "email://connect@serverboards.io" or
+  similar.
+
+  """
+  def urlparse(url), do: urlparse(url, nil)
+  def urlparse(nil, what), do: urlparse("", what)
+  def urlparse(url, what) do
+    parsed = URI.parse(url)
+
+    query = case parsed.query do
+      nil -> nil
+      q -> URI.decode_query(q)
+    end
+
+    json = %{
+      "host" => parsed.host,
+      "port" => parsed.port,
+      "scheme" => parsed.scheme,
+      "path" => parsed.path,
+      "query" => query,
+      "user" => parsed.userinfo,
+    }
+
+    if what do
+      jp(json, what)
+    else
+      json
+    end
+  end
+
+
+  @doc ~S"""
+  Performs a JSON Pointer search on JSON data.
+
+  It just uses / to separate keys.
+  """
+  def jp(nil, _), do: nil
+  def jp(json, str) when is_binary(str), do: jp(json, String.split(str, "/"))
+  def jp(json, [ head | rest]) when is_list(json) do
+    n = ExoSQL.Utils.to_number!(head)
+    jp(Enum.at(json, n), rest)
+  end
+  def jp(json, ["" | rest]), do: jp(json, rest)
+  def jp(json, [head | rest]), do: jp(Map.get(json, head, nil), rest)
+  def jp(json, []), do: json
 
   ### Aggregate functions
   def is_aggregate("count"), do: true

@@ -39,4 +39,53 @@ defmodule ExoSQL.BuiltinsTest do
     assert ExoSQL.Builtins.if_(true, "test", 1) == "test"
     assert ExoSQL.Builtins.if_(false, "test", 1) == 1
   end
+
+  test "jp test" do
+    json = %{
+      "first_name" => "Anonymous",
+      "last_name" => "--",
+      "addresses" => [
+        %{
+          "street" => "Main Rd"
+        },
+        %{
+          "street" => "Side Rd"
+        }
+      ],
+      "email" => "admin@example.org"
+    }
+
+    assert ExoSQL.Builtins.jp(json, "") == json
+    assert ExoSQL.Builtins.jp(json, "/first_name") == json["first_name"]
+    assert ExoSQL.Builtins.jp(json, "none") == nil
+    assert ExoSQL.Builtins.jp(json, "/addresses") == json["addresses"]
+    assert ExoSQL.Builtins.jp(json, "/addresses/0/street") == "Main Rd"
+    assert ExoSQL.Builtins.jp(json, "/addresses/10/street") == nil
+  end
+
+  test "urlparse" do
+    url = "https://serverboards.io/download/"
+    email = "connect@serverboards.io"
+    email2 = "mailto://connect@serverboards.io"
+    urlq = "https://serverboards.io/download/?q=test&utm_campaign=exosql"
+
+    assert ExoSQL.Builtins.urlparse(url, "scheme") == "https"
+    assert ExoSQL.Builtins.urlparse(url, "host") == "serverboards.io"
+
+    assert ExoSQL.Builtins.urlparse(email, "scheme") == nil
+    assert ExoSQL.Builtins.urlparse(email, "host") == nil
+    assert ExoSQL.Builtins.urlparse(email, "path") == "connect@serverboards.io"
+
+    assert ExoSQL.Builtins.urlparse(email2, "scheme") == "mailto"
+    assert ExoSQL.Builtins.urlparse(email2, "host") == "serverboards.io"
+    assert ExoSQL.Builtins.urlparse(email2, "user") == "connect"
+
+    parsed = ExoSQL.Builtins.urlparse(urlq)
+    Logger.debug(inspect parsed)
+    assert ExoSQL.Builtins.jp(parsed, "host") == "serverboards.io"
+    assert ExoSQL.Builtins.jp(parsed, "query/q") == "test"
+    assert ExoSQL.Builtins.urlparse(urlq, "query/utm_campaign") == "exosql"
+
+    assert ExoSQL.Builtins.urlparse(nil, "query/utm_campaign") == nil
+  end
 end
