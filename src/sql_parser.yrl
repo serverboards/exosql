@@ -12,6 +12,7 @@ id comma dot lit op open_par close_par var
 'SELECT' 'FROM' 'AS'
 'OUTER' 'LEFT' 'RIGHT' 'INNER' 'CROSS' 'JOIN' 'ON'
 'WHERE' 'GROUP' 'BY' 'ORDER' 'ASC' 'DESC'
+'TRUE' 'FALSE'
 .
 
 Rootsymbol query.
@@ -63,6 +64,8 @@ expr_list -> expr comma expr_list: ['$1'] ++ '$3'.
 
 expr -> column : {column, '$1'}.
 expr -> lit : {lit, unwrap('$1')}.
+expr -> 'TRUE' : {lit, true}.
+expr -> 'FALSE' : {lit, false}.
 expr -> var : {var, unwrap('$1')}.
 expr -> open_par expr close_par : '$2'.
 expr -> expr op expr: {op, {unwrap('$2'), '$1', '$3'}}.
