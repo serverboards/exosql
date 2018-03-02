@@ -401,6 +401,21 @@ defmodule QueryTest do
 
     assert res.columns == [{:tmp, "month", "month"}]
     assert Enum.count(res.rows) == 6
+
+
+    res = analyze_query!("""
+      SELECT week
+        FROM generate_series(
+                strftime($start, '%W'),
+                strftime($end, '%W'),
+                1
+            ) AS week
+      """, %{ "__vars__" => %{
+          "start" => "2017-01-01",
+          "end" => "2017-12-31",
+        }})
+
+    assert Enum.count(res.rows) == 53
   end
 
   test "Fail get non existant column" do

@@ -39,7 +39,10 @@ defmodule ExoSQL.Executor do
       rows: rows
     }}
   end
-  def execute({:execute, {:fn, {function, params}}, quals, []}, context) do
+  def execute({:execute, {:fn, {function, params}}, _quals, []}, context) do
+    params = params
+      |> Enum.map(&simplify_expr_columns(&1, [], context["__vars__"]))
+
     res = ExoSQL.Expr.run_expr({:fn, {function, params}}, [])
 
     res = %ExoSQL.Result{
@@ -283,6 +286,9 @@ defmodule ExoSQL.Executor do
 
   # alias of fn renames the table and the column inside
   def execute({:alias, {:fn, {function, params}}, alias_}, context) do
+    params = params
+      |> Enum.map(&simplify_expr_columns(&1, [], context["__vars__"]))
+
     res = ExoSQL.Expr.run_expr({:fn, {function, params}}, [])
     columns = Enum.map(res.columns, fn column ->
       {:tmp, alias_, alias_}
