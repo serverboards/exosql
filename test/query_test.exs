@@ -556,4 +556,9 @@ defmodule QueryTest do
     assert res.rows === [[20]]
   end
 
+
+  test "Empty search sum is 0" do
+    res = analyze_query!("SELECT SUM(price) FROM products WHERE id = 9999")
+    assert res.rows == [[0]]
+  end
 end
