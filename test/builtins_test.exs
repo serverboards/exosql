@@ -123,7 +123,7 @@ defmodule ExoSQL.BuiltinsTest do
     assert ExoSQL.Builtins.format("%,k €",         0.53) == "0,53 €"
     assert ExoSQL.Builtins.format("%,k €",         2.53) == "2,53 €"
     assert ExoSQL.Builtins.format("%,k €",        24.53) == "24,53 €"
-    assert ExoSQL.Builtins.format("%,k €",        81.50) == "24,53 €"
+    assert ExoSQL.Builtins.format("%,k €",        81.50) == "81,50 €"
     assert ExoSQL.Builtins.format("%,k €",       200.53) == "200,53 €"
     assert ExoSQL.Builtins.format("%,k €",     2_000.53) == "2.000 €"
     assert ExoSQL.Builtins.format("%,k €",    20_200.53) == "20.200 €"
