@@ -1,8 +1,8 @@
 require Logger
 
 defmodule ExoSQL.Format do
-  @format_re ~r/%[\d\.\-]*[%fsdk]/
-  @format_re_one ~r/([\d\.\-]*)([fsdk])/
+  @format_re ~r/%[\d\.,\-]*[%fsdk]/
+  @format_re_one ~r/([\d\.,\-]*)([fsdk])/
 
   def format(str, params) do
     {str, []} = Regex.split(@format_re, str, include_captures: true)
@@ -18,6 +18,32 @@ defmodule ExoSQL.Format do
     end)
 
     str
+  end
+
+
+  def localized_number(number) do
+    localized_number(number, 0)
+  end
+  def localized_number(number, 0) do
+    int = Float.to_string(Float.floor(number), decimals: 0)
+    head = localized_number_str_comma(int)
+    "#{head}"
+  end
+  def localized_number(number, decimals) do
+    dec = Float.to_string(number, decimals: decimals)
+    {int, dec} = String.split_at(dec, String.length(dec) - decimals)
+    head = localized_number_str_comma(String.slice(int, 0, String.length(int) - 1))
+    "#{head},#{dec}"
+  end
+
+  defp localized_number_str_comma(lit) do
+    if String.length(lit) > 3 do
+      {head, tail} = String.split_at( lit, String.length(lit) - 3 )
+      head = localized_number_str_comma( head )
+      "#{head}.#{tail}"
+    else
+      lit
+    end
   end
 
   def format_one(type, data) do
@@ -38,18 +64,39 @@ defmodule ExoSQL.Format do
         "#{data}"
       _, ".", "k" ->
         {:ok, data} = ExoSQL.Utils.to_float(data)
-        Logger.debug(" > #{inspect data}")
         {data, sufix} = cond do
-          data >= 100_000 ->
+          data >= 1_000_000 ->
             data = data / 1_000_000
-            data = Float.to_string(data, decimals: 2)
+            data = Float.to_string(data, decimals: 1)
             {data, "M"}
-          data >= 100 ->
+          data >= 100_000 ->
             data = data / 1_000
-            data = Float.to_string(data, decimals: 2)
+            data = Float.to_string(data, decimals: 1)
             {data, "k"}
+          data >= 1_000 ->
+            data = Kernel.trunc(data)
+            {data, ""}
           true ->
             data = Float.to_string(data, decimals: 2)
+            {data, ""}
+        end
+        "#{data}#{sufix}"
+      _, ",", "k" ->
+        {:ok, data} = ExoSQL.Utils.to_float(data)
+        {data, sufix} = cond do
+          data >= 1_000_000 ->
+            data = data / 1_000_000
+            data = localized_number(data, 1)
+            {data, "MM"}
+          data >= 100_000 ->
+            data = data / 1_000
+            data = localized_number(data, 1)
+            {data, "k"}
+          data >= 1_000 ->
+            data = localized_number(data, 0)
+            {data, ""}
+          true ->
+            data = localized_number(data, 2)
             {data, ""}
         end
         "#{data}#{sufix}"
