@@ -116,10 +116,10 @@ defmodule ExoSQL.BuiltinsTest do
     assert ExoSQL.Builtins.format("%.k €",       200.53) == "200.53 €"
     assert ExoSQL.Builtins.format("%.k €",     2_000.53) == "2000 €"
     assert ExoSQL.Builtins.format("%.k €",    20_200.53) == "20200 €"
-    assert ExoSQL.Builtins.format("%.k €",   200_400.53) == "200.4k €"
+    assert ExoSQL.Builtins.format("%.k €",   200_400.53) == "200.4K €"
     assert ExoSQL.Builtins.format("%.k €", 2_200_000.53) == "2.2M €"
 
-    assert ExoSQL.Builtins.format("%,k €",         0.00) == "0,00 €"
+    assert ExoSQL.Builtins.format("%,k €",         0.00) == "0 €"
     assert ExoSQL.Builtins.format("%,k €",         0.53) == "0,53 €"
     assert ExoSQL.Builtins.format("%,k €",         2.53) == "2,53 €"
     assert ExoSQL.Builtins.format("%,k €",        24.53) == "24,53 €"
@@ -127,7 +127,9 @@ defmodule ExoSQL.BuiltinsTest do
     assert ExoSQL.Builtins.format("%,k €",       200.53) == "200,53 €"
     assert ExoSQL.Builtins.format("%,k €",     2_000.53) == "2.000 €"
     assert ExoSQL.Builtins.format("%,k €",    20_200.53) == "20.200 €"
-    assert ExoSQL.Builtins.format("%,k €",   200_400.53) == "200,4k €"
+    assert ExoSQL.Builtins.format("%,k €",   200_400.53) == "200,4K €"
+    assert ExoSQL.Builtins.format("%,k €",   200_000.53) == "200K €"
+    assert ExoSQL.Builtins.format("%,k €", 2_001_000.53) == "2MM €"
     assert ExoSQL.Builtins.format("%,k €", 2_200_000.53) == "2,2MM €"
   end
 end

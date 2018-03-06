@@ -33,7 +33,11 @@ defmodule ExoSQL.Format do
     dec = Float.to_string(number, decimals: decimals)
     {int, dec} = String.split_at(dec, String.length(dec) - decimals)
     head = localized_number_str_comma(String.slice(int, 0, String.length(int) - 1))
-    "#{head},#{dec}"
+    if dec == String.duplicate("0", decimals) do
+      "#{head}"
+    else
+      "#{head},#{dec}"
+    end
   end
 
   defp localized_number_str_comma(lit) do
@@ -72,7 +76,7 @@ defmodule ExoSQL.Format do
           data >= 100_000 ->
             data = data / 1_000
             data = Float.to_string(data, decimals: 1)
-            {data, "k"}
+            {data, "K"}
           data >= 1_000 ->
             data = Kernel.trunc(data)
             {data, ""}
@@ -91,7 +95,7 @@ defmodule ExoSQL.Format do
           data >= 100_000 ->
             data = data / 1_000
             data = localized_number(data, 1)
-            {data, "k"}
+            {data, "K"}
           data >= 1_000 ->
             data = localized_number(data, 0)
             {data, ""}
