@@ -393,6 +393,10 @@ defmodule QueryTest do
   end
 
   test "Select from generate_series" do
+    res = analyze_query!("SELECT * FROM generate_series(12)")
+
+    assert Enum.count(res.rows) == 12
+
     res = analyze_query!("SELECT generate_series FROM generate_series(1,12,2)")
 
     assert Enum.count(res.rows) == 6

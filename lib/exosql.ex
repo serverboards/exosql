@@ -93,9 +93,12 @@ defmodule ExoSQL do
     }}
   end
   def schema(db, table, context) do
-    {db, opts} = context[db]
-
-    apply(db, :schema, [opts, table])
+    case context[db] do
+      {db, opts} ->
+        apply(db, :schema, [opts, table])
+      nil ->
+        throw {:not_found, {{db, table}, :in, Map.keys(context)}}
+    end
   end
 
   def repl(context) do
