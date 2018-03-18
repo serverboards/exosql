@@ -25,12 +25,12 @@ defmodule ExoSQL.Format do
     localized_number(number, 0)
   end
   def localized_number(number, 0) do
-    int = Float.to_string(Float.floor(number), decimals: 0)
+    int = :erlang.float_to_binary(Float.floor(number), decimals: 0)
     head = localized_number_str_comma(int)
     "#{head}"
   end
   def localized_number(number, decimals) do
-    dec = Float.to_string(number, decimals: decimals)
+    dec = :erlang.float_to_binary(number, decimals: decimals)
     {int, dec} = String.split_at(dec, String.length(dec) - decimals)
     head = localized_number_str_comma(String.slice(int, 0, String.length(int) - 1))
     if dec == String.duplicate("0", decimals) do
@@ -57,11 +57,11 @@ defmodule ExoSQL.Format do
         to_string(data)
       _, "", "f" ->
         {:ok, data} = ExoSQL.Utils.to_float(data)
-        Float.to_string(data, decimals: 2)
+        :erlang.float_to_binary(data, decimals: 2)
       _, "." <> decimals, "f" ->
         {:ok, data} = ExoSQL.Utils.to_float(data)
         {:ok, decimals} = ExoSQL.Utils.to_number(decimals)
-        Float.to_string(data, decimals: decimals)
+        :erlang.float_to_binary(data, decimals: decimals)
       _, "", "d" ->
         {:ok, data} = ExoSQL.Utils.to_number(data)
         data = Kernel.trunc(data)
@@ -71,17 +71,17 @@ defmodule ExoSQL.Format do
         {data, sufix} = cond do
           data >= 1_000_000 ->
             data = data / 1_000_000
-            data = Float.to_string(data, decimals: 1)
+            data = :erlang.float_to_binary(data, decimals: 1)
             {data, "M"}
           data >= 100_000 ->
             data = data / 1_000
-            data = Float.to_string(data, decimals: 1)
+            data = :erlang.float_to_binary(data, decimals: 1)
             {data, "K"}
           data >= 1_000 ->
             data = Kernel.trunc(data)
             {data, ""}
           true ->
-            data = Float.to_string(data, decimals: 2)
+            data = :erlang.float_to_binary(data, decimals: 2)
             {data, ""}
         end
         "#{data}#{sufix}"

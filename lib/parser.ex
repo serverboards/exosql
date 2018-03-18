@@ -131,7 +131,7 @@ defmodule ExoSQL.Parser do
   # if alias is for a function, also re-alias column names for ease of use (NON SQL)
   def resolve_columns({:alias, {{:fn, _} = aliased, alias_}}, context_tables_columns) do
     columns = resolve_columns(aliased, context_tables_columns)
-    Enum.map(columns, fn {_, _, column} ->
+    Enum.map(columns, fn {_, _, _} ->
       {:tmp, alias_, alias_}
     end)
   end
@@ -153,13 +153,13 @@ defmodule ExoSQL.Parser do
     # Logger.debug("Get column from table #{inspect table}: #{inspect columns}")
     columns
   end
-  def resolve_columns({:select, query}, context_tables_columns) do
+  def resolve_columns({:select, query}, _context_tables_columns) do
     {columns, _} = Enum.reduce(query[:select], {[], 1}, fn column, {acc, count} ->
       # Logger.debug("Resolve column name for: #{inspect column}")
       column = case column do
         {:column, {_db, _table, column}} -> {:tmp, :tmp, column}
         {:alias, {_, alias_}} -> {:tmp, :tmp, alias_}
-        expr ->
+        _expr ->
           {:tmp, :tmp, "col_#{count}"}
       end
       # Logger.debug("Resolved: #{inspect column}")
@@ -204,8 +204,8 @@ defmodule ExoSQL.Parser do
     {:ok, parsed} = real_parse(query, context)
     parsed
   end
-  def resolve_table({:fn, _function} = orig, context), do: orig
-  def resolve_table({:alias, {table, alias_}} = orig, context) do
+  def resolve_table({:fn, _function} = orig, _context), do: orig
+  def resolve_table({:alias, {table, alias_}}, context) do
     {:alias, {resolve_table(table, context), alias_}}
   end
 
@@ -215,8 +215,8 @@ defmodule ExoSQL.Parser do
   """
   def resolve_column({:column, {nil, nil, column}}, schema) do
     found = Enum.filter(schema, fn
-      {db, table, ^column} -> true
-      other -> false
+      {_db, _table, ^column} -> true
+      _other -> false
     end)
 
     found = case found do
@@ -234,8 +234,8 @@ defmodule ExoSQL.Parser do
 
   def resolve_column({:column, {nil, table, column}}, schema) do
     found = Enum.find(schema, fn
-      {db, ^table, ^column} -> true
-      other -> false
+      {_db, ^table, ^column} -> true
+      _other -> false
     end)
 
     if found do

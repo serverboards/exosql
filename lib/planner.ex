@@ -134,7 +134,7 @@ defmodule ExoSQL.Planner do
 
   def plan(plan, _context), do: plan(plan)
 
-  defp plan_execute({:alias, {{:fn, {function, params}}, alias_}}, where, all_expressions) do
+  defp plan_execute({:alias, {{:fn, {function, params}}, alias_}}, _where, _all_expressions) do
     ex = {:fn, {function, params}}
     {:alias, ex, alias_}
   end
@@ -145,7 +145,7 @@ defmodule ExoSQL.Planner do
     ex = {:execute, {db, table}, quals, columns}
     {:alias, ex, alias_}
   end
-  defp plan_execute({:alias, {%ExoSQL.Query{} = q, alias_}}, where, all_expressions) do
+  defp plan_execute({:alias, {%ExoSQL.Query{} = q, alias_}}, _where, _all_expressions) do
     {:ok, ex} = plan(q)
     {:alias, ex, alias_}
   end
@@ -154,7 +154,7 @@ defmodule ExoSQL.Planner do
     quals = get_quals(db, table, where)
     {:execute, {db, table}, quals, columns}
   end
-  defp plan_execute(%ExoSQL.Query{} = q, where, all_expressions) do
+  defp plan_execute(%ExoSQL.Query{} = q, _where, _all_expressions) do
     {:ok, q} = plan(q)
     q
   end

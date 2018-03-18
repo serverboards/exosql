@@ -297,7 +297,7 @@ defmodule ExoSQL.Builtins do
   """
   def get_domain(nil), do: nil
   def get_domain(hostname) do
-    [tld | rparts] = hostname |> String.split(".") |> Enum.reverse
+    [_tld | rparts] = hostname |> String.split(".") |> Enum.reverse
 
     # always remove last part
     get_domainr(rparts, hostname)
