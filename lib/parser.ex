@@ -101,10 +101,15 @@ defmodule ExoSQL.Parser do
     try do
       sql = String.to_charlist(sql)
       {:ok, lexed, _lines} = :sql_lexer.string(sql)
-      {:ok, parsed} = :sql_parser.parse(lexed)
+      parsed = case :sql_parser.parse(lexed) do
+        {:ok, parsed} -> parsed
+        {:error, any} -> throw any
+      end
       # Logger.debug("Yeec parsed: #{inspect parsed, pretty: true}")
       real_parse(parsed, context)
     catch
+      {1, :sql_parser, msg} ->
+        {:error, {:syntax, to_string(msg)}}
       any -> {:error, any}
     end
   end
