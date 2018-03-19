@@ -6,7 +6,7 @@ query
   column table tableid groupby
   join join_type
   orderby order_expr_list order_expr asc_desc
-  expr expr_l2 expr_l3 expr_l4 expr_l5 expr_atom
+  expr expr_l2 expr_l3 expr_l4 expr_l5 expr_l6 expr_atom
   .
 
 Terminals
@@ -15,7 +15,7 @@ op1 op2 op3 op4 op5
 'SELECT' 'FROM' 'AS'
 'OUTER' 'LEFT' 'RIGHT' 'INNER' 'CROSS' 'JOIN' 'ON'
 'WHERE' 'GROUP' 'BY' 'ORDER' 'ASC' 'DESC'
-'TRUE' 'FALSE'
+'TRUE' 'FALSE' 'NOT'
 .
 
 Rootsymbol query.
@@ -77,8 +77,11 @@ expr_l3 -> expr_l4: '$1'.
 expr_l4 -> expr_l5 op4 expr_l4: {op, {unwrap('$2'), '$1', '$3'}}.
 expr_l4 -> expr_l5: '$1'.
 
-expr_l5 -> expr_atom op5 expr_l5: {op, {unwrap('$2'), '$1', '$3'}}.
-expr_l5 -> expr_atom: '$1'.
+expr_l5 -> expr_l6 op5 expr_l5: {op, {unwrap('$2'), '$1', '$3'}}.
+expr_l5 -> expr_l6: '$1'.
+
+expr_l6 -> 'NOT' expr_atom: {op, {'not', '$2'}}.
+expr_l6 -> expr_atom: '$1'.
 
 expr_atom -> column : {column, '$1'}.
 expr_atom -> lit : {lit, unwrap('$1')}.

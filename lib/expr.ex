@@ -124,6 +124,12 @@ defmodule ExoSQL.Expr do
     s1<>s2
   end
 
+  def run_expr({:op, {:not, op}}, cur) do
+    n = run_expr(op, cur)
+
+    not n
+  end
+
   def run_expr({:fn, {fun, exprs}}, cur) do
     params = for e <- exprs, do: run_expr(e, cur)
     ExoSQL.Builtins.call_function(fun, params)

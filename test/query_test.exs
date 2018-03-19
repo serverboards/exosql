@@ -79,6 +79,9 @@ defmodule QueryTest do
 
     res = analyze_query!("SELECT 1 + 2 OR 2 + 2")
     assert res.rows == [[3]]
+
+    res = analyze_query!("SELECT NOT false AND true")
+    assert res.rows == [[true]]
   end
 
   test "Select * from" do
