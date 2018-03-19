@@ -45,6 +45,42 @@ defmodule QueryTest do
     analyze_query!("SELECT A.passwd.uid, A.passwd.user, A.passwd.home FROM A.passwd WHERE A.passwd.uid >= 1001", context)
   end
 
+  test "Operator precedence at WHERE" do
+    res = analyze_query!("SELECT * FROM purchases WHERE date >= '2017-01-01'  AND  date <= '2017-12-31'")
+
+    assert Enum.count(res.rows) == 4
+
+    res = analyze_query!("SELECT 1 + 1 == 1 + 1")
+    assert res.rows == [[true]]
+
+    res = analyze_query!("SELECT 1 * 1 < 1 + 1")
+    assert res.rows == [[true]]
+
+    res = analyze_query!("SELECT 1 * 1 + 1 * 1")
+    assert res.rows == [[2]]
+
+    res = analyze_query!("SELECT 1 + 1 + 1")
+    assert res.rows == [[3]]
+
+    res = analyze_query!("SELECT 1 + 1 * 1 + 1")
+    assert res.rows == [[3]]
+
+    res = analyze_query!("SELECT 1 + 2 / 2 + 1")
+    assert res.rows == [[3]]
+
+    res = analyze_query!("SELECT (1 + 2) / (2 + 1)")
+    assert res.rows == [[1]]
+
+    res = analyze_query!("SELECT (1 + 2) / (2 + 1)")
+    assert res.rows == [[1]]
+
+    res = analyze_query!("SELECT 1 + 2 AND 2 + 2")
+    assert res.rows == [[4]]
+
+    res = analyze_query!("SELECT 1 + 2 OR 2 + 2")
+    assert res.rows == [[3]]
+  end
+
   test "Select * from" do
     result = analyze_query!("SELECT * FROM A.users")
 
@@ -82,7 +118,6 @@ defmodule QueryTest do
     }
 
     result = analyze_query!("SELECT A.products.name, (A.products.price || ' €'), ROUND( A.products.price * 0.21, 2 ) FROM A.products",  context)
-
     Logger.debug(ExoSQL.format_result result)
   end
 

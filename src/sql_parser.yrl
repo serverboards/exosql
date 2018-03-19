@@ -2,13 +2,16 @@ Nonterminals
 query
   select select_expr select_expr_list
   from table_list
-  where expr expr_list
+  where expr_list
   column table tableid groupby
   join join_type
-  orderby order_expr_list order_expr asc_desc.
+  orderby order_expr_list order_expr asc_desc
+  expr expr_l2 expr_l3 expr_l4 expr_l5 expr_atom
+  .
 
 Terminals
-id comma dot lit op open_par close_par var
+id comma dot lit open_par close_par var
+op1 op2 op3 op4 op5
 'SELECT' 'FROM' 'AS'
 'OUTER' 'LEFT' 'RIGHT' 'INNER' 'CROSS' 'JOIN' 'ON'
 'WHERE' 'GROUP' 'BY' 'ORDER' 'ASC' 'DESC'
@@ -21,7 +24,7 @@ query -> select from join where groupby orderby: #{select => '$1', from => '$2',
 query -> select: #{select => '$1', from => [], join => [], where => nil, groupby => nil, orderby => []}.
 
 select -> 'SELECT' select_expr_list : '$2'.
-select -> 'SELECT' op : tag('$2', "*"), [{all_columns}].
+select -> 'SELECT' op5: tag('$2', "*"), [{all_columns}].
 
 select_expr_list -> select_expr : ['$1'].
 select_expr_list -> select_expr comma select_expr_list: ['$1'] ++ '$3'.
@@ -44,7 +47,7 @@ join_type -> 'RIGHT' 'JOIN' : right_join.
 join_type -> 'RIGHT' 'OUTER' 'JOIN' : right_join.
 
 where -> '$empty' : nil.
-where -> 'WHERE' expr : '$2'.
+where -> 'WHERE' 'expr' : '$2'.
 
 groupby -> '$empty' : nil.
 groupby -> 'GROUP' 'BY' expr_list : '$3'.
@@ -62,16 +65,30 @@ asc_desc -> 'DESC' : desc.
 expr_list -> expr : ['$1'].
 expr_list -> expr comma expr_list: ['$1'] ++ '$3'.
 
-expr -> column : {column, '$1'}.
-expr -> lit : {lit, unwrap('$1')}.
-expr -> 'TRUE' : {lit, true}.
-expr -> 'FALSE' : {lit, false}.
-expr -> var : {var, unwrap('$1')}.
-expr -> open_par expr close_par : '$2'.
-expr -> expr op expr: {op, {unwrap('$2'), '$1', '$3'}}.
-expr -> id open_par close_par : {fn, {unwrap_d('$1'), []}}.
-expr -> id open_par expr_list close_par : {fn, {unwrap_d('$1'), '$3'}}.
-expr -> id open_par op close_par: tag('$3', "*"), {fn, {unwrap_d('$1'), [{lit, "*"}]}}.
+expr -> expr_l2 op1 expr: {op, {unwrap('$2'), '$1', '$3'}}.
+expr -> expr_l2: '$1'.
+
+expr_l2 -> expr_l3 op2 expr_l2: {op, {unwrap('$2'), '$1', '$3'}}.
+expr_l2 -> expr_l3: '$1'.
+
+expr_l3 -> expr_l4 op3 expr_l3: {op, {unwrap('$2'), '$1', '$3'}}.
+expr_l3 -> expr_l4: '$1'.
+
+expr_l4 -> expr_l5 op4 expr_l4: {op, {unwrap('$2'), '$1', '$3'}}.
+expr_l4 -> expr_l5: '$1'.
+
+expr_l5 -> expr_atom op5 expr_l5: {op, {unwrap('$2'), '$1', '$3'}}.
+expr_l5 -> expr_atom: '$1'.
+
+expr_atom -> column : {column, '$1'}.
+expr_atom -> lit : {lit, unwrap('$1')}.
+expr_atom -> 'TRUE' : {lit, true}.
+expr_atom -> 'FALSE' : {lit, false}.
+expr_atom -> var : {var, unwrap('$1')}.
+expr_atom -> open_par expr close_par : '$2'.
+expr_atom -> id open_par close_par : {fn, {unwrap_d('$1'), []}}.
+expr_atom -> id open_par expr_list close_par : {fn, {unwrap_d('$1'), '$3'}}.
+expr_atom -> id open_par op5 close_par: tag('$3', "*"), {fn, {unwrap_d('$1'), [{lit, "*"}]}}.
 
 column -> id dot id dot id : {unwrap('$1'), unwrap('$3'), unwrap('$5')}.
 column -> id dot id : {nil, unwrap('$1'), unwrap('$3')}.
