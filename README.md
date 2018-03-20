@@ -35,7 +35,7 @@ end
 
 ## Features
 
-* **SELECT over external databases**
+* **SELECT over external databases (CSV, HTTP endpoints... Programable)**
 * `SELECT` over several tables
 * `WHERE`
 * `INNER JOIN`
@@ -43,11 +43,14 @@ end
 * `RIGHT JOIN`
 * `GROUP BY`
 * `ORDER BY`
+* `OFFSET` and `LIMIT`
+* `DISTINCT` and `DISTINCT ON`
 * table and column alias with `AS`
 * nested `SELECT` at `FROM`
 * `generate_series` function tables
 * Aggregation functions: COUNT, SUM, AVG
 * Builtin functions and operators: * / + - || or and; round concat...
+* Builtin `format`, `strftime` and more string and time formatting functions.
 * Basic Reflection over `self.tables`
 * Variables
 
