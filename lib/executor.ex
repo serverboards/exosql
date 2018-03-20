@@ -91,7 +91,7 @@ defmodule ExoSQL.Executor do
     }}
   end
   def execute({:execute, {db, table}, quals, columns}, context) do
-    # Logger.debug("#{inspect {db, table, columns}}")
+    Logger.debug("#{inspect {db, table, columns}}")
     {dbmod, ctx} = context[db]
 
     quals = quals_with_vars(quals, Map.get(context, "__vars__", %{}))

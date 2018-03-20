@@ -142,6 +142,12 @@ defmodule ExoSQL.Expr do
     Enum.at(cur, n)
   end
 
+  def run_expr({:select, query}, _cur) do
+    {:ok, res} = ExoSQL.Executor.execute(query, %{})
+    [[data | _] | _ ] = res.columns # first of first
+    data
+  end
+
   @doc """
   Try to return matching types.
 

@@ -19,7 +19,7 @@ defmodule ExoSQL.Parser do
   tree with all data resolved.
   """
   defp real_parse(parsed, context) do
-    # Logger.debug("Real parse #{inspect parsed}")
+    Logger.debug("Real parse #{inspect parsed, pretty: true}")
     %{
       select: select,
       from: from,
@@ -45,14 +45,14 @@ defmodule ExoSQL.Parser do
     # Logger.debug("Resolved schemas: #{inspect all_schemas}")
 
     groupby = if groupby do
-      Enum.map(groupby, &resolve_column(&1, all_schemas))
+      Enum.map(groupby, &resolve_column(&1, all_schemas, context))
     else nil end
 
     # Logger.debug("All tables #{inspect all_tables}")
     join = Enum.map(join, fn {type, {table, expr}} ->
       {type, {
         resolve_table(table, context),
-        resolve_column(expr, all_schemas)
+        resolve_column(expr, all_schemas, context)
       }}
     end)
 
@@ -72,22 +72,22 @@ defmodule ExoSQL.Parser do
             Enum.map(columns, &{:column, {db, table, &1}})
         end)
       _other  ->
-        Enum.map(select, &resolve_column(&1, all_schemas))
+        Enum.map(select, &resolve_column(&1, all_schemas, context))
     end
     # Logger.debug("Resolved: #{inspect select}")
     distinct = case Keyword.get(select_options, :distinct) do
       nil -> nil
-      other -> resolve_column(other, all_schemas)
+      other -> resolve_column(other, all_schemas, context)
     end
 
     where = if where do
-      resolve_column(where, all_schemas)
+      resolve_column(where, all_schemas, context)
     else nil end
 
     # Resolve orderby
     orderby = Enum.map(orderby, fn
       {type, expr} ->
-        {type, resolve_column(expr, all_schemas)}
+        {type, resolve_column(expr, all_schemas, context)}
     end)
 
     {:ok, %ExoSQL.Query{
@@ -199,8 +199,10 @@ defmodule ExoSQL.Parser do
   end
 
   def resolve_table({:table, {nil, name}}, context) when is_binary(name) do
+    Logger.debug("#{inspect context}")
     options = Enum.flat_map(context, fn {dbname, _db} ->
       {:ok, tables} = ExoSQL.schema(dbname, context)
+      Logger.debug("Resolved #{inspect tables}")
       tables
         |> Enum.filter(&(&1 == name))
         |> Enum.map(&{dbname, &1})
@@ -227,7 +229,7 @@ defmodule ExoSQL.Parser do
   From the list of tables, and context, and an unknown column, return the
   FQN of the column.
   """
-  def resolve_column({:column, {nil, nil, column}}, schema) do
+  def resolve_column({:column, {nil, nil, column}}, schema, _context) do
     found = Enum.filter(schema, fn
       {_db, _table, ^column} -> true
       _other -> false
@@ -246,7 +248,7 @@ defmodule ExoSQL.Parser do
     end
   end
 
-  def resolve_column({:column, {nil, table, column}}, schema) do
+  def resolve_column({:column, {nil, table, column}}, schema, _context) do
     found = Enum.find(schema, fn
       {_db, ^table, ^column} -> true
       _other -> false
@@ -258,22 +260,28 @@ defmodule ExoSQL.Parser do
       throw {:not_found, {table, column}, :in, schema}
     end
   end
-  def resolve_column({:column, _} = column, _schema), do: column
+  def resolve_column({:column, _} = column, _schema, _context), do: column
 
-  def resolve_column({:op, {op, ex1, ex2}}, schema) do
-    {:op, {op, resolve_column(ex1, schema), resolve_column(ex2, schema)}}
+  def resolve_column({:op, {op, ex1, ex2}}, schema, context) do
+    {:op, {op, resolve_column(ex1, schema, context), resolve_column(ex2, schema, context)}}
   end
 
-  def resolve_column({:fn, {f, params}}, schema) do
-    params = Enum.map(params, &resolve_column(&1, schema))
+  def resolve_column({:fn, {f, params}}, schema, context) do
+    params = Enum.map(params, &resolve_column(&1, schema, context))
     {:fn, {f, params}}
   end
 
-  def resolve_column({:alias, {expr, alias_}}, schema) do
-    {:alias, {resolve_column(expr, schema), alias_}}
+  def resolve_column({:alias, {expr, alias_}}, schema, context) do
+    {:alias, {resolve_column(expr, schema, context), alias_}}
   end
 
-  def resolve_column(other, _schema) do
+  def resolve_column({:select, query}, schema, context) do
+    context = Map.put(context, "__parent__", schema)
+    {:ok, parsed} = real_parse(query, context)
+    {:select, parsed}
+  end
+
+  def resolve_column(other, _schema, _context) do
     other
   end
 

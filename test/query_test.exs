@@ -625,4 +625,8 @@ defmodule QueryTest do
     assert (Enum.at res.rows, 0) == [11]
     assert (Enum.at res.rows, 9) == [20]
   end
+
+  test "Neste SELECT" do
+    analyze_query!("SELECT id, (SELECT name FROM products WHERE id = 1), ammount FROM purchases")
+  end
 end

@@ -105,18 +105,25 @@ defmodule ExoSQL.Planner do
         {:order_by, type, expr, acc}
     end)
 
+    select = Enum.map(query.select, fn
+      {:select, query} ->
+        {:ok, plan} = plan(query)
+        {:select, plan}
+      other -> other
+    end)
+
     select_plan = cond do
       # if grouping, special care on aggregate builtins
       query.groupby ->
-        select = Enum.map(query.select, &fix_aggregates_select(&1, Enum.count(query.groupby)))
+        select = Enum.map(select, &fix_aggregates_select(&1, Enum.count(query.groupby)))
         {:select, order_plan, select}
       # groups full table, do a table to row conversion, and then the ops
-      has_aggregates(query.select) ->
+      has_aggregates(select) ->
         table_in_a_row = {:table_to_row, order_plan}
-        select = Enum.map(query.select, &fix_aggregates_select(&1, 0))
+        select = Enum.map(select, &fix_aggregates_select(&1, 0))
         {:select, table_in_a_row, select}
       true ->
-        {:select, order_plan, query.select}
+        {:select, order_plan, select}
     end
 
     distinct_plan = case query.distinct do
