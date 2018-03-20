@@ -563,7 +563,7 @@ defmodule QueryTest do
     assert Enum.count(res.rows) == 12 # outer join
   end
 
-  test "Ambigous name in query, not smart enough for group removes columns. (FIXME)" do
+  test "Ambiguous name in query, not smart enough for group removes columns. (FIXME)" do
     try do
       analyze_query!("""
       SELECT month, sum(ammount) FROM
@@ -575,7 +575,7 @@ defmodule QueryTest do
           month.month = hist.month
         GROUP BY month.month
       """)
-      flunk "Should fail because of ambigous column. Actually should not if someday the parer is smarter about to use only group columns on select"
+      flunk "Should fail because of ambigous column. Actually should not if someday the parser is smarter about to use only group columns on select"
     rescue
       MatchError -> :ok
     end
@@ -608,5 +608,9 @@ defmodule QueryTest do
   test "Distinct" do
     res = analyze_query!("SELECT DISTINCT product_id FROM purchases")
     assert Enum.count(res.rows) == 4
+
+    res = analyze_query!("SELECT DISTINCT ON (user_id) * FROM purchases")
+    assert Enum.count(res.rows) == 3
+    assert Enum.count(res.columns) == 5
   end
 end

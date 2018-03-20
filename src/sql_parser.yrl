@@ -24,8 +24,9 @@ Rootsymbol query.
 query -> select from join where groupby orderby: #{select => '$1', from => '$2', join => '$3', where => '$4', groupby => '$5', orderby => '$6'}.
 query -> select: #{select => '$1', from => [], join => [], where => nil, groupby => nil, orderby => []}.
 
-select -> 'SELECT' select_expr_list : {'$2', []}.
+select -> 'SELECT' 'DISTINCT' 'ON' open_par expr close_par select_expr_list : {'$7', [{distinct, '$5'}]}.
 select -> 'SELECT' 'DISTINCT' select_expr_list : {'$3', [{distinct, all_columns}]}.
+select -> 'SELECT' select_expr_list : {'$2', []}.
 
 select_expr_list -> select_expr : ['$1'].
 select_expr_list -> select_expr comma select_expr_list: ['$1'] ++ '$3'.

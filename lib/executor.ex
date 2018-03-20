@@ -41,7 +41,7 @@ defmodule ExoSQL.Executor do
       |> Enum.uniq_by(fn {key,_} -> key end)
       |> Enum.map(fn {_, row} -> row end)
 
-    Logger.debug("Get distinct from #{inspect rows}")
+    # Logger.debug("Get distinct from #{inspect rows}")
 
     {:ok, %{
       columns: columns,
