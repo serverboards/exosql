@@ -35,7 +35,7 @@ end
 
 ## Features
 
-* **SELECT over external databases (CSV, HTTP endpoints... Programable)**
+* **SELECT over external databases (CSV, HTTP endpoints... Programmable)**
 * `SELECT` over several tables
 * `WHERE`
 * `INNER JOIN`
