@@ -613,4 +613,16 @@ defmodule QueryTest do
     assert Enum.count(res.rows) == 3
     assert Enum.count(res.columns) == 5
   end
+
+  test "LIMIT" do
+    res = analyze_query!("SELECT * FROM generate_series(20) LIMIT 10")
+    assert Enum.count(res.rows) == 10
+    assert (Enum.at res.rows, 0) == [1]
+    assert (Enum.at res.rows, 9) == [10]
+
+    res = analyze_query!("SELECT * FROM generate_series(20) OFFSET 10 LIMIT 10")
+    assert Enum.count(res.rows) == 10
+    assert (Enum.at res.rows, 0) == [11]
+    assert (Enum.at res.rows, 9) == [20]
+  end
 end

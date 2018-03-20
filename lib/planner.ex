@@ -132,8 +132,20 @@ defmodule ExoSQL.Planner do
         acc
     end)
 
+    limit_plan = case query.offset do
+      nil -> order_plan
+      number ->
+        {:offset, number, order_plan}
+    end
 
-    plan = order_plan
+    limit_plan = case query.limit do
+      nil -> limit_plan
+      number ->
+        {:limit, number, limit_plan}
+    end
+
+
+    plan = limit_plan
 
     {:ok, plan}
   end

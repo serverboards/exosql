@@ -26,7 +26,9 @@ defmodule ExoSQL.Parser do
       where: where,
       groupby: groupby,
       join: join,
-      orderby: orderby
+      orderby: orderby,
+      limit: limit,
+      offset: offset,
     } = parsed
     {select, select_options} = select
 
@@ -95,7 +97,9 @@ defmodule ExoSQL.Parser do
       where: where,
       groupby: groupby,
       join: join,
-      orderby: orderby
+      orderby: orderby,
+      limit: limit,
+      offset: offset,
     }}
   end
 

@@ -6,6 +6,7 @@ query
   column table tableid groupby
   join join_type
   orderby order_expr_list order_expr asc_desc
+  limit offset
   expr expr_l2 expr_l3 expr_l4 expr_l5 expr_l6 expr_atom
   .
 
@@ -16,13 +17,15 @@ op1 op2 op3 op4 op5
 'OUTER' 'LEFT' 'RIGHT' 'INNER' 'CROSS' 'JOIN' 'ON'
 'WHERE' 'GROUP' 'BY' 'ORDER' 'ASC' 'DESC'
 'TRUE' 'FALSE' 'NOT'
-'DISTINCT'
+'DISTINCT' 'LIMIT' 'ALL' 'OFFSET'
 .
 
 Rootsymbol query.
 
-query -> select from join where groupby orderby: #{select => '$1', from => '$2', join => '$3', where => '$4', groupby => '$5', orderby => '$6'}.
-query -> select: #{select => '$1', from => [], join => [], where => nil, groupby => nil, orderby => []}.
+query -> select from join where groupby orderby offset limit:
+    #{select => '$1', from => '$2', join => '$3', where => '$4', groupby => '$5', orderby => '$6', offset => '$7', limit => '$8'}.
+query -> select:
+    #{select => '$1', from => [], join => [], where => nil, groupby => nil, orderby => [], limit => nil, offset => nil}.
 
 select -> 'SELECT' 'DISTINCT' 'ON' open_par expr close_par select_expr_list : {'$7', [{distinct, '$5'}]}.
 select -> 'SELECT' 'DISTINCT' select_expr_list : {'$3', [{distinct, all_columns}]}.
@@ -64,6 +67,13 @@ order_expr -> lit asc_desc: {ok, N} = 'Elixir.ExoSQL.Utils':to_number(unwrap('$1
 asc_desc -> '$empty' : asc.
 asc_desc -> 'ASC' : asc.
 asc_desc -> 'DESC' : desc.
+
+limit -> '$empty': nil.
+limit -> 'LIMIT' lit: {ok, N} = 'Elixir.ExoSQL.Utils':to_number(unwrap('$2')), N.
+limit -> 'LIMIT' 'ALL': nil.
+
+offset -> '$empty': nil.
+offset -> 'OFFSET' lit: {ok, N} = 'Elixir.ExoSQL.Utils':to_number(unwrap('$2')), N.
 
 expr_list -> expr : ['$1'].
 expr_list -> expr comma expr_list: ['$1'] ++ '$3'.

@@ -45,6 +45,8 @@ defmodule ExoSQL do
       groupby: nil,
       join: nil,
       orderby: [],
+      limit: nil,
+      offset: nil
     ]
   end
 

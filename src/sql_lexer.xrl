@@ -2,8 +2,8 @@ Definitions.
 
 INT    = [0-9]+
 MINUS  = -
-RESERVEDL = (select|where|from|as|inner|cross|left|right|outer|join|on|group|by|order|asc|desc|true|false|not|distinct)
-RESERVEDU = (SELECT|WHERE|FROM|AS|INNER|CROSS|LEFT|RIGHT|OUTER|JOIN|ON|GROUP|BY|ORDER|ASC|DESC|TRUE|FALSE|NOT|DISTINCT)
+RESERVEDL = (select|where|from|as|inner|cross|left|right|outer|join|on|group|by|order|asc|desc|true|false|not|distinct|limit|offset|all)
+RESERVEDU = (SELECT|WHERE|FROM|AS|INNER|CROSS|LEFT|RIGHT|OUTER|JOIN|ON|GROUP|BY|ORDER|ASC|DESC|TRUE|FALSE|NOT|DISTINCT|LIMIT|OFFSET|ALL)
 ID     = [_a-zA-Z][_a-zA-Z0-9]*
 COMMA  = ,
 DOT    = \.

@@ -227,6 +227,25 @@ defmodule ExoSQL.Executor do
     }}
   end
 
+  def execute({:offset, offset, from}, context) do
+    {:ok, data} = execute(from, context)
+    rows = Enum.drop(data.rows, offset)
+    {:ok, %ExoSQL.Result{
+      columns: data.columns,
+      rows: rows
+    }}
+  end
+
+  def execute({:limit, limit, from}, context) do
+    {:ok, data} = execute(from, context)
+    rows = Enum.take(data.rows, limit)
+    {:ok, %ExoSQL.Result{
+      columns: data.columns,
+      rows: rows
+    }}
+  end
+
+
   def execute(%ExoSQL.Result{} = res, _context), do: {:ok, res}
   def execute(%{ rows: rows, columns: columns}, _context), do: {:ok, %ExoSQL.Result{ rows: rows, columns: columns }}
 
