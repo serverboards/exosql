@@ -603,4 +603,10 @@ defmodule QueryTest do
     res = analyze_query!("SELECT SUM(price) FROM products WHERE id = 9999")
     assert res.rows == [[0]]
   end
+
+
+  test "Distinct" do
+    res = analyze_query!("SELECT DISTINCT product_id FROM purchases")
+    assert Enum.count(res.rows) == 4
+  end
 end

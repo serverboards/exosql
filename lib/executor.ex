@@ -22,6 +22,33 @@ defmodule ExoSQL.Executor do
     {:ok, %ExoSQL.Result{ rows: rows, columns: columns}}
   end
 
+  def execute({:distinct, what, from}, context) do
+    {:ok, %{ columns: columns, rows: rows}} = execute(from, context)
+
+    rows = case what do
+      :all_columns ->
+        Enum.map(rows, fn row ->
+          {row, row}
+        end)
+      what ->
+        expr = simplify_expr_columns(what, columns, context["__vars__"])
+        Enum.map(rows, fn row ->
+          {ExoSQL.Expr.run_expr(expr, row), row}
+        end)
+    end
+
+    rows = Enum.sort(rows)
+      |> Enum.uniq_by(fn {key,_} -> key end)
+      |> Enum.map(fn {_, row} -> row end)
+
+    Logger.debug("Get distinct from #{inspect rows}")
+
+    {:ok, %{
+      columns: columns,
+      rows: rows
+    }}
+  end
+
   def execute({:execute, {"self", "tables"}, _quals, _columns}, context) do
     rows = Enum.flat_map(context, fn {db, _conf} ->
       {:ok, tables} = ExoSQL.schema(db, context)

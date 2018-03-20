@@ -119,7 +119,13 @@ defmodule ExoSQL.Planner do
         {:select, order_plan, query.select}
     end
 
-    order_plan = Enum.reduce(query.orderby, select_plan, fn
+    distinct_plan = case query.distinct do
+      nil -> select_plan
+      other ->
+        {:distinct, other, select_plan}
+    end
+
+    order_plan = Enum.reduce(query.orderby, distinct_plan, fn
       {type, {:lit, n}}, acc ->
         {:order_by, type, {:column, n-1}, acc}
       {_type, _expr}, acc ->

@@ -28,6 +28,7 @@ defmodule ExoSQL.Parser do
       join: join,
       orderby: orderby
     } = parsed
+    {select, select_options} = select
 
     from = Enum.map(from, &resolve_table(&1, context))
 
@@ -72,7 +73,10 @@ defmodule ExoSQL.Parser do
         Enum.map(select, &resolve_column(&1, all_schemas))
     end
     # Logger.debug("Resolved: #{inspect select}")
-
+    distinct = case Keyword.get(select_options, :distinct) do
+      nil -> nil
+      other -> resolve_column(other, all_schemas)
+    end
 
     where = if where do
       resolve_column(where, all_schemas)
@@ -86,6 +90,7 @@ defmodule ExoSQL.Parser do
 
     {:ok, %ExoSQL.Query{
       select: select,
+      distinct: distinct,
       from: from, # all the tables it gets data from, but use only the frist and the joins.
       where: where,
       groupby: groupby,
