@@ -350,7 +350,7 @@ defmodule ExoSQL.Builtins do
     expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
     # Logger.debug("Simplified expression #{inspect expr}")
     Enum.reduce(data.rows, 0, fn row, acc ->
-      n = ExoSQL.Expr.run_expr(expr, row)
+      n = ExoSQL.Expr.run_expr(expr, {row, %{}})
       n = case ExoSQL.Utils.to_number(n) do
         {:ok, n} -> n
         {:error, nil} -> 0
@@ -362,7 +362,7 @@ defmodule ExoSQL.Builtins do
   def max_(data, expr) do
     expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
     Enum.reduce(data.rows, nil, fn row, acc ->
-      n = ExoSQL.Expr.run_expr(expr, row)
+      n = ExoSQL.Expr.run_expr(expr, {row, %{}})
       {:ok, n} = ExoSQL.Utils.to_number(n)
       if not acc or n > acc do
         n
@@ -374,7 +374,7 @@ defmodule ExoSQL.Builtins do
   def min_(data, expr) do
     expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
     Enum.reduce(data.rows, nil, fn row, acc ->
-      n = ExoSQL.Expr.run_expr(expr, row)
+      n = ExoSQL.Expr.run_expr(expr, {row, %{}})
       {:ok, n} = ExoSQL.Utils.to_number(n)
       if not acc or n < acc do
         n

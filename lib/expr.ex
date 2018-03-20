@@ -138,13 +138,16 @@ defmodule ExoSQL.Expr do
 
   def run_expr({:lit, val}, _cur), do: val
 
-  def run_expr({:column, n}, cur) when is_number(n) do
-    Enum.at(cur, n)
+  def run_expr({:column, n}, {row, _context}) when is_number(n) do
+    Enum.at(row, n)
   end
 
-  def run_expr({:select, query}, _cur) do
-    {:ok, res} = ExoSQL.Executor.execute(query, %{})
-    [[data | _] | _ ] = res.columns # first of first
+  def run_expr({:select, query}, {_, context}) do
+    {:ok, res} = ExoSQL.Executor.execute(query, context)
+    data = case res.rows do
+      [[data | _] | _ ] -> data
+      [[]] -> nil
+    end
     data
   end
 
