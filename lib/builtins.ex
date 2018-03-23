@@ -320,6 +320,7 @@ defmodule ExoSQL.Builtins do
   It just uses / to separate keys.
   """
   def jp(nil, _), do: nil
+  def jp(json, idx) when is_list(json) and is_number(idx), do: Enum.at(json, idx)
   def jp(json, str) when is_binary(str), do: jp(json, String.split(str, "/"))
   def jp(json, [ head | rest]) when is_list(json) do
     n = ExoSQL.Utils.to_number!(head)
