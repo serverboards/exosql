@@ -144,7 +144,7 @@ Lower case a full string
 
 Joins all elements from a list into a string, using the given separator.
 
-```
+```sql
 join([1,2,3,4], "/")
 "1/2/3/4"
 ```
@@ -153,7 +153,7 @@ join([1,2,3,4], "/")
 
 Splits a string into a list using the given separator.
 
-```
+```sql
 split("1, 2,3 4")
 ["1", "2", "3", "4"]
 ```
@@ -165,7 +165,7 @@ Extracts a substring from the first argument.
 
 Can use negative indexes to start to count from the end.
 
-```
+```sql
 substr('#test#', 1, -1)
 "test"
 ```
@@ -174,7 +174,7 @@ substr('#test#', 1, -1)
 
 Converts the given argument into a string.
 
-```
+```sql
 to_string(1)
 "1"
 ```
@@ -278,7 +278,7 @@ Can be reverse with a larger start than end and negative step.
 
 It can be used to for example fill all holes in a temporal serie:
 
-```
+```sql
 SELECT month, SUM(value)
   FROM generate_series(12) AS month
 LEFT JOIN purchases
@@ -315,7 +315,7 @@ This helper eases the generation of histograms.
 
 For example an histogram of prices:
 
-```
+```sql
 SELECT n, SUM(price)
   FROM (SELECT width_bucket(price, 0, 200, 10) AS n, price
           FROM products)
@@ -324,7 +324,7 @@ SELECT n, SUM(price)
 
 or more complete, with filling zeroes:
 
-```
+```sql
 SELECT m, SUM(price)
   FROM generate_series(10) AS m
   LEFT JOIN (
