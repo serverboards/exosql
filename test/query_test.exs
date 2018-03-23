@@ -652,6 +652,6 @@ defmodule QueryTest do
   test "SELECT IN" do
     res = analyze_query!("SELECT * FROM products WHERE id IN [1,2,3]")
 
-    assert Enum.count(res.rows) == 4
+    assert Enum.count(res.rows) == 3
   end
 end

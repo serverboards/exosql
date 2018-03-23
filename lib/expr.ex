@@ -181,4 +181,43 @@ defmodule ExoSQL.Expr do
         {a, b}
     end
   end
+
+
+  @doc ~S"""
+  Try to simplify expressions.
+
+  Will return always a valid expression.
+
+  If any subexpression is of any of these types, the expression will be the
+  maximum complxity.
+
+  This makes for example to simplify:
+
+  {:list, [lit: 1, lit: 2]} -> {:lit, [1,2]}
+  """
+  def simplify({:lit, n}), do: {:lit, n}
+  def simplify({:op, {op, op1, op2}}) do
+    op1 = simplify(op1)
+    op2 = simplify(op2)
+    case {op1, op2} do
+      {{:lit, op1}, {:lit, op2}} ->
+        {:lit, run_expr({:op, {op, op1, op2}}, [])}
+      other ->
+        {:op, {op, op1, op2}}
+    end
+  end
+  def simplify({:list, list}) do
+    list = Enum.map(list, &simplify(&1))
+    all_literals = Enum.all?(list, fn
+      {:lit, n} -> true
+      other -> false
+    end)
+    if all_literals do
+      list = Enum.map(list, fn {:lit, n} -> n end)
+      {:lit, list}
+    else
+      {:list, list}
+    end
+  end
+  def simplify(other), do: other
 end

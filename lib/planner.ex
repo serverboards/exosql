@@ -61,16 +61,19 @@ defmodule ExoSQL.Planner do
   TODO: explore different plans acording to some weights and return the optimal one.
   """
   def plan(query) do
+    where = ExoSQL.Expr.simplify(query.where)
+    select = ExoSQL.Expr.simplify(query.select)
+
     all_expressions = [
-      query.where,
-      query.select,
+      where,
+      select,
       query.groupby,
       Enum.map(query.orderby, fn {_type, expr} -> expr end),
       Enum.map(query.join, fn {_join, {_from, expr}} -> expr end),
     ]
     # Logger.debug("All expressions: #{inspect all_expressions}")
     # Logger.debug("From #{inspect query.from, pretty: true}")
-    from = Enum.map(query.from, &plan_execute(&1, query.where, all_expressions))
+    from = Enum.map(query.from, &plan_execute(&1, where, all_expressions))
 
     from_plan = if from == [] do
       %ExoSQL.Result{columns: ["?NONAME"], rows: [[1]]} # just one element
@@ -86,8 +89,8 @@ defmodule ExoSQL.Planner do
         {join_type, acc, from, expr}
     end)
 
-    where_plan = if query.where do
-      {:filter, join_plan, query.where}
+    where_plan = if where do
+      {:filter, join_plan, where}
     else
       join_plan
     end
@@ -108,15 +111,15 @@ defmodule ExoSQL.Planner do
     select_plan = cond do
       # if grouping, special care on aggregate builtins
       query.groupby ->
-        select = Enum.map(query.select, &fix_aggregates_select(&1, Enum.count(query.groupby)))
+        select = Enum.map(select, &fix_aggregates_select(&1, Enum.count(query.groupby)))
         {:select, order_plan, select}
       # groups full table, do a table to row conversion, and then the ops
-      has_aggregates(query.select) ->
+      has_aggregates(select) ->
         table_in_a_row = {:table_to_row, order_plan}
-        select = Enum.map(query.select, &fix_aggregates_select(&1, 0))
+        select = Enum.map(select, &fix_aggregates_select(&1, 0))
         {:select, table_in_a_row, select}
       true ->
-        {:select, order_plan, query.select}
+        {:select, order_plan, select}
     end
 
     distinct_plan = case query.distinct do
@@ -248,6 +251,9 @@ defmodule ExoSQL.Planner do
   end
   defp get_quals(db, table, {:op, {op, {:var, variable}}, {:column, {db, table, column}}}) do
     [[column, op, {:var, variable}]]
+  end
+  defp get_quals(db, table, {:op, {"IN", {:column, {db, table, column}}, {:lit, list}}}) when is_list(list) do
+    [[column, "IN", list]]
   end
   defp get_quals(db, table, {:op, {"AND", op1, op2}}) do
     Enum.flat_map([op1, op2], &(get_quals(db, table, &1)))
