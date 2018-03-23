@@ -173,6 +173,7 @@ defmodule ExoSQL.Builtins do
   %k - integer with k, M sufix
   %.k - float with k, M sufix, uses float part
   """
+  def format(str), do: str
   def format(str, args) when is_list(args) do
     ExoSQL.Format.format(str, args)
   end
@@ -186,7 +187,6 @@ defmodule ExoSQL.Builtins do
   * %f (only two decimals)
   * %.{ndec}f
   """
-  def format(str), do: str
   def format(str, arg1), do: format(str, [arg1])
   def format(str, arg1, arg2), do: format(str, [arg1, arg2])
   def format(str, arg1, arg2, arg3), do: format(str, [arg1, arg2, arg3])
