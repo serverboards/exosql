@@ -25,6 +25,7 @@ defmodule ExoSQL.Builtins do
     "to_string" => {ExoSQL.Builtins, :to_string},
     "to_datetime" => {ExoSQL.Builtins, :to_datetime},
     "to_timestamp" => {ExoSQL.Builtins, :to_timestamp},
+    "to_number" => {ExoSQL.Utils, :'to_number!'},
     "substr" => {ExoSQL.Builtins, :substr},
     "now" => {ExoSQL.Builtins, :now},
     "strftime" => {ExoSQL.Builtins, :strftime},
