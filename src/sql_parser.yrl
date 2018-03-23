@@ -17,7 +17,7 @@ op1 op2 op3 op4 op5 op6
 'SELECT' 'FROM' 'AS'
 'OUTER' 'LEFT' 'RIGHT' 'INNER' 'CROSS' 'JOIN' 'ON'
 'WHERE' 'GROUP' 'BY' 'ORDER' 'ASC' 'DESC'
-'TRUE' 'FALSE' 'NOT'
+'TRUE' 'FALSE' 'NOT' 'NULL'
 'DISTINCT' 'LIMIT' 'ALL' 'OFFSET'
 .
 
@@ -106,6 +106,7 @@ expr_atom -> litn : {lit, unwrap_raw('$1')}.
 expr_atom -> litf : {lit, unwrap_raw('$1')}.
 expr_atom -> 'TRUE' : {lit, true}.
 expr_atom -> 'FALSE' : {lit, false}.
+expr_atom -> 'NULL' : {lit, nil}.
 expr_atom -> var : {var, unwrap('$1')}.
 expr_atom -> open_par expr close_par : '$2'.
 expr_atom -> id open_par close_par : {fn, {unwrap_d('$1'), []}}.

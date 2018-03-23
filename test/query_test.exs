@@ -670,4 +670,10 @@ defmodule QueryTest do
 
     assert Enum.count(res.rows) == 3
   end
+
+  test "NULL" do
+    res = analyze_query!("SELECT NULL")
+
+    assert res.rows == [[ nil ]]
+  end
 end
