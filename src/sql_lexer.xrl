@@ -12,7 +12,7 @@ OP2     = (or|OR)
 OP3     = (<|>|<=|>=|==|!=|<>|<|>|=|\|\|)
 OP4     = (-|\+)
 OP5     = (\*|/)
-OP6     = (IN)
+OP6     = (IN|IS|in|is)
 SPACE  = [\n\t\s]+
 OPEN_PAR = \(
 CLOSE_PAR = \)

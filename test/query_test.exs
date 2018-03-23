@@ -82,6 +82,24 @@ defmodule QueryTest do
 
     res = analyze_query!("SELECT NOT false AND true")
     assert res.rows == [[true]]
+
+    res = analyze_query!("SELECT NOT 'test'")
+    assert res.rows == [[false]]
+
+    res = analyze_query!("SELECT NOT ''")
+    assert res.rows == [[true]]
+
+    res = analyze_query!("SELECT NOT NOT 'test'")
+    assert res.rows == [[true]]
+
+    res = analyze_query!("SELECT 1 IS (0 + 1)")
+    assert res.rows == [[ true ]]
+
+    res = analyze_query!("SELECT 1 IS '1'")
+    assert res.rows == [[ false ]]
+
+    res = analyze_query!("SELECT 1 == '1'")
+    assert res.rows == [[ true ]]
   end
 
   test "Select * from" do
@@ -675,5 +693,9 @@ defmodule QueryTest do
     res = analyze_query!("SELECT NULL")
 
     assert res.rows == [[ nil ]]
+
+    res = analyze_query!("SELECT * FROM generate_series(5) LEFT JOIN urls ON id = generate_series WHERE url is NULL")
+
+    assert Enum.count(res.rows) == 1
   end
 end

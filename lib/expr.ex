@@ -46,6 +46,12 @@ defmodule ExoSQL.Expr do
 
     r1 == r2
   end
+  def run_expr({:op, {"IS", op1, op2}}, cur) do
+    r1 = run_expr(op1, cur)
+    r2 = run_expr(op2, cur)
+
+    r1 === r2
+  end
   def run_expr({:op, {">", op1, op2}}, cur) do
     r1 = run_expr(op1, cur)
     r2 = run_expr(op2, cur)
@@ -127,7 +133,11 @@ defmodule ExoSQL.Expr do
   def run_expr({:op, {:not, op}}, cur) do
     n = run_expr(op, cur)
 
-    not n
+    if n do
+      false
+    else
+      true
+    end
   end
 
   def run_expr({:op, {"IN", op1, op2}}, cur) do
@@ -223,10 +233,16 @@ defmodule ExoSQL.Expr do
     Enum.map(list, &simplify/1)
   end
   def simplify({:op, {:not, op}}) do
-    Logger.debug("Simplify not #{inspect op}")
     case simplify(op) do
       {:lit, op} ->
-        {:lit, not op}
+        cond do
+          op == "" ->
+            {:lit, true}
+          op ->
+            {:lit, false}
+          true ->
+            {:lit, true}
+        end
       other ->
         {:not, other}
     end

@@ -94,10 +94,10 @@ expr_l4 -> expr_l5: '$1'.
 expr_l5 -> expr_l6 op5 expr_l5: {op, {unwrap('$2'), '$1', '$3'}}.
 expr_l5 -> expr_l6: '$1'.
 
-expr_l6 -> expr_l7 op6 expr_l6: {op, {unwrap('$2'), '$1', '$3'}}.
+expr_l6 -> expr_l7 op6 expr_l6: {op, {unwrap_u('$2'), '$1', '$3'}}.
 expr_l6 -> expr_l7: '$1'.
 
-expr_l7 -> 'NOT' expr_atom: {op, {'not', '$2'}}.
+expr_l7 -> 'NOT' expr_l7: {op, {'not', '$2'}}.
 expr_l7 -> expr_atom: '$1'.
 
 expr_atom -> column : {column, '$1'}.
@@ -131,6 +131,7 @@ select -> column comma select: [unwrap('$1')] ++ '$3'.
 Erlang code.
 
 unwrap_d({_,_,V}) -> 'Elixir.String':downcase('Elixir.List':to_string(V)).
+unwrap_u({_,_,V}) -> 'Elixir.String':upcase('Elixir.List':to_string(V)).
 unwrap({_,_,V}) -> 'Elixir.List':to_string(V).
 unwrap_raw({_,_,V}) -> V.
 tag(A, B) ->
