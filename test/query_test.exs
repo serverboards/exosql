@@ -625,4 +625,10 @@ defmodule QueryTest do
     assert (Enum.at res.rows, 0) == [11]
     assert (Enum.at res.rows, 9) == [20]
   end
+
+  test "IN operator and lists" do
+    res = analyze_query!("SELECT [1,2,3,4]")
+
+    assert res.rows == [[ [1,2,3,4] ]]
+  end
 end

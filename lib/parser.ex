@@ -109,7 +109,10 @@ defmodule ExoSQL.Parser do
   def parse(sql, context) do
     try do
       sql = String.to_charlist(sql)
-      {:ok, lexed, _lines} = :sql_lexer.string(sql)
+      lexed = case :sql_lexer.string(sql) do
+        {:ok, lexed, _lines} -> lexed
+        {:error, other, _} -> throw other
+      end
       parsed = case :sql_parser.parse(lexed) do
         {:ok, parsed} -> parsed
         {:error, any} -> throw any
@@ -117,9 +120,13 @@ defmodule ExoSQL.Parser do
       # Logger.debug("Yeec parsed: #{inspect parsed, pretty: true}")
       real_parse(parsed, context)
     catch
-      {1, :sql_parser, msg} ->
-        {:error, {:syntax, to_string(msg)}}
-      any -> {:error, any}
+      {line_number, :sql_lexer, msg} ->
+        {:error, {[syntax: msg, at_line: line_number]}}
+      {line_number, :sql_parser, msg} ->
+        {:error, {[syntax: to_string(msg), at_line: line_number]}}
+      any ->
+        Logger.debug("Generic error at SQL parse: #{inspect any}")
+        {:error, any}
     end
   end
 
