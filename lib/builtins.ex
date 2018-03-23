@@ -16,8 +16,6 @@ defmodule ExoSQL.Builtins do
 
   @functions %{
     "round" => {ExoSQL.Builtins, :round},
-    "concat" => {ExoSQL.Builtins, :concat},
-    "not" => {ExoSQL.Builtins, :not_},
     "if" => {ExoSQL.Builtins, :if_},
     "bool" => {ExoSQL.Builtins, :bool},
     "lower" => {ExoSQL.Builtins, :lower},
@@ -74,17 +72,6 @@ defmodule ExoSQL.Builtins do
     {:ok, r} = to_number(r)
 
     Float.round(n, r)
-  end
-
-  def concat(a, b) do
-    a = to_string(a)
-    b = to_string(b)
-
-    a <> b
-  end
-
-  def not_(a) do
-    not bool(a)
   end
 
   def if_(cond_, then_, else_ \\ nil) do
@@ -212,8 +199,14 @@ defmodule ExoSQL.Builtins do
     end_ = to_float!(end_)
     nbuckets = to_number!(nbuckets)
 
-    ((n - start_) * nbuckets / (end_- start_))
-      |> Kernel.round
+    bucket = ((n - start_) * nbuckets / (end_- start_))
+    bucket = bucket |> Kernel.round
+
+    cond do
+      bucket < 0 -> 0
+      bucket >= nbuckets -> nbuckets - 1
+      true -> bucket
+    end
   end
 
 
@@ -357,7 +350,11 @@ defmodule ExoSQL.Builtins do
 
   def avg(data, expr) do
   # Logger.debug("Avg of #{inspect data} by #{inspect expr}")
-    sum(data, expr) / count(data, nil)
+    if data.columns == [] do
+      nil
+    else
+      sum(data, expr) / count(data, nil)
+    end
   end
 
   def sum(data, expr) do

@@ -104,7 +104,11 @@ defmodule ExoSQL do
     end
   end
 
-  def repl(context) do
+  @default_context %{
+        "A" => {ExoSQL.Csv, path: "test/data/csv/"},
+        "B" => {ExoSQL.HTTP, []}
+      }
+  def repl(context \\ @default_context) do
     input = IO.gets("exosql> ") |> String.trim
     case input do
       "" -> :eof
