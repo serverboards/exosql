@@ -201,22 +201,34 @@ defmodule ExoSQL.Expr do
     op2 = simplify(op2)
     case {op1, op2} do
       {{:lit, op1}, {:lit, op2}} ->
-        {:lit, run_expr({:op, {op, op1, op2}}, [])}
-      other ->
+        {:lit, run_expr({:op, {op, {:lit, op1}, {:lit, op2}}}, [])}
+      _other ->
         {:op, {op, op1, op2}}
     end
   end
   def simplify({:list, list}) do
     list = Enum.map(list, &simplify(&1))
     all_literals = Enum.all?(list, fn
-      {:lit, n} -> true
-      other -> false
+      {:lit, _n} -> true
+      _other -> false
     end)
     if all_literals do
       list = Enum.map(list, fn {:lit, n} -> n end)
       {:lit, list}
     else
       {:list, list}
+    end
+  end
+  def simplify(list) when is_list(list) do
+    Enum.map(list, &simplify/1)
+  end
+  def simplify({:op, {:not, op}}) do
+    Logger.debug("Simplify not #{inspect op}")
+    case simplify(op) do
+      {:lit, op} ->
+        {:lit, not op}
+      other ->
+        {:not, other}
     end
   end
   def simplify(other), do: other
