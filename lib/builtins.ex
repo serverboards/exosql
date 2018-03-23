@@ -22,6 +22,8 @@ defmodule ExoSQL.Builtins do
     "bool" => {ExoSQL.Builtins, :bool},
     "lower" => {ExoSQL.Builtins, :lower},
     "upper" => {ExoSQL.Builtins, :upper},
+    "split" => {ExoSQL.Builtins, :split},
+    "join" => {ExoSQL.Builtins, :join},
     "to_string" => {ExoSQL.Builtins, :to_string},
     "to_datetime" => {ExoSQL.Builtins, :to_datetime},
     "to_timestamp" => {ExoSQL.Builtins, :to_timestamp},
@@ -126,6 +128,16 @@ defmodule ExoSQL.Builtins do
   def substr(str, skip) do
     substr(str, skip, 10_000) # A upper limit on what to return, should be enought
   end
+  def join(str, sep \\ ",") do
+    Enum.join(str, sep)
+  end
+  def split(str, sep) do
+    String.split(str, sep)
+  end
+  def split(str) do
+    String.split(str, [", ", ",", " "])
+  end
+
 
   @doc ~S"""
   Convert datetime to string.

@@ -388,6 +388,22 @@ defmodule QueryTest do
     assert result.rows == [["st-mystri"]]
   end
 
+  test "Join and split strings" do
+    result = analyze_query!("SELECT join(['the', 'answer', 42], ' ')")
+    assert result.rows == [["the answer 42"]]
+
+    result = analyze_query!("SELECT join([1,2,3])")
+    assert result.rows == [["1,2,3"]]
+
+    result = analyze_query!("SELECT split('the#answer#is#42', '#')")
+    assert result.rows == [[ ["the", "answer", "is", "42"] ]]
+
+    result = analyze_query!("SELECT split('the,answer is, 42')")
+    assert result.rows == [[ ["the", "answer", "is", "42"] ]]
+
+    result = analyze_query!("SELECT split('the answer is, 42')")
+    assert result.rows == [[ ["the", "answer", "is", "42"] ]]
+  end
 
   test "Query with if" do
     res = analyze_query!("""
