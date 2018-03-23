@@ -24,8 +24,8 @@ defmodule PlannerTest do
             {"A", "products", "name"},
           ]},
           {:op, {"and",
-            {:op, {">", {:column, {"A", "products", "price"}}, {:lit, "0"}}},
-            {:op, {">=", {:column, {"A", "products", "stock"}}, {:lit, "1"}}
+            {:op, {">", {:column, {"A", "products", "price"}}, {:lit, 0}}},
+            {:op, {">=", {:column, {"A", "products", "stock"}}, {:lit, 1}}
           }}}
         },
         [
@@ -46,7 +46,7 @@ defmodule PlannerTest do
     {:execute, _from, quals, _columns} = plan |> elem(1) |> elem(1)
     Logger.debug("quals: #{inspect quals}, should be stock > 0, price <= 100")
 
-    assert quals == [["stock", ">", "0"], ["price", "<=", "100"]]
+    assert quals == [["stock", ">", 0], ["price", "<=", 100]]
 
     # Maybe OR
     {:ok, parsed} = ExoSQL.parse("SELECT name, stock>0 FROM products WHERE (stock > 0) OR (price <= 100)", @context)
@@ -68,7 +68,7 @@ defmodule PlannerTest do
     {:execute, _from, quals, _columns} = plan |> elem(1) |> elem(1)
     Logger.debug("quals: #{inspect quals}, should be stock > $test, price <= 100")
 
-    assert quals == [["stock", ">", {:var, "test"}], ["price", "<=", "100"]]
+    assert quals == [["stock", ">", {:var, "test"}], ["price", "<=", 100]]
 
   end
 end

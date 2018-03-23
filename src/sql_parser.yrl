@@ -11,7 +11,8 @@ query
   .
 
 Terminals
-id comma dot lit open_par close_par var
+id comma dot lit litn litf var
+open_par close_par open_br close_br open_sqb close_sqb
 op1 op2 op3 op4 op5
 'SELECT' 'FROM' 'AS'
 'OUTER' 'LEFT' 'RIGHT' 'INNER' 'CROSS' 'JOIN' 'ON'
@@ -63,17 +64,17 @@ orderby -> 'ORDER' 'BY' order_expr_list : '$3'.
 order_expr_list -> order_expr: ['$1'].
 order_expr_list -> order_expr comma order_expr_list: ['$1'] ++ '$3'.
 order_expr -> column asc_desc: {'$2', {column, '$1'}}.
-order_expr -> lit asc_desc: {ok, N} = 'Elixir.ExoSQL.Utils':to_number(unwrap('$1')), {'$2', {lit, N}}.
+order_expr -> litn asc_desc: {'$2', {lit, unwrap_raw('$1')}}.
 asc_desc -> '$empty' : asc.
 asc_desc -> 'ASC' : asc.
 asc_desc -> 'DESC' : desc.
 
 limit -> '$empty': nil.
-limit -> 'LIMIT' lit: {ok, N} = 'Elixir.ExoSQL.Utils':to_number(unwrap('$2')), N.
+limit -> 'LIMIT' litn: unwrap_raw('$2').
 limit -> 'LIMIT' 'ALL': nil.
 
 offset -> '$empty': nil.
-offset -> 'OFFSET' lit: {ok, N} = 'Elixir.ExoSQL.Utils':to_number(unwrap('$2')), N.
+offset -> 'OFFSET' litn: unwrap_raw('$2').
 
 expr_list -> expr : ['$1'].
 expr_list -> expr comma expr_list: ['$1'] ++ '$3'.
@@ -98,6 +99,8 @@ expr_l6 -> expr_atom: '$1'.
 
 expr_atom -> column : {column, '$1'}.
 expr_atom -> lit : {lit, unwrap('$1')}.
+expr_atom -> litn : {lit, unwrap_raw('$1')}.
+expr_atom -> litf : {lit, unwrap_raw('$1')}.
 expr_atom -> 'TRUE' : {lit, true}.
 expr_atom -> 'FALSE' : {lit, false}.
 expr_atom -> var : {var, unwrap('$1')}.
@@ -105,6 +108,7 @@ expr_atom -> open_par expr close_par : '$2'.
 expr_atom -> id open_par close_par : {fn, {unwrap_d('$1'), []}}.
 expr_atom -> id open_par expr_list close_par : {fn, {unwrap_d('$1'), '$3'}}.
 expr_atom -> id open_par op5 close_par: tag('$3', "*"), {fn, {unwrap_d('$1'), [{lit, "*"}]}}.
+expr_atom -> open_sqb expr_list close_sqb: {list, '$2'}.
 
 column -> id dot id dot id : {unwrap('$1'), unwrap('$3'), unwrap('$5')}.
 column -> id dot id : {nil, unwrap('$1'), unwrap('$3')}.
@@ -123,6 +127,7 @@ Erlang code.
 
 unwrap_d({_,_,V}) -> 'Elixir.String':downcase('Elixir.List':to_string(V)).
 unwrap({_,_,V}) -> 'Elixir.List':to_string(V).
+unwrap_raw({_,_,V}) -> V.
 tag(A, B) ->
   A1 = unwrap(A),
   %% io:format("DEBUG: ~p == ~p", [A1, B]),

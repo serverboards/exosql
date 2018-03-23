@@ -15,6 +15,10 @@ OP5     = (\*|/)
 SPACE  = [\n\t\s]+
 OPEN_PAR = \(
 CLOSE_PAR = \)
+OPEN_SQB = \[
+CLOSE_SQB = \]
+OPEN_BR = \{
+CLOSE_BR = \}
 QUOTED_STRING = ("([^"])*"|'([^'])*')
 %% "
 VAR    =  \$[_a-zA-Z][_a-zA-Z0-9]*
@@ -34,11 +38,19 @@ Rules.
 {DOT}    : {token, {dot, TokenLine, TokenChars}}.
 {OPEN_PAR}      : {token, {open_par, TokenLine, TokenChars}}.
 {CLOSE_PAR}     : {token, {close_par, TokenLine, TokenChars}}.
-{INT}{DOT}{INT} : {token, {lit, TokenLine, TokenChars}}.
-{INT}           : {token, {lit, TokenLine, TokenChars}}.
-{MINUS}{INT}{DOT}{INT} : {token, {lit, TokenLine, TokenChars}}.
-{MINUS}{INT}           : {token, {lit, TokenLine, TokenChars}}.
+{OPEN_SQB}      : {token, {open_sqb, TokenLine, TokenChars}}.
+{CLOSE_SQB}     : {token, {close_sqb, TokenLine, TokenChars}}.
+{OPEN_BR}      : {token, {open_br, TokenLine, TokenChars}}.
+{CLOSE_BR}     : {token, {close_br, TokenLine, TokenChars}}.
+{INT}{DOT}{INT} : {token, {litf, TokenLine, to_number(TokenChars)}}.
+{INT}           : {token, {litn, TokenLine, to_number(TokenChars)}}.
+{MINUS}{INT}{DOT}{INT} : {token, {litf, TokenLine, to_number(TokenChars)}}.
+{MINUS}{INT}           : {token, {litn, TokenLine, to_number(TokenChars)}}.
 {QUOTED_STRING} : {token, {lit, TokenLine, string:substr(TokenChars, 2, string:len(TokenChars)-2)}}.
 {VAR}           : {token, {var, TokenLine, string:substr(TokenChars, 2, string:len(TokenChars))}}.
 
 Erlang code.
+
+to_number(S) ->
+  S2 = list_to_binary(S),
+  'Elixir.ExoSQL.Utils':'to_number!'(S2).

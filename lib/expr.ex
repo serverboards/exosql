@@ -142,6 +142,10 @@ defmodule ExoSQL.Expr do
     Enum.at(cur, n)
   end
 
+  def run_expr({:list, data}, cur) when is_list(data) do
+    Enum.map(data, &(run_expr(&1, cur)))
+  end
+
   @doc """
   Try to return matching types.
 
