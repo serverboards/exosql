@@ -130,13 +130,15 @@ defmodule ExoSQL.Expr do
     s1<>s2
   end
 
-  def run_expr({:op, {:not, op}}, cur) do
+  def run_expr({:op, {:not, op}}, cur), do: run_expr({:not, op}, cur)
+
+  def run_expr({:not, op}, cur) do
     n = run_expr(op, cur)
 
-    if n do
-      false
-    else
-      true
+    cond do
+      n == "" -> true
+      n -> false
+      true -> true
     end
   end
 

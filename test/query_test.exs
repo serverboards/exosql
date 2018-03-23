@@ -89,6 +89,9 @@ defmodule QueryTest do
     res = analyze_query!("SELECT NOT ''")
     assert res.rows == [[true]]
 
+    res = analyze_query!("SELECT NOT format('')")
+    assert res.rows == [[true]]
+
     res = analyze_query!("SELECT NOT NOT 'test'")
     assert res.rows == [[true]]
 

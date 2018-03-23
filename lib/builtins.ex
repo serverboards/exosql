@@ -186,6 +186,7 @@ defmodule ExoSQL.Builtins do
   * %f (only two decimals)
   * %.{ndec}f
   """
+  def format(str), do: str
   def format(str, arg1), do: format(str, [arg1])
   def format(str, arg1, arg2), do: format(str, [arg1, arg2])
   def format(str, arg1, arg2, arg3), do: format(str, [arg1, arg2, arg3])
