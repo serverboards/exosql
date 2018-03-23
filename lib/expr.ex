@@ -134,7 +134,10 @@ defmodule ExoSQL.Expr do
     op1 = run_expr(op1, cur)
     op2 = run_expr(op2, cur)
 
-    op1 in op2
+    Enum.any?(op2, fn el2 ->
+      {op1, el2} = match_types(op1, el2)
+      op1 == el2
+    end)
   end
 
   def run_expr({:fn, {fun, exprs}}, cur) do
