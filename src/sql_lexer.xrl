@@ -12,6 +12,7 @@ OP2     = (or|OR)
 OP3     = (<|>|<=|>=|==|!=|<>|<|>|=|\|\|)
 OP4     = (-|\+)
 OP5     = (\*|/)
+OP6     = (IN)
 SPACE  = [\n\t\s]+
 OPEN_PAR = \(
 CLOSE_PAR = \)
@@ -33,6 +34,7 @@ Rules.
 {OP3}     : {token, {op3, TokenLine, TokenChars}}.
 {OP4}     : {token, {op4, TokenLine, TokenChars}}.
 {OP5}     : {token, {op5, TokenLine, TokenChars}}.
+{OP6}     : {token, {op6, TokenLine, TokenChars}}.
 {ID}     : {token, {id, TokenLine, TokenChars}}.
 {COMMA}  : {token, {comma, TokenLine, TokenChars}}.
 {DOT}    : {token, {dot, TokenLine, TokenChars}}.

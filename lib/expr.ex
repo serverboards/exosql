@@ -130,6 +130,13 @@ defmodule ExoSQL.Expr do
     not n
   end
 
+  def run_expr({:op, {"IN", op1, op2}}, cur) do
+    op1 = run_expr(op1, cur)
+    op2 = run_expr(op2, cur)
+
+    op1 in op2
+  end
+
   def run_expr({:fn, {fun, exprs}}, cur) do
     params = for e <- exprs, do: run_expr(e, cur)
     ExoSQL.Builtins.call_function(fun, params)

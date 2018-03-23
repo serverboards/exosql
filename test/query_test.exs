@@ -630,5 +630,12 @@ defmodule QueryTest do
     res = analyze_query!("SELECT [1,2,3,4]")
 
     assert res.rows == [[ [1,2,3,4] ]]
+
+    res = analyze_query!("SELECT 2 IN [1,2,3,4]")
+    assert res.rows == [[ true ]]
+
+    res = analyze_query!("SELECT NOT (2 IN [1,2,3,4])")
+    assert res.rows == [[ false ]]
+
   end
 end
