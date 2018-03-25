@@ -187,6 +187,10 @@ Upper cases a full string
 
 ### Date time functions
 
+#### `now()`
+
+Returns current datetime.
+
 #### `strftime(datetime, format_str)`
 
 Convert a datetime to a string. Can be used also to extract some parts of a
