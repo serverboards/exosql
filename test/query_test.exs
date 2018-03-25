@@ -760,4 +760,27 @@ defmodule QueryTest do
     res = analyze_query!("SELECT * FROM products WHERE regex(name, 'https://.*')")
     assert Enum.count(res.rows) == 0
   end
+
+  test "CASE WHEN" do
+    res = analyze_query!("""
+      SELECT
+        name,
+        CASE
+          WHEN (price >= 20)
+           THEN 'expensive'
+          WHEN price >= 10
+           THEN 'ok'
+          ELSE 'cheap'
+        END
+      FROM products
+      ORDER BY name
+      """)
+
+    assert res.rows == [
+        ["donut", "expensive"],
+        ["lollipop", "ok"],
+        ["sugus", "cheap"],
+        ["water", "expensive"],
+      ]
+  end
 end

@@ -166,6 +166,21 @@ defmodule ExoSQL.Expr do
     like(String.downcase(op1), String.downcase(op2))
   end
 
+
+  def run_expr({:case, list}, cur) do
+    Enum.find_value(list, fn {condition, expr} ->
+      case run_expr(condition, cur) do
+        "" -> nil
+        val ->
+          if val do
+            run_expr(expr, cur)
+          else
+            nil
+          end
+      end
+    end)
+  end
+
   def run_expr({:fn, {fun, exprs}}, cur) do
     params = for e <- exprs, do: run_expr(e, cur)
     ExoSQL.Builtins.call_function(fun, params)

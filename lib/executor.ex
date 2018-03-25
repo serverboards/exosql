@@ -388,6 +388,13 @@ defmodule ExoSQL.Executor do
     params = Enum.map(params, &simplify_expr_columns(&1, names, vars))
     {:fn, {f, params}}
   end
+  def simplify_expr_columns({:case, list}, names, vars) do
+    list = Enum.map(list, fn {e, v} ->
+      {simplify_expr_columns(e, names, vars), simplify_expr_columns(v, names, vars)}
+    end)
+
+    {:case, list}
+  end
   def simplify_expr_columns(other, _names, _vars), do: other
 
   # def simplify_expr_columns_nofn({:column, cn}, names) do
