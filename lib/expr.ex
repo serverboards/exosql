@@ -152,6 +152,20 @@ defmodule ExoSQL.Expr do
     end)
   end
 
+  def run_expr({:op, {"LIKE", op1, op2}}, cur) do
+    op1 = run_expr(op1, cur)
+    op2 = run_expr(op2, cur)
+
+    like(op1, op2)
+  end
+
+  def run_expr({:op, {"ILIKE", op1, op2}}, cur) do
+    op1 = run_expr(op1, cur)
+    op2 = run_expr(op2, cur)
+
+    like(String.downcase(op1), String.downcase(op2))
+  end
+
   def run_expr({:fn, {fun, exprs}}, cur) do
     params = for e <- exprs, do: run_expr(e, cur)
     ExoSQL.Builtins.call_function(fun, params)
@@ -168,6 +182,24 @@ defmodule ExoSQL.Expr do
     Enum.map(data, &(run_expr(&1, cur)))
   end
 
+
+  def like(str, str), do: true
+  def like(str, ""), do: false
+  def like(str, "%"), do: true
+  def like(str, "%" <> more) do
+    # Logger.debug("Like #{inspect {str, "%", more}}")
+    length = String.length(str)
+    Enum.any?(0..length, fn n ->
+      like(String.slice(str, n, length), more)
+    end)
+  end
+  def like(<<_::size(8)>> <> str, "_" <> more), do: like(str, more)
+
+  def like(<<chr::size(8)>> <> str, <<chr::size(8)>> <> more), do: like(str, more)
+  def like(str, expr) do
+    # Logger.debug("Like #{inspect {str, expr}} -> false")
+    false
+  end
   @doc """
   Try to return matching types.
 

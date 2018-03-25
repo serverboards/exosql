@@ -701,4 +701,42 @@ defmodule QueryTest do
 
     assert Enum.count(res.rows) == 1
   end
+
+  test "LIKE/ILIKE" do
+    assert ExoSQL.Expr.like("a", "a") == true
+    assert ExoSQL.Expr.like("a", "%a") == true
+    assert ExoSQL.Expr.like("a", "a%") == true
+    assert ExoSQL.Expr.like("a", "%a%") == true
+    assert ExoSQL.Expr.like("test", "test%") == true
+    assert ExoSQL.Expr.like("testing", "test%") == true
+    assert ExoSQL.Expr.like("testing", "%test%") == true
+    assert ExoSQL.Expr.like("testing", "%test") == false
+    assert ExoSQL.Expr.like("a", "%b") == false
+    assert ExoSQL.Expr.like("aaaaaa", "%b") == false
+    assert ExoSQL.Expr.like("aaaaaab", "%b") == true
+    assert ExoSQL.Expr.like("aaaaaabaaa", "%b") == false
+    assert ExoSQL.Expr.like("aaaaaabaaa", "%b%") == true
+    assert ExoSQL.Expr.like("axxa", "a__a") == true
+
+
+    res = analyze_query!("SELECT * FROM products WHERE name LIKE 'w%'")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE name LIKE 'W%'")
+    assert Enum.count(res.rows) == 0
+    res = analyze_query!("SELECT * FROM products WHERE name ILIKE 'W%'")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE name LIKE '%u%'")
+    assert Enum.count(res.rows) == 2
+
+    res = analyze_query!("SELECT * FROM products WHERE name LIKE 's%s'")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE name LIKE 's___s'")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE name LIKE '_o%'")
+    assert Enum.count(res.rows) == 2
+  end
 end
