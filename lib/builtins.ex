@@ -16,7 +16,6 @@ defmodule ExoSQL.Builtins do
 
   @functions %{
     "round" => {ExoSQL.Builtins, :round},
-    "if" => {ExoSQL.Builtins, :if_},
     "bool" => {ExoSQL.Builtins, :bool},
     "lower" => {ExoSQL.Builtins, :lower},
     "upper" => {ExoSQL.Builtins, :upper},
@@ -73,14 +72,6 @@ defmodule ExoSQL.Builtins do
     {:ok, r} = to_number(r)
 
     Float.round(n, r)
-  end
-
-  def if_(cond_, then_, else_ \\ nil) do
-    if cond_ do
-      then_
-    else
-      else_
-    end
   end
 
   def bool(nil), do: false
@@ -233,7 +224,7 @@ defmodule ExoSQL.Builtins do
   def regex(str, regexs, query) do
     jp(regex(str, regexs), query)
   end
-  
+
   @doc ~S"""
   Generates a table with the series of numbers as given. Use for histograms
   without holes.

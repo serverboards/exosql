@@ -8,7 +8,7 @@ query
   orderby order_expr_list order_expr asc_desc
   limit offset
   expr expr_l2 expr_l3 expr_l4 expr_l5 expr_l6 expr_l7 expr_atom
-  case_expr_list case_expr
+  case_expr_list case_expr if_expr_list
   .
 
 Terminals
@@ -21,6 +21,7 @@ op1 op2 op3 op4 op5 op6
 'TRUE' 'FALSE' 'NOT' 'NULL'
 'DISTINCT' 'LIMIT' 'ALL' 'OFFSET'
 'CASE' 'WHEN' 'THEN' 'ELSE' 'END'
+'IF' 'ELIF'
 .
 
 Rootsymbol query.
@@ -117,12 +118,18 @@ expr_atom -> 'JOIN' open_par expr_list close_par : {fn, {'Elixir.List':to_string
 expr_atom -> id open_par op5 close_par: tag('$3', "*"), {fn, {unwrap_d('$1'), [{lit, "*"}]}}.
 expr_atom -> open_sqb expr_list close_sqb: {list, '$2'}.
 expr_atom -> 'CASE' case_expr_list: {'case', '$2'}.
+expr_atom -> 'IF' expr 'THEN' expr if_expr_list: {'case', [ {'$2', '$4'} | '$5' ]}.
 
 case_expr_list -> case_expr case_expr_list: ['$1' | '$2'].
 case_expr_list -> 'ELSE' expr 'END': [{{lit, true}, '$2'}].
 case_expr_list -> 'END': [].
 
 case_expr -> 'WHEN' expr 'THEN' expr: {'$2', '$4'}.
+
+if_expr_list -> 'ELIF' expr 'THEN' expr if_expr_list: [{'$2', '$4'} | '$5'].
+if_expr_list -> 'ELSE' expr 'END': [{{lit, true}, '$2'}].
+if_expr_list -> 'END': [].
+
 
 column -> id dot id dot id : {unwrap('$1'), unwrap('$3'), unwrap('$5')}.
 column -> id dot id : {nil, unwrap('$1'), unwrap('$3')}.

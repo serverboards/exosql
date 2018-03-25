@@ -428,10 +428,11 @@ defmodule QueryTest do
 
   test "Query with if" do
     res = analyze_query!("""
-      SELECT name, IF(ammount>20, "Gold", "Silver")
+      SELECT name, (IF ammount>20 THEN "Gold" ELSE "Silver" END) as metal
         FROM users
        INNER JOIN purchases ON user_id = users.id
       """)
+    [{_, _, "name"}, {_, _, "metal"}] =  res.columns
     assert Enum.count(res.rows) >= 1
   end
 
@@ -800,6 +801,26 @@ defmodule QueryTest do
           ["sugus", nil],
           ["water", "expensive"],
         ]
+  end
+
+  test "IF THEN" do
+    res = analyze_query!("""
+      SELECT
+        name,
+        IF   price >= 20 THEN 'expensive'
+        ELIF price >= 10 THEN 'ok'
+        ELSE 'cheap'
+        END
+      FROM products
+      ORDER BY name
+      """)
+
+    assert res.rows == [
+        ["donut", "expensive"],
+        ["lollipop", "ok"],
+        ["sugus", "cheap"],
+        ["water", "expensive"],
+      ]
 
   end
 end

@@ -73,7 +73,7 @@ end
 * `OFFSET` and `LIMIT`
 * `DISTINCT` and `DISTINCT ON`
 * `LIKE` and `ILIKE`
-* `CASE` `WHEN` `THEN` `ELSE` `END`
+* `CASE` `WHEN` `THEN` `ELSE` `END` / `IF` `THEN` `ELIF` `ELSE` `END`.
 * table and column alias with `AS`
 * nested `SELECT` at `FROM`
 * `generate_series` function tables
@@ -232,17 +232,6 @@ This is called implicitly on `strftime` calls, and normally is not needed.
 #### `bool(arg)`
 
 Converts to boolean. Equivalent to `NOT NOT arg`
-
-### Logical functions
-
-#### `if(cond, then, else)`
-
-Evaluates the condition and if true returns the `then` value, or else the `else`
-value.
-
-Currently it is a function, not a macro nor expression, so it executes both
-sides which can result in an error or performance problems.
-
 
 ### Aggregation functions
 
