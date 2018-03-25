@@ -73,6 +73,7 @@ end
 * `OFFSET` and `LIMIT`
 * `DISTINCT` and `DISTINCT ON`
 * `LIKE` and `ILIKE`
+* `CASE` `WHEN` `THEN` `ELSE` `END`
 * table and column alias with `AS`
 * nested `SELECT` at `FROM`
 * `generate_series` function tables
