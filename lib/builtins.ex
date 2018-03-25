@@ -34,6 +34,7 @@ defmodule ExoSQL.Builtins do
     "generate_series" => {ExoSQL.Builtins, :generate_series},
     "urlparse" => {ExoSQL.Builtins, :urlparse},
     "jp" => {ExoSQL.Builtins, :jp},
+    "regex" => {ExoSQL.Builtins, :regex},
 
     ## Aggregates
     "count" => {ExoSQL.Builtins, :count},
@@ -210,6 +211,29 @@ defmodule ExoSQL.Builtins do
   end
 
 
+  @doc ~S"""
+  Performs a regex match
+
+  May return a list of groups, or a dict with named groups, depending on
+  the regex.
+
+  As an optional third parameter it performs a jp query.
+
+  Returns NULL if no match (which is falsy, so can be used for expressions)
+  """
+  def regex(str, regexs) do
+    regex = Regex.compile!(regexs) # slow. FIXME to precompile
+
+    if String.contains?(regexs, "(?<") do
+      Regex.named_captures(regex, str)
+    else
+      Regex.run(regex, str)
+    end
+  end
+  def regex(str, regexs, query) do
+    jp(regex(str, regexs), query)
+  end
+  
   @doc ~S"""
   Generates a table with the series of numbers as given. Use for histograms
   without holes.

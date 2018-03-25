@@ -72,12 +72,13 @@ end
 * `ORDER BY`
 * `OFFSET` and `LIMIT`
 * `DISTINCT` and `DISTINCT ON`
+* `LIKE` and `ILIKE`
 * table and column alias with `AS`
 * nested `SELECT` at `FROM`
 * `generate_series` function tables
 * Aggregation functions: `COUNT`, `SUM`, `AVG`...
 * Builtin functions and operators: * / + - || `or` `and` `in` `not`; `round` `concat`... [See all](#builtins).
-* Builtin `format`, `strftime` and more string and time formatting functions.
+* Builtin `format`, `strftime`, `regex` and more string and time formatting functions.
 * Basic Reflection over `self.tables`
 * JSON support via [json pointer](#jp).
 * Array support: `[1, 2, 3, 4]`
@@ -294,6 +295,19 @@ Does [JSON Pointer](https://tools.ietf.org/html/rfc6901) selection:
 
 * Use / to navigate through the object keys or array indexes.
 * If no data found, return `NULL`
+
+#### `regex(str, regex, query \\ nil)`
+
+Performs a regex search on the string.
+
+It uses elixir regex, so use it as reference.
+
+Can use groups and named groups for matching and it will return a list of a map
+with the result. It can optionally use directly JSON pointer queries. See
+`jp` function.
+
+If matches the result will be "trueish" (or "falsy" if doesn't) so can be used
+as a boolean.
 
 #### `round(number, precision=0)`
 

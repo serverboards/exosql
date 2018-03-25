@@ -739,4 +739,25 @@ defmodule QueryTest do
     res = analyze_query!("SELECT * FROM products WHERE name LIKE '_o%'")
     assert Enum.count(res.rows) == 2
   end
+
+
+  test "REGEX" do
+    res = analyze_query!("SELECT * FROM products WHERE regex(name, '^.*$')")
+    assert Enum.count(res.rows) == 4
+
+    res = analyze_query!("SELECT * FROM products WHERE regex(name, '^s.*$')")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE regex(name, '^s(.*)$', 1)")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE regex(name, '^s(?<ug>.*)$', 'ug')")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE jp(regex(name, '^s(?<ug>.*)'), 'ug')")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE regex(name, 'https://.*')")
+    assert Enum.count(res.rows) == 0
+  end
 end
