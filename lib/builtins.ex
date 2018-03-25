@@ -34,6 +34,8 @@ defmodule ExoSQL.Builtins do
     "urlparse" => {ExoSQL.Builtins, :urlparse},
     "jp" => {ExoSQL.Builtins, :jp},
     "regex" => {ExoSQL.Builtins, :regex},
+    "random" => {ExoSQL.Builtins, :random},
+    "randint" => {ExoSQL.Builtins, :randint},
 
     ## Aggregates
     "count" => {ExoSQL.Builtins, :count},
@@ -72,6 +74,13 @@ defmodule ExoSQL.Builtins do
     {:ok, r} = to_number(r)
 
     Float.round(n, r)
+  end
+  def random(), do: :rand.uniform()
+  def randint(max_) do
+    :rand.uniform(max_-1)
+  end
+  def randint(min_, max_) do
+    :rand.uniform(max_ - min_ - 1) + min_ - 1
   end
 
   def bool(nil), do: false

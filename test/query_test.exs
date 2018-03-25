@@ -821,6 +821,16 @@ defmodule QueryTest do
         ["sugus", "cheap"],
         ["water", "expensive"],
       ]
+  end
 
+  test "RANDOM" do
+    res = analyze_query!("SELECT random() FROM generate_series(10000)")
+    assert Enum.all?(res.rows, fn [n] -> n >= 0.0 && n < 1.0 end)
+
+    res = analyze_query!("SELECT randint(100) FROM generate_series(10000)")
+    assert Enum.all?(res.rows, fn [n] -> n >= 0 && n < 100 end)
+
+    res = analyze_query!("SELECT randint(50, 100) FROM generate_series(10000)")
+    assert Enum.all?(res.rows, fn [n] -> n >= 50 && n < 100 end)
   end
 end

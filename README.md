@@ -286,6 +286,14 @@ Does [JSON Pointer](https://tools.ietf.org/html/rfc6901) selection:
 * Use / to navigate through the object keys or array indexes.
 * If no data found, return `NULL`
 
+#### `RANDOM()`
+
+Return a random float between 0 and 1.
+
+#### `RANDINT(max)` / `RANDINT(min, max)`
+
+Returns a random integer between `min` and `max`.
+
 #### `regex(str, regex, query \\ nil)`
 
 Performs a regex search on the string.
