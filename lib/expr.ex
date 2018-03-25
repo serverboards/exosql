@@ -199,8 +199,8 @@ defmodule ExoSQL.Expr do
 
 
   def like(str, str), do: true
-  def like(str, ""), do: false
-  def like(str, "%"), do: true
+  def like(_str, ""), do: false
+  def like(_str, "%"), do: true
   def like(str, "%" <> more) do
     # Logger.debug("Like #{inspect {str, "%", more}}")
     length = String.length(str)
@@ -211,7 +211,7 @@ defmodule ExoSQL.Expr do
   def like(<<_::size(8)>> <> str, "_" <> more), do: like(str, more)
 
   def like(<<chr::size(8)>> <> str, <<chr::size(8)>> <> more), do: like(str, more)
-  def like(str, expr) do
+  def like(_str, _expr) do
     # Logger.debug("Like #{inspect {str, expr}} -> false")
     false
   end
