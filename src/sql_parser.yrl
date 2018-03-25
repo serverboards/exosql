@@ -120,7 +120,7 @@ expr_atom -> 'CASE' case_expr_list: {'case', '$2'}.
 
 case_expr_list -> case_expr case_expr_list: ['$1' | '$2'].
 case_expr_list -> 'ELSE' expr 'END': [{{lit, true}, '$2'}].
-case_expr_list -> 'END': [{{lit, true}, nil}].
+case_expr_list -> 'END': [].
 
 case_expr -> 'WHEN' expr 'THEN' expr: {'$2', '$4'}.
 

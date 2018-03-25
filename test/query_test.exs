@@ -782,5 +782,24 @@ defmodule QueryTest do
         ["sugus", "cheap"],
         ["water", "expensive"],
       ]
+
+      res = analyze_query!("""
+        SELECT
+          name,
+          CASE
+            WHEN (price >= 20)
+             THEN 'expensive'
+          END
+        FROM products
+        ORDER BY name
+        """)
+
+      assert res.rows == [
+          ["donut", "expensive"],
+          ["lollipop", nil],
+          ["sugus", nil],
+          ["water", "expensive"],
+        ]
+
   end
 end
