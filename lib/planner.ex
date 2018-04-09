@@ -147,8 +147,23 @@ defmodule ExoSQL.Planner do
         {:limit, number, limit_plan}
     end
 
+    Logger.debug("union #{inspect query.union}")
+    union_plan = case query.union do
+      nil -> limit_plan
+      {:distinct, other} ->
+        {:ok, other_plan} = plan(other)
+        {
+          :distinct,
+          :all_columns,
+          {:union, limit_plan, other_plan}
+        }
+      {:all, other} ->
+        {:ok, other_plan} = plan(other)
+        {:union, limit_plan, other_plan}
+    end
 
-    plan = limit_plan
+
+    plan = union_plan
 
     {:ok, plan}
   end

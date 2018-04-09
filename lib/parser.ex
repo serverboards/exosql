@@ -19,7 +19,6 @@ defmodule ExoSQL.Parser do
   tree with all data resolved.
   """
   defp real_parse(parsed, context) do
-    # Logger.debug("Real parse #{inspect parsed}")
     %{
       select: select,
       from: from,
@@ -29,6 +28,7 @@ defmodule ExoSQL.Parser do
       orderby: orderby,
       limit: limit,
       offset: offset,
+      union: union,
     } = parsed
     {select, select_options} = select
 
@@ -90,6 +90,13 @@ defmodule ExoSQL.Parser do
         {type, resolve_column(expr, all_schemas)}
     end)
 
+    # resolve union
+    union = if union do
+      {type, other} = union
+      {:ok, other} = real_parse(other, context)
+      {type, other}
+    end
+
     {:ok, %ExoSQL.Query{
       select: select,
       distinct: distinct,
@@ -100,6 +107,7 @@ defmodule ExoSQL.Parser do
       orderby: orderby,
       limit: limit,
       offset: offset,
+      union: union
     }}
   end
 

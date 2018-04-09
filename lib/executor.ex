@@ -245,6 +245,20 @@ defmodule ExoSQL.Executor do
     }}
   end
 
+  def execute({:union, froma, fromb}, context) do
+    {:ok, dataa} = execute(froma, context)
+    {:ok, datab} = execute(fromb, context)
+
+    if Enum.count(dataa.columns) != Enum.count(datab.columns) do
+      {:error, :union_column_count_mismatch}
+    else
+      {:ok, %ExoSQL.Result{
+        columns: dataa.columns,
+        rows: dataa.rows ++ datab.rows
+      }}
+    end
+  end
+
 
   def execute(%ExoSQL.Result{} = res, _context), do: {:ok, res}
   def execute(%{ rows: rows, columns: columns}, _context), do: {:ok, %ExoSQL.Result{ rows: rows, columns: columns }}

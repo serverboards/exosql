@@ -74,6 +74,7 @@ end
 * `DISTINCT` and `DISTINCT ON`
 * `LIKE` and `ILIKE`
 * `CASE` `WHEN` `THEN` `ELSE` `END` / `IF` `THEN` `ELIF` `ELSE` `END`.
+* `UNION` and `UNION ALL`.
 * table and column alias with `AS`
 * nested `SELECT` at `FROM`
 * `generate_series` function tables

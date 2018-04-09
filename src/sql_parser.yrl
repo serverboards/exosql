@@ -1,5 +1,5 @@
 Nonterminals
-query
+query complex_query
   select select_expr select_expr_list
   from table_list
   where expr_list
@@ -22,14 +22,22 @@ op1 op2 op3 op4 op5 op6
 'DISTINCT' 'LIMIT' 'ALL' 'OFFSET'
 'CASE' 'WHEN' 'THEN' 'ELSE' 'END'
 'IF' 'ELIF'
+'UNION'
 .
 
-Rootsymbol query.
+Rootsymbol complex_query.
+
+complex_query -> query 'UNION' complex_query: maps:put(union, {all, '$3'}, '$1').
+complex_query -> query 'UNION' 'ALL' complex_query: maps:put(union, {distinct, '$4'}, '$1').
+
+complex_query -> query: '$1'.
 
 query -> select from join where groupby orderby offset limit:
-    #{select => '$1', from => '$2', join => '$3', where => '$4', groupby => '$5', orderby => '$6', offset => '$7', limit => '$8'}.
+    #{select => '$1', from => '$2', join => '$3', where => '$4',
+      groupby => '$5', orderby => '$6', offset => '$7', limit => '$8', union => nil}.
 query -> select:
-    #{select => '$1', from => [], join => [], where => nil, groupby => nil, orderby => [], limit => nil, offset => nil}.
+    #{select => '$1', from => [], join => [], where => nil, groupby => nil,
+      orderby => [], limit => nil, offset => nil, union => nil}.
 
 select -> 'SELECT' 'DISTINCT' 'ON' open_par expr close_par select_expr_list : {'$7', [{distinct, '$5'}]}.
 select -> 'SELECT' 'DISTINCT' select_expr_list : {'$3', [{distinct, all_columns}]}.

@@ -833,4 +833,29 @@ defmodule QueryTest do
     res = analyze_query!("SELECT randint(50, 100) FROM generate_series(10000)")
     assert Enum.all?(res.rows, fn [n] -> n >= 50 && n < 100 end)
   end
+
+  test "UNION" do
+    res = analyze_query!("SELECT DISTINCT * FROM (SELECT 1)")
+    assert res.rows == [[1]]
+
+    res = analyze_query!("SELECT 1 UNION ALL SELECT 1")
+    assert res.rows == [[1]]
+
+    res = analyze_query!("SELECT 1 UNION SELECT 2")
+    assert res.rows == [[1], [2]]
+
+    res = analyze_query!("SELECT 1 UNION ALL SELECT 2")
+    assert res.rows == [[1], [2]]
+
+    res = analyze_query!("SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 1")
+    assert res.rows == [[1], [2], [3]]
+
+    res = analyze_query!("SELECT 'product_' || id, name FROM products UNION ALL SELECT 'user_' || id, name FROM users")
+    assert Enum.count(res.rows) == 7
+
+    res = analyze_query!("SELECT 'product_' || id, name FROM products UNION ALL SELECT 'user_' || id, name FROM users")
+    assert Enum.count(res.rows) == 7
+
+
+  end
 end
