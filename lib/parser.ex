@@ -199,10 +199,10 @@ defmodule ExoSQL.Parser do
   end
 
   def resolve_table({:table, {nil, name}}, context) when is_binary(name) do
-    Logger.debug("#{inspect context}")
+    # Logger.debug("#{inspect context}")
     options = Enum.flat_map(context, fn {dbname, _db} ->
       {:ok, tables} = ExoSQL.schema(dbname, context)
-      Logger.debug("Resolved #{inspect tables}")
+      # Logger.debug("Resolved #{inspect tables}")
       tables
         |> Enum.filter(&(&1 == name))
         |> Enum.map(&{dbname, &1})
@@ -229,26 +229,34 @@ defmodule ExoSQL.Parser do
   From the list of tables, and context, and an unknown column, return the
   FQN of the column.
   """
-  def resolve_column({:column, {nil, nil, column}}, schema, _context) do
+  def resolve_column({:column, {nil, nil, column}}, schema, context) do
     found = Enum.filter(schema, fn
       {_db, _table, ^column} -> true
       _other -> false
     end)
 
     found = case found do
-      [one] -> one
-      [] -> throw {:not_found, column, :in, schema}
+      [one] ->
+        {:column, one}
+      [] ->
+        parent_schema = Map.get(context, "__parent__", %{})
+        if parent_schema do
+          {:column, found} = resolve_column({:column, {nil, nil, column}}, parent_schema, context)
+          {:parent_column, found}
+        else
+          throw {:not_found, column, :in, schema}
+        end
       _many -> throw {:ambiguous_column, column, :in, schema}
     end
 
     if found do
-      {:column, found}
+      found
     else
       throw {:not_found, column, :in, schema}
     end
   end
 
-  def resolve_column({:column, {nil, table, column}}, schema, _context) do
+  def resolve_column({:column, {nil, table, column}}, schema, context) do
     found = Enum.find(schema, fn
       {_db, ^table, ^column} -> true
       _other -> false
@@ -257,7 +265,13 @@ defmodule ExoSQL.Parser do
     if found do
       {:column, found}
     else
-      throw {:not_found, {table, column}, :in, schema}
+      parent_schema = Map.get(context, "__parent__", %{})
+      if parent_schema do
+        {:column, found} = resolve_column({:column, {nil, table, column}}, parent_schema, context)
+        {:parent_column, found}
+      else
+        throw {:not_found, {table, column}, :in, schema}
+      end
     end
   end
   def resolve_column({:column, _} = column, _schema, _context), do: column

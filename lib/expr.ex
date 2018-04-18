@@ -142,7 +142,9 @@ defmodule ExoSQL.Expr do
     Enum.at(row, n)
   end
 
-  def run_expr({:select, query}, {_, context}) do
+  def run_expr({:select, query}, {row, context}) do
+    context = Map.put(context, :__parent_row, row)
+    context = Map.put(context, :__parent_columns, context[:__row_columns])
     {:ok, res} = ExoSQL.Executor.execute(query, context)
     data = case res.rows do
       [[data | _] | _ ] -> data
@@ -150,6 +152,17 @@ defmodule ExoSQL.Expr do
     end
     data
   end
+
+  def run_expr({:parent_column, n}, {_row, context}) do
+    idx = Enum.find_index(context[:__parent_columns], &(&1 == n))
+    # Logger.debug("Get parent column #{inspect n} from #{inspect context}: #{inspect idx}")
+    if idx do
+      context[:__parent_row] |> Enum.at(idx)
+    else
+      throw {:unknown_column, {:parent_column, n}}
+    end
+  end
+
 
   @doc """
   Try to return matching types.

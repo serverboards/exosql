@@ -626,7 +626,13 @@ defmodule QueryTest do
     assert (Enum.at res.rows, 9) == [20]
   end
 
-  test "Neste SELECT" do
-    analyze_query!("SELECT id, (SELECT name FROM products WHERE id = 1), ammount FROM purchases")
+  test "Simple nested SELECT" do
+    analyze_query!("SELECT id, (SELECT now()), ammount FROM purchases")
+  end
+
+  test "Complex nested SELECT" do
+    res = analyze_query!("SELECT id, (SELECT name FROM products WHERE id = product_id), ammount, product_id FROM purchases")
+    analyze_query!("SELECT id, (SELECT name FROM products WHERE id = purchases.product_id), ammount, product_id FROM purchases")
+    # flunk 1
   end
 end
