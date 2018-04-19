@@ -17,7 +17,7 @@ defmodule ExoSQL.Executor do
       Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, row) )
     end)
 
-    columns = resolve_column_names(columns)
+    columns = resolve_column_names(columns, rcolumns)
 
     {:ok, %ExoSQL.Result{ rows: rows, columns: columns}}
   end
@@ -163,7 +163,7 @@ defmodule ExoSQL.Executor do
       group ++ [table]
     end)
 
-    columns = resolve_column_names(groups) ++ ["group_by"]
+    columns = resolve_column_names(groups, data.columns) ++ ["group_by"]
     # Logger.debug("Grouped rows: #{inspect columns}\n #{inspect rows, pretty: true}")
 
     {:ok, %ExoSQL.Result{
@@ -221,6 +221,7 @@ defmodule ExoSQL.Executor do
     columns = Enum.map(data.columns, fn {_db, _table, column} ->
       {:tmp, alias_, column}
     end)
+    # Logger.debug("Set alias for #{inspect alias_} #{inspect data} -> #{inspect columns}")
     {:ok, %ExoSQL.Result{
       columns: columns,
       rows: data.rows
@@ -422,16 +423,21 @@ defmodule ExoSQL.Executor do
   # end
   # def simplify_expr_columns_nofn(other, _names), do: other
 
-  defp resolve_column_names(columns), do: resolve_column_names(columns, 1)
-  defp resolve_column_names([{:column, col} | rest], count) do
-    [col | resolve_column_names(rest, count + 1)]
+  defp resolve_column_names(columns, pcolumns), do: resolve_column_names(columns, pcolumns, 1)
+
+  defp resolve_column_names([{:column, col} | rest], pcolumns, count) when is_tuple(col) do
+    [col | resolve_column_names(rest, pcolumns, count + 1)]
   end
-  defp resolve_column_names([{:alias, {oldcol, name}} | rest], count) do
-    [{_db, table, _column}] = resolve_column_names([oldcol], 1) # to keep the table name
-    [{:tmp, table, name} | resolve_column_names(rest, count + 1)]
+  defp resolve_column_names([{:column, col} | rest], pcolumns, count) when is_number(col) do
+    col = Enum.at(pcolumns, col)
+    [col | resolve_column_names(rest, pcolumns, count + 1)]
   end
-  defp resolve_column_names([_other | rest], count) do
-    [{:tmp, :tmp, "col_#{count}"} | resolve_column_names(rest, count + 1)]
+  defp resolve_column_names([{:alias, {oldcol, name}} | rest], pcolumns, count) do
+    [{_db, table, _column}] = resolve_column_names([oldcol], pcolumns, 1) # to keep the table name
+    [{:tmp, table, name} | resolve_column_names(rest, pcolumns, count + 1)]
   end
-  defp resolve_column_names([], _count), do: []
+  defp resolve_column_names([_other | rest], pcolumns, count) do
+    [{:tmp, :tmp, "col_#{count}"} | resolve_column_names(rest, pcolumns, count + 1)]
+  end
+  defp resolve_column_names([], _pcolumns, _count), do: []
 end

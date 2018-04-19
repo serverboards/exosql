@@ -862,9 +862,12 @@ defmodule QueryTest do
     assert Enum.count(res.rows) == 3
 
     res = analyze_query!("SELECT * FROM (SELECT id, name FROM products LIMIT 3) AS prods")
+    assert res.columns == [{:tmp, "prods", "id"}, {:tmp, "prods", "name"}]
     assert Enum.count(res.rows) == 3
 
     res = analyze_query!("SELECT * FROM (SELECT id AS pid, name AS product_name FROM products LIMIT 3) AS prods ORDER BY prods.pid")
     assert Enum.count(res.rows) == 3
+
+    assert res.columns == [{:tmp, "prods", "pid"}, {:tmp, "prods", "product_name"}]
   end
 end
