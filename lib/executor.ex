@@ -365,7 +365,7 @@ defmodule ExoSQL.Executor do
         end) |> Enum.uniq
         # Logger.debug("inids #{inspect inids}")
         {_db, _table, columnname} = idt
-        [{:in, columnname, inids}]
+        [{columnname, "IN", inids}]
       _expr ->
         []
     end
