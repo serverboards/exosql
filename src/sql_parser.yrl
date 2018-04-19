@@ -124,6 +124,7 @@ expr_atom -> id open_par close_par : {fn, {unwrap_d('$1'), []}}.
 expr_atom -> id open_par expr_list close_par : {fn, {unwrap_d('$1'), '$3'}}.
 expr_atom -> 'JOIN' open_par expr_list close_par : {fn, {'Elixir.List':to_string("join"), '$3'}}.
 expr_atom -> id open_par op5 close_par: tag('$3', "*"), {fn, {unwrap_d('$1'), [{lit, "*"}]}}.
+expr_atom -> id open_par 'DISTINCT' expr close_par: {fn, {unwrap_d('$1'), [{distinct, '$4'}]}}.
 expr_atom -> open_sqb expr_list close_sqb: {list, '$2'}.
 expr_atom -> 'CASE' case_expr_list: {'case', '$2'}.
 expr_atom -> 'IF' expr 'THEN' expr if_expr_list: {'case', [ {'$2', '$4'} | '$5' ]}.

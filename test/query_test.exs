@@ -856,4 +856,23 @@ defmodule QueryTest do
     res = analyze_query!("SELECT 'product_' || id, name FROM products UNION ALL SELECT 'user_' || id, name FROM users")
     assert Enum.count(res.rows) == 7
   end
+
+
+  test "COUNT variations" do
+    # count all
+    res = analyze_query!("SELECT COUNT(*) FROM generate_series(10) LEFT JOIN purchases ON purchases.id = generate_series")
+    assert res.rows == [[10]]
+
+    # count not nulls
+    res = analyze_query!("SELECT COUNT(id) FROM generate_series(10) LEFT JOIN purchases ON purchases.id = generate_series")
+    assert res.rows == [[6]]
+
+    # count not nulls AND unique product_id
+    res = analyze_query!("SELECT COUNT(DISTINCT product_id) FROM generate_series(10) LEFT JOIN purchases ON purchases.id = generate_series")
+    assert res.rows == [[4]]
+    res = analyze_query!("SELECT count(DISTINCT product_id) FROM generate_series(10) LEFT JOIN purchases ON purchases.id = generate_series")
+    assert res.rows == [[4]]
+
+  end
+
 end

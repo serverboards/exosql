@@ -367,9 +367,26 @@ defmodule ExoSQL.Builtins do
   def is_aggregate("sum"), do: true
   def is_aggregate(_other), do: false
 
-  def count(data, _) do
-  # Logger.debug("Count #{inspect data}")
+  def count(data, {:lit, '*'}) do
     Enum.count(data.rows)
+  end
+  def count(data, {:distinct, expr}) do
+    expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
+    Enum.reduce(data.rows, MapSet.new(), fn row, acc ->
+      case ExoSQL.Expr.run_expr(expr, row) do
+        nil -> acc
+        val -> MapSet.put(acc, val)
+      end
+    end) |> Enum.count
+  end
+  def count(data, expr) do
+    expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
+    Enum.reduce(data.rows, 0, fn row, acc ->
+      case ExoSQL.Expr.run_expr(expr, row) do
+        nil -> acc
+        _other -> 1 + acc
+      end
+    end)
   end
 
   def avg(data, expr) do

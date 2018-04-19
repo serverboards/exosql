@@ -286,6 +286,10 @@ defmodule ExoSQL.Parser do
     {:op, {op, resolve_column(ex1, schema), resolve_column(ex2, schema)}}
   end
 
+  def resolve_column({:distinct, expr}, schema) do
+    {:distinct, resolve_column(expr, schema)}
+  end
+
   def resolve_column({:case, list}, schema) do
     list = Enum.map(list, fn {c, e} ->
       {resolve_column(c, schema), resolve_column(e, schema)}
