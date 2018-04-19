@@ -148,7 +148,7 @@ table -> tableid 'AS' id : {alias, {'$1', unwrap('$3')}}.
 table -> tableid : '$1'.
 tableid -> id dot id : {table, {unwrap('$1'), unwrap('$3')}}.
 tableid -> id : {table, {nil, unwrap('$1')}}.
-tableid -> open_par query close_par : {select, '$2'}.
+tableid -> open_par complex_query close_par : {select, '$2'}.
 tableid -> id open_par expr_list close_par : {fn, {unwrap_d('$1'), '$3'}}.
 
 select -> column comma select: [unwrap('$1')] ++ '$3'.

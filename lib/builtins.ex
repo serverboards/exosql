@@ -365,6 +365,8 @@ defmodule ExoSQL.Builtins do
   def is_aggregate("count"), do: true
   def is_aggregate("avg"), do: true
   def is_aggregate("sum"), do: true
+  def is_aggregate("max"), do: true
+  def is_aggregate("min"), do: true
   def is_aggregate(_other), do: false
 
   def count(data, {:lit, '*'}) do
@@ -417,7 +419,8 @@ defmodule ExoSQL.Builtins do
     Enum.reduce(data.rows, nil, fn row, acc ->
       n = ExoSQL.Expr.run_expr(expr, row)
       {:ok, n} = ExoSQL.Utils.to_number(n)
-      if not acc or n > acc do
+      Logger.debug("#{inspect acc} > #{inspect n}")
+      if n != nil and (acc == nil or n > acc) do
         n
       else
         acc
@@ -429,7 +432,7 @@ defmodule ExoSQL.Builtins do
     Enum.reduce(data.rows, nil, fn row, acc ->
       n = ExoSQL.Expr.run_expr(expr, row)
       {:ok, n} = ExoSQL.Utils.to_number(n)
-      if not acc or n < acc do
+      if n != nil and (acc == nil or n < acc) do
         n
       else
         acc

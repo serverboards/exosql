@@ -855,6 +855,10 @@ defmodule QueryTest do
 
     res = analyze_query!("SELECT 'product_' || id, name FROM products UNION ALL SELECT 'user_' || id, name FROM users")
     assert Enum.count(res.rows) == 7
+
+    res = analyze_query!("SELECT MAX(a), MAX(b) FROM (SELECT 1 AS a, 0 AS b UNION SELECT 0, 1)")
+    assert Enum.count(res.rows) == 1
+    assert res.rows == [[1, 1]]
   end
 
 
