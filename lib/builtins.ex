@@ -419,7 +419,6 @@ defmodule ExoSQL.Builtins do
     Enum.reduce(data.rows, nil, fn row, acc ->
       n = ExoSQL.Expr.run_expr(expr, row)
       {:ok, n} = ExoSQL.Utils.to_number(n)
-      Logger.debug("#{inspect acc} > #{inspect n}")
       if n != nil and (acc == nil or n > acc) do
         n
       else
