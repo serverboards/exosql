@@ -201,8 +201,34 @@ defmodule ExoSQL.Planner do
   defp get_table_columns_at_expr(db, table, {:alias, {expr, _alias}}) do
     get_table_columns_at_expr(db, table, expr)
   end
+  defp get_table_columns_at_expr(db, table, {:select, query}) do
+    {:ok, plan} = plan(query)
+    res = get_parent_columns(plan)
+    Logger.debug("Get parents from #{inspect plan, pretty: true}: #{inspect res}")
+    res
+  end
   defp get_table_columns_at_expr(_db, _table, _other), do: []
 
+
+  defp get_parent_columns({:parent_column, column}) do
+    [column]
+  end
+  defp get_parent_columns(list) when is_list(list) do
+    Enum.flat_map(list, &get_parent_columns(&1))
+  end
+  defp get_parent_columns({:filter, from, expr}) do
+    get_parent_columns(from) ++ get_parent_columns(expr)
+  end
+  defp get_parent_columns({:select, from, columns}) do
+    get_parent_columns(from) ++ get_parent_columns(columns)
+  end
+  defp get_parent_columns({:op, {_op, a, b}}) do
+    get_parent_columns(a) ++ get_parent_columns(b)
+  end
+  defp get_parent_columns(_other) do
+    Logger.debug("No parent columns from #{inspect _other}")
+    []
+  end
 
   # If an aggregate function is found, rewrite it to be a real aggregate
   # The way to do it is set as first argument the column with the aggregated table

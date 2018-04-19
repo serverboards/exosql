@@ -631,8 +631,15 @@ defmodule QueryTest do
   end
 
   test "Complex nested SELECT" do
-    res = analyze_query!("SELECT id, (SELECT name FROM products WHERE id = product_id), ammount, product_id FROM purchases")
-    analyze_query!("SELECT id, (SELECT name FROM products WHERE id = purchases.product_id), ammount, product_id FROM purchases")
-    # flunk 1
+    res = analyze_query!("SELECT id, (SELECT name FROM products WHERE id = product_id), ammount FROM purchases")
+    assert Enum.count(res.rows) == 6
+    assert Enum.count(res.columns) == 3
+    assert (hd res.rows) == ["1", "sugus", "10"]
+
+    analyze_query!("SELECT id, (SELECT name FROM products WHERE id = purchases.product_id), ammount FROM purchases")
+    assert Enum.count(res.rows) == 6
+    assert Enum.count(res.columns) == 3
+    assert (hd res.rows) == ["1", "sugus", "10"]
+
   end
 end
