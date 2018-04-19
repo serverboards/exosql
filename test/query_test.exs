@@ -855,7 +855,16 @@ defmodule QueryTest do
 
     res = analyze_query!("SELECT 'product_' || id, name FROM products UNION ALL SELECT 'user_' || id, name FROM users")
     assert Enum.count(res.rows) == 7
+  end
 
+  test "SELECT FROM with alias" do
+    res = analyze_query!("SELECT * FROM (SELECT id, name FROM products LIMIT 3)")
+    assert Enum.count(res.rows) == 3
 
+    res = analyze_query!("SELECT * FROM (SELECT id, name FROM products LIMIT 3) AS prods")
+    assert Enum.count(res.rows) == 3
+
+    res = analyze_query!("SELECT * FROM (SELECT id AS pid, name AS product_name FROM products LIMIT 3) AS prods ORDER BY prods.pid")
+    assert Enum.count(res.rows) == 3
   end
 end
