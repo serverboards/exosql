@@ -238,6 +238,9 @@ defmodule ExoSQL.Planner do
       {:fn, {f, args}}
     end
   end
+  defp fix_aggregates_select({:alias, {expr, alias_}}, aggregate_column) do
+    {:alias, {fix_aggregates_select(expr, aggregate_column), alias_}}
+  end
   defp fix_aggregates_select(other, _), do: other
 
   defp has_aggregates({:op, {_op, op1, op2}}) do

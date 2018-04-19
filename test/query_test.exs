@@ -428,7 +428,7 @@ defmodule QueryTest do
 
   test "Query with if" do
     res = analyze_query!("""
-      SELECT name, (IF ammount>20 THEN "Gold" ELSE "Silver" END) as metal
+      SELECT name, (IF amount>20 THEN "Gold" ELSE "Silver" END) as metal
         FROM users
        INNER JOIN purchases ON user_id = users.id
       """)
@@ -438,7 +438,7 @@ defmodule QueryTest do
 
   test "Query with format() and not top level aggregation" do
     res = analyze_query!("""
-      SELECT name, format("%.2f €", SUM(ammount*price)) FROM purchases
+      SELECT name, format("%.2f €", SUM(amount*price)) FROM purchases
       INNER JOIN products ON products.id = product_id
       GROUP BY name
     """)
@@ -451,7 +451,7 @@ defmodule QueryTest do
 
     # No group by
     res = analyze_query!("""
-      SELECT format("%d units sold", SUM(ammount)) FROM purchases
+      SELECT format("%d units sold", SUM(amount)) FROM purchases
     """)
 
     assert Enum.count(res.rows) == 1
@@ -459,8 +459,8 @@ defmodule QueryTest do
 
   test "Width bucket to create histograms. Sales by month." do
     res = analyze_query!("""
-    SELECT col_1, sum(ammount) FROM
-      (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+    SELECT col_1, sum(amount) FROM
+      (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), amount
        FROM purchases)
       GROUP BY col_1
     """)
@@ -526,10 +526,10 @@ defmodule QueryTest do
 
   test "Width bucket to create histograms. INNER JOIN. 5 months." do
     res = analyze_query!("""
-    SELECT month, sum(ammount) FROM
+    SELECT month, sum(amount) FROM
       generate_series(12) AS month
       JOIN
-        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), amount
          FROM purchases)
       ON
         month = col_1
@@ -541,10 +541,10 @@ defmodule QueryTest do
 
   test "Width bucket to create histograms. LEFT JOIN Return all months." do
     res = analyze_query!("""
-    SELECT month, sum(ammount) FROM
+    SELECT month, sum(amount) FROM
       generate_series(12) AS month
       LEFT OUTER JOIN
-        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), amount
          FROM purchases)
       ON
         month = col_1
@@ -556,8 +556,8 @@ defmodule QueryTest do
 
   test "Width bucket to create histograms. RIGHT JOIN. Return all months." do
     res = analyze_query!("""
-    SELECT month, sum(ammount) FROM
-        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+    SELECT month, sum(amount) FROM
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), amount
         FROM purchases)
       RIGHT OUTER JOIN
         generate_series(12) AS month
@@ -580,16 +580,16 @@ defmodule QueryTest do
 
   test "Function table with alias" do
     res = analyze_query!("""
-      SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, ammount
+      SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, amount
         FROM purchases
       """)
-    assert res.columns == [{:tmp, :tmp, "month"}, {"A", "purchases", "ammount"}]
+    assert res.columns == [{:tmp, :tmp, "month"}, {"A", "purchases", "amount"}]
   end
 
   test "Width bucket, table alias and column alias" do
     res = analyze_query!("""
-    SELECT month.month, sum(ammount) FROM
-      (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, ammount
+    SELECT month.month, sum(amount) FROM
+      (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, amount
         FROM purchases) AS hist
       RIGHT OUTER JOIN
         generate_series(12) AS month
@@ -604,8 +604,8 @@ defmodule QueryTest do
   test "Ambiguous name in query, not smart enough for group removes columns. (FIXME)" do
     try do
       analyze_query!("""
-      SELECT month, sum(ammount) FROM
-        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, ammount
+      SELECT month, sum(amount) FROM
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, amount
           FROM purchases) AS hist
         RIGHT OUTER JOIN
           generate_series(12) AS month
@@ -855,19 +855,5 @@ defmodule QueryTest do
 
     res = analyze_query!("SELECT 'product_' || id, name FROM products UNION ALL SELECT 'user_' || id, name FROM users")
     assert Enum.count(res.rows) == 7
-  end
-
-  test "SELECT FROM with alias" do
-    res = analyze_query!("SELECT * FROM (SELECT id, name FROM products LIMIT 3)")
-    assert Enum.count(res.rows) == 3
-
-    res = analyze_query!("SELECT * FROM (SELECT id, name FROM products LIMIT 3) AS prods")
-    assert res.columns == [{:tmp, "prods", "id"}, {:tmp, "prods", "name"}]
-    assert Enum.count(res.rows) == 3
-
-    res = analyze_query!("SELECT * FROM (SELECT id AS pid, name AS product_name FROM products LIMIT 3) AS prods ORDER BY prods.pid")
-    assert Enum.count(res.rows) == 3
-
-    assert res.columns == [{:tmp, "prods", "pid"}, {:tmp, "prods", "product_name"}]
   end
 end

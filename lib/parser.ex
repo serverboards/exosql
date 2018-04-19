@@ -68,9 +68,9 @@ defmodule ExoSQL.Parser do
             [{:column, {:tmp, table, table}}]
           {:alias, {%ExoSQL.Query{ select: select }, _}} ->
             Enum.with_index(select) |> Enum.map(fn
-              {{:alias, {orig, col_alias}}, col} ->
+              {{:alias, {_orig, col_alias}}, col} ->
                 {:alias, {{:column, col}, col_alias}}
-              {orig, col} ->
+              {_orig, col} ->
                 {:column, col}
             end)
           {db, table} ->
