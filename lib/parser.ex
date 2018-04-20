@@ -73,9 +73,11 @@ defmodule ExoSQL.Parser do
               {_orig, col} ->
                 {:column, col}
             end)
+          {:alias, {{db, table}, alias_}} ->
+            {:ok, %{ columns: columns }} = ExoSQL.schema(db, table, context)
+            Enum.map(columns, &{:column, {:tmp, alias_, &1}})
           {db, table} ->
             {:ok, %{ columns: columns }} = ExoSQL.schema(db, table, context)
-            # Enum.with_index(columns) |> Enum.map(fn {_, col} -> {:column, col} end)
             Enum.map(columns, &{:column, {db, table, &1}})
         end)
       _other  ->
@@ -160,7 +162,6 @@ defmodule ExoSQL.Parser do
       end)
     end)
 
-    # Logger.debug("Resolve columns:\n\n#{inspect tables}\n\n#{inspect context_tables_columns, pretty: true}")
     Enum.flat_map(tables, &resolve_columns(&1, context_tables_columns))
   end
 

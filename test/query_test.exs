@@ -521,6 +521,7 @@ defmodule QueryTest do
       generate_series(12) AS months
     """)
 
+    assert res.columns == [{:tmp, "months", "months"}]
     assert Enum.count(res.rows) == 12
   end
 
@@ -576,6 +577,14 @@ defmodule QueryTest do
       """)
 
     assert res.columns == [{:tmp, "us", "first_name"}]
+  end
+
+  test "Simple table alias as" do
+    res = analyze_query!("""
+      SELECT * FROM users AS us
+      """)
+
+    assert res.columns == [{:tmp, "us", "id"}, {:tmp, "us", "name"}, {:tmp, "us", "email"}]
   end
 
   test "Function table with alias" do
