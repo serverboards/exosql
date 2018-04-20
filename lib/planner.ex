@@ -244,10 +244,15 @@ defmodule ExoSQL.Planner do
   defp fix_aggregates_select({:alias, {expr, alias_}}, aggregate_column) do
     {:alias, {fix_aggregates_select(expr, aggregate_column), alias_}}
   end
-  defp fix_aggregates_select(other, _), do: other
+  defp fix_aggregates_select(other, _) do
+    other
+  end
 
   defp has_aggregates({:op, {_op, op1, op2}}) do
     has_aggregates(op1) or has_aggregates(op2)
+  end
+  defp has_aggregates({:alias, {expr, _alias}}) do
+    has_aggregates(expr)
   end
   defp has_aggregates({:fn, {f, args}}) do
     if not ExoSQL.Builtins.is_aggregate(f) do

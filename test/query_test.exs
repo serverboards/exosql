@@ -885,7 +885,44 @@ defmodule QueryTest do
     assert res.rows == [[4]]
     res = analyze_query!("SELECT count(DISTINCT product_id) FROM generate_series(10) LEFT JOIN purchases ON purchases.id = generate_series")
     assert res.rows == [[4]]
-
   end
 
+  test "Same table with alias and joins" do
+    res = analyze_query!("
+      SELECT 'returning customers', COUNT(DISTINCT old.user_id) AS count
+        FROM purchases AS new
+        INNER JOIN purchases AS old
+          ON old.user_id = new.user_id
+        WHERE
+          new.date >= '2017-01-01' AND new.date <= '2017-12-31' AND
+          old.date < '2017-01-01'
+      ")
+    assert res.rows == [["returning customers", 1]]
+
+    res = analyze_query!("
+      SELECT 'new customers', a - b
+        FROM (
+          SELECT COUNT(DISTINCT user_id) AS a
+          FROM purchases
+          WHERE date >= '2017-01-01' AND date <= '2017-12-31'
+        ), (
+          SELECT COUNT(DISTINCT old.user_id) AS b
+          FROM purchases AS new
+          INNER JOIN purchases AS old
+            ON old.user_id = new.user_id
+          WHERE
+            new.date >= '2017-01-01' AND new.date <= '2017-12-31' AND
+            old.date < '2017-01-01'
+        )
+      ")
+    assert res.rows == [["new customers", 2]]
+
+    res = analyze_query!("
+      SELECT 'total customers', COUNT(DISTINCT user_id)
+        FROM purchases
+        WHERE date >= '2017-01-01' AND date <= '2017-12-31'
+        ")
+        
+    assert res.rows == [["total customers", 3]]
+  end
 end
