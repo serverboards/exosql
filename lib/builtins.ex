@@ -396,7 +396,7 @@ defmodule ExoSQL.Builtins do
     if data.columns == [] do
       nil
     else
-      sum(data, expr) / count(data, nil)
+      sum(data, expr) / count(data, {:lit, '*'})
     end
   end
 
