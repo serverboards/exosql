@@ -176,7 +176,7 @@ defmodule ExoSQL.Planner do
   defp plan_execute({:alias, {{db, table}, alias_}}, where, all_expressions) do
     columns = Enum.uniq(get_table_columns_at_expr(:tmp, alias_, all_expressions))
     columns = Enum.map(columns, fn {:tmp, ^alias_, column} -> {db, table, column} end)
-    quals = get_quals(db, table, where)
+    quals = get_quals(:tmp, alias_, where)
     ex = {:execute, {db, table}, quals, columns}
     {:alias, ex, alias_}
   end
