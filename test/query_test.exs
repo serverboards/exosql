@@ -922,7 +922,22 @@ defmodule QueryTest do
         FROM purchases
         WHERE date >= '2017-01-01' AND date <= '2017-12-31'
         ")
-        
+
     assert res.rows == [["total customers", 3]]
+  end
+
+  test "Huge JOIN do it fast" do
+    # Uses task to give a max time (5s) for execution.
+    pid = Task.async(fn ->
+      res = analyze_query!("
+        SELECT COUNT(*)
+         FROM generate_series(10000) AS a
+        INNER JOIN generate_series(10000) AS b
+         ON a == b
+      ")
+
+      assert res.rows == [[10_000]]
+    end)
+    Task.await(pid)
   end
 end

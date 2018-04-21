@@ -286,10 +286,23 @@ defmodule ExoSQL.Executor do
 
     # Logger.debug("Left join of\n\n#{inspect res1, pretty: true}\n\n#{inspect res2, pretty: true}\n\n#{inspect expr}")
 
+
+    # Use hashmap or loop strategy depending on size of second table.
+    # The size limit is a very arbitrary number that balances the
+    # cost of creating an M the map and looking into it N times (N*log M+M*logM),
+    # vs looping and checking N*M. N is out of control, so we focus on M.
+    rows = if Enum.count(res2.rows) > 50 do
+      execute_join_hashmap(res1, res2, expr, context, no_match_strategy)
+    else
+      execute_join_loop(res1, res2, expr, context, no_match_strategy)
+    end
+  end
+
+  def execute_join_loop(res1, res2, expr, context, no_match_strategy) do
     columns = res1.columns ++ res2.columns
-    # Logger.debug("Columns #{inspect columns}")
     rexpr = simplify_expr_columns(expr, columns, context["__vars__"])
     empty_row2 = Enum.map(res2.columns, fn _ -> nil end)
+    # Logger.debug("Columns #{inspect columns}")
     rows = Enum.reduce( res1.rows, [], fn row1, acc ->
       nrows = Enum.map( res2.rows, fn row2 ->
         row = row1 ++ row2
@@ -316,6 +329,56 @@ defmodule ExoSQL.Executor do
       rows: rows
     }}
   end
+
+  def execute_join_hashmap(res1, res2, expr, context, no_match_strategy) do
+    case hashmap_decompose_expr(res1.columns, expr) do
+      {expra, exprb} ->
+        expra = simplify_expr_columns(expra, res1.columns, context["__vars__"])
+        exprb = simplify_expr_columns(exprb, res2.columns, context["__vars__"])
+
+        mapb = Enum.reduce(res2.rows, %{}, fn row, acc ->
+          {_, map} = Map.get_and_update( acc, ExoSQL.Expr.run_expr(exprb, row),  fn
+            nil -> {nil, [row]}
+            list -> {nil, [row | list]}
+          end)
+          map
+        end)
+        empty_row2 = Enum.map(res2.columns, fn _ -> nil end)
+
+        rows = Enum.reduce(res1.rows, [], fn row1, acc ->
+          vala = ExoSQL.Expr.run_expr(expra, row1)
+          rows2 = Map.get(mapb, vala, [])
+          nrows = if rows2 == [] and no_match_strategy == :left do
+            [row1 ++ empty_row2]
+          else
+            Enum.map(rows2, fn row2 ->
+              row1 ++ row2
+            end)
+          end
+
+          nrows ++ acc
+        end)
+
+        columns = res1.columns ++ res2.columns
+        {:ok, %ExoSQL.Result{
+          columns: columns,
+          rows: rows
+        }}
+      _ ->
+        Logger.debug("Cant decompose expr, use loop strategy")
+        execute_join_loop(res1, res2, expr, context, no_match_strategy)
+    end
+  end
+
+  def hashmap_decompose_expr(columns, {:op, {"==", {:column, a}, {:column, b}}}) do
+    at_a = Enum.any?(columns, &(&1 == a))
+    if at_a do
+      {{:column, a}, {:column, b}}
+    else
+      {{:column, b}, {:column, a}}
+    end
+  end
+  def hashmap_decompose_expr(_, _), do: nil
 
   def quals_with_vars(quals, vars) do
     Enum.map(quals, fn
