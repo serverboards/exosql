@@ -175,4 +175,19 @@ defmodule ExecutorTest do
       Logger.info ExoSQL.format_result(result)
   end
 
+  test "extra quals on = and ==" do
+    q = ExoSQL.Executor.get_extra_quals(
+      %{ columns: [{:tmp, :tmp, "A"}], rows: []},
+      {:op, {"=", {:column, {:tmp, :tmp, "A"}}, {:column, {:tmp, "B", "B"}}}},
+      @context
+      )
+    assert q != []
+    q = ExoSQL.Executor.get_extra_quals(
+      %{ columns: [{:tmp, :tmp, "A"}], rows: []},
+      {:op, {"==", {:column, {:tmp, :tmp, "A"}}, {:column, {:tmp, "B", "B"}}}},
+      @context
+      )
+    assert q != []
+  end
+
 end

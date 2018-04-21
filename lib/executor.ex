@@ -370,6 +370,14 @@ defmodule ExoSQL.Executor do
     end
   end
 
+  def hashmap_decompose_expr(columns, {:op, {"=", {:column, a}, {:column, b}}}) do
+    at_a = Enum.any?(columns, &(&1 == a))
+    if at_a do
+      {{:column, a}, {:column, b}}
+    else
+      {{:column, b}, {:column, a}}
+    end
+  end
   def hashmap_decompose_expr(columns, {:op, {"==", {:column, a}, {:column, b}}}) do
     at_a = Enum.any?(columns, &(&1 == a))
     if at_a do
@@ -410,28 +418,33 @@ defmodule ExoSQL.Executor do
   def get_extra_quals(res1, expr, context) do
     case expr do
       {:op, {"=", {:column, a}, {:column, b}}} ->
-        res1_contains_a = Enum.find(res1.columns, fn
-          ^a -> true
-          _ -> false
-        end)
-
-        {idf, idt} = if res1_contains_a do
-          {a, b}
-        else
-          {b, a}
-        end
-
-        ids = simplify_expr_columns({:column, idf}, res1.columns, context["__vars__"])
-        # Logger.debug("From ltable get #{inspect idf} #{inspect ids}")
-        inids = Enum.reduce(res1.rows, [], fn row, acc ->
-          [ExoSQL.Expr.run_expr(ids, row) | acc]
-        end) |> Enum.uniq
-        # Logger.debug("inids #{inspect inids}")
-        {_db, _table, columnname} = idt
-        [{columnname, "IN", inids}]
+        get_extra_quals_from_eq(res1, a, b, context)
+      {:op, {"==", {:column, a}, {:column, b}}} ->
+        get_extra_quals_from_eq(res1, a, b, context)
       _expr ->
         []
     end
+  end
+  def get_extra_quals_from_eq(res1, a, b, context) do
+    res1_contains_a = Enum.find(res1.columns, fn
+      ^a -> true
+      _ -> false
+    end)
+
+    {idf, idt} = if res1_contains_a do
+      {a, b}
+    else
+      {b, a}
+    end
+
+    ids = simplify_expr_columns({:column, idf}, res1.columns, context["__vars__"])
+    # Logger.debug("From ltable get #{inspect idf} #{inspect ids}")
+    inids = Enum.reduce(res1.rows, [], fn row, acc ->
+      [ExoSQL.Expr.run_expr(ids, row) | acc]
+    end) |> Enum.uniq
+    # Logger.debug("inids #{inspect inids}")
+    {_db, _table, columnname} = idt
+    [{columnname, "IN", inids}]
   end
 
 

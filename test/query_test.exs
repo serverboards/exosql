@@ -939,5 +939,18 @@ defmodule QueryTest do
       assert res.rows == [[10_000]]
     end)
     Task.await(pid)
+
+    # same, use = to ensure works on both
+    pid = Task.async(fn ->
+      res = analyze_query!("
+        SELECT COUNT(*)
+         FROM generate_series(10000) AS a
+        INNER JOIN generate_series(10000) AS b
+         ON a = b
+      ")
+
+      assert res.rows == [[10_000]]
+    end)
+    Task.await(pid)
   end
 end
