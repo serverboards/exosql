@@ -21,7 +21,7 @@ defmodule ExoSQL.Builtins do
     "upper" => {ExoSQL.Builtins, :upper},
     "split" => {ExoSQL.Builtins, :split},
     "join" => {ExoSQL.Builtins, :join},
-    "to_string" => {ExoSQL.Builtins, :to_string},
+    "to_string" => {ExoSQL.Builtins, :to_string_},
     "to_datetime" => {ExoSQL.Builtins, :to_datetime},
     "to_timestamp" => {ExoSQL.Builtins, :to_timestamp},
     "to_number" => {ExoSQL.Utils, :'to_number!'},
@@ -97,6 +97,7 @@ defmodule ExoSQL.Builtins do
 
   def now(), do: DateTime.utc_now()
   def to_datetime(other), do: ExoSQL.DateTime.to_datetime(other)
+  def to_datetime(other, mod), do: ExoSQL.DateTime.to_datetime(other, mod)
   def to_timestamp(%DateTime{} = d), do: DateTime.to_unix(d)
 
   def substr(nil, _skip, _len) do

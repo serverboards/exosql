@@ -331,6 +331,32 @@ defmodule QueryTest do
     assert result.rows == [["09:51"]]
   end
 
+  test "Datetime operations" do
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', '-1D'))")
+    assert result.rows == [["2018-02-04T09:51:45.489Z"]]
+
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', '1D'))")
+    assert result.rows == [["2018-02-06T09:51:45.489Z"]]
+
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', 'P1M'))")
+    Logger.warn("Adding 1 month gives extra days for feb!")
+    assert result.rows == [["2018-03-07T09:51:45.489Z"]]
+
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', '-1M'))")
+    assert result.rows == [["2018-01-06T09:51:45.489Z"]]
+
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', 'P2Y'))")
+    # Logger.warn("Adding 2 years add a day!")
+    assert result.rows == [["2020-02-05T09:51:45.489Z"]]
+
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', '2YT1M'))")
+    assert result.rows == [["2020-02-05T09:52:45.489Z"]]
+
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', 'PT45M'))")
+    assert result.rows == [["2018-02-05T10:36:45.489Z"]]
+end
+
+
   test "Query node proc" do
     context = %{ "A" => {ExoSQL.Node, []}}
     result = analyze_query!("SELECT * FROM proc", context)

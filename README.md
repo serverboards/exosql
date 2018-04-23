@@ -217,7 +217,7 @@ Most common markers:
 * `%F` -- ISO year: yyyy-mm-dd
 * `%H` -- Time: HH:MM:SS
 
-#### `to_datetime(str | int)`
+#### `to_datetime(str | int, mod \\ nil)`
 
 Converts the given string or integer to a date.
 
@@ -231,6 +231,19 @@ The string must be in ISO8859 sub string format:
 * or an Unix epoch integer.
 
 This is called implicitly on `strftime` calls, and normally is not needed.
+
+If `mod` is given it is a duration modifier as defined by
+[ISO8601](https://en.wikipedia.org/wiki/ISO_8601#Durations), with the following
+changes:
+
+* Initial `P` is optional
+* Can start with a sign to donte subtraction: `-`
+
+For example:
+
+* Subtract one month `to_datetime(NOW(), "-1M")`
+* Add 30 minutes: `to_datetime(NOW(), "T30M")`
+* One year and a half and 6 minutes ago: `to_datetime(NOW(), "-1Y1MT6M")`
 
 ### Boolean functions
 
