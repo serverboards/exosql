@@ -103,6 +103,10 @@ defmodule QueryTest do
 
     res = analyze_query!("SELECT 1 == '1'")
     assert res.rows == [[ true ]]
+
+
+    res = analyze_query!("SELECT 115 % 60")
+    assert res.rows == [[ 55 ]]
   end
 
   test "Select * from" do

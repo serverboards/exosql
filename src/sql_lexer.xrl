@@ -11,7 +11,7 @@ OP1     = (and|AND)
 OP2     = (or|OR)
 OP3     = (<|>|<=|>=|==|!=|<>|<|>|=|\|\|)
 OP4     = (-|\+)
-OP5     = (\*|/)
+OP5     = (\*|/|%)
 OP6     = (IN|IS|LIKE|ILIKE|CASE|in|is|like|ilike)
 SPACE  = [\n\t\s]+
 OPEN_PAR = \(
