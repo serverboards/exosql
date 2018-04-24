@@ -35,11 +35,6 @@ defmodule ExoSQL.BuiltinsTest do
     assert ExoSQL.Builtins.substr(dt, 0, 10) == "2018-02-10"
   end
 
-  test "IF test" do
-    assert ExoSQL.Builtins.if_(true, "test", 1) == "test"
-    assert ExoSQL.Builtins.if_(false, "test", 1) == 1
-  end
-
   test "jp test" do
     json = %{
       "first_name" => "Anonymous",

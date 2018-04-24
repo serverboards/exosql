@@ -17,7 +17,7 @@ defmodule ExoSQL.HTTP do
     # Logger.debug("Get request #{inspect quals} #{inspect columns}")
 
     urls = Enum.find_value(quals, [], fn
-      {:in, "url", urls} -> urls
+      {"url", "IN", urls} -> urls
       _other -> false
     end)
 

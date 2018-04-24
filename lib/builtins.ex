@@ -16,15 +16,15 @@ defmodule ExoSQL.Builtins do
 
   @functions %{
     "round" => {ExoSQL.Builtins, :round},
-    "concat" => {ExoSQL.Builtins, :concat},
-    "not" => {ExoSQL.Builtins, :not_},
-    "if" => {ExoSQL.Builtins, :if_},
     "bool" => {ExoSQL.Builtins, :bool},
     "lower" => {ExoSQL.Builtins, :lower},
     "upper" => {ExoSQL.Builtins, :upper},
-    "to_string" => {ExoSQL.Builtins, :to_string},
+    "split" => {ExoSQL.Builtins, :split},
+    "join" => {ExoSQL.Builtins, :join},
+    "to_string" => {ExoSQL.Builtins, :to_string_},
     "to_datetime" => {ExoSQL.Builtins, :to_datetime},
     "to_timestamp" => {ExoSQL.Builtins, :to_timestamp},
+    "to_number" => {ExoSQL.Utils, :'to_number!'},
     "substr" => {ExoSQL.Builtins, :substr},
     "now" => {ExoSQL.Builtins, :now},
     "strftime" => {ExoSQL.Builtins, :strftime},
@@ -33,6 +33,9 @@ defmodule ExoSQL.Builtins do
     "generate_series" => {ExoSQL.Builtins, :generate_series},
     "urlparse" => {ExoSQL.Builtins, :urlparse},
     "jp" => {ExoSQL.Builtins, :jp},
+    "regex" => {ExoSQL.Builtins, :regex},
+    "random" => {ExoSQL.Builtins, :random},
+    "randint" => {ExoSQL.Builtins, :randint},
 
     ## Aggregates
     "count" => {ExoSQL.Builtins, :count},
@@ -72,24 +75,12 @@ defmodule ExoSQL.Builtins do
 
     Float.round(n, r)
   end
-
-  def concat(a, b) do
-    a = to_string(a)
-    b = to_string(b)
-
-    a <> b
+  def random(), do: :rand.uniform()
+  def randint(max_) do
+    :rand.uniform(max_-1)
   end
-
-  def not_(a) do
-    not bool(a)
-  end
-
-  def if_(cond_, then_, else_ \\ nil) do
-    if cond_ do
-      then_
-    else
-      else_
-    end
+  def randint(min_, max_) do
+    :rand.uniform(max_ - min_ - 1) + min_ - 1
   end
 
   def bool(nil), do: false
@@ -106,6 +97,7 @@ defmodule ExoSQL.Builtins do
 
   def now(), do: DateTime.utc_now()
   def to_datetime(other), do: ExoSQL.DateTime.to_datetime(other)
+  def to_datetime(other, mod), do: ExoSQL.DateTime.to_datetime(other, mod)
   def to_timestamp(%DateTime{} = d), do: DateTime.to_unix(d)
 
   def substr(nil, _skip, _len) do
@@ -125,6 +117,16 @@ defmodule ExoSQL.Builtins do
   def substr(str, skip) do
     substr(str, skip, 10_000) # A upper limit on what to return, should be enought
   end
+  def join(str, sep \\ ",") do
+    Enum.join(str, sep)
+  end
+  def split(str, sep) do
+    String.split(str, sep)
+  end
+  def split(str) do
+    String.split(str, [", ", ",", " "])
+  end
+
 
   @doc ~S"""
   Convert datetime to string.
@@ -160,6 +162,7 @@ defmodule ExoSQL.Builtins do
   %k - integer with k, M sufix
   %.k - float with k, M sufix, uses float part
   """
+  def format(str), do: str
   def format(str, args) when is_list(args) do
     ExoSQL.Format.format(str, args)
   end
@@ -198,10 +201,39 @@ defmodule ExoSQL.Builtins do
     end_ = to_float!(end_)
     nbuckets = to_number!(nbuckets)
 
-    ((n - start_) * nbuckets / (end_- start_))
-      |> Kernel.round
+    bucket = ((n - start_) * nbuckets / (end_- start_))
+    bucket = bucket |> Kernel.round
+
+    cond do
+      bucket < 0 -> 0
+      bucket >= nbuckets -> nbuckets - 1
+      true -> bucket
+    end
   end
 
+
+  @doc ~S"""
+  Performs a regex match
+
+  May return a list of groups, or a dict with named groups, depending on
+  the regex.
+
+  As an optional third parameter it performs a jp query.
+
+  Returns NULL if no match (which is falsy, so can be used for expressions)
+  """
+  def regex(str, regexs) do
+    regex = Regex.compile!(regexs) # slow. FIXME to precompile
+
+    if String.contains?(regexs, "(?<") do
+      Regex.named_captures(regex, str)
+    else
+      Regex.run(regex, str)
+    end
+  end
+  def regex(str, regexs, query) do
+    jp(regex(str, regexs), query)
+  end
 
   @doc ~S"""
   Generates a table with the series of numbers as given. Use for histograms
@@ -320,6 +352,7 @@ defmodule ExoSQL.Builtins do
   It just uses / to separate keys.
   """
   def jp(nil, _), do: nil
+  def jp(json, idx) when is_list(json) and is_number(idx), do: Enum.at(json, idx)
   def jp(json, str) when is_binary(str), do: jp(json, String.split(str, "/"))
   def jp(json, [ head | rest]) when is_list(json) do
     n = ExoSQL.Utils.to_number!(head)
@@ -333,16 +366,39 @@ defmodule ExoSQL.Builtins do
   def is_aggregate("count"), do: true
   def is_aggregate("avg"), do: true
   def is_aggregate("sum"), do: true
+  def is_aggregate("max"), do: true
+  def is_aggregate("min"), do: true
   def is_aggregate(_other), do: false
 
-  def count(data, _) do
-  # Logger.debug("Count #{inspect data}")
+  def count(data, {:lit, '*'}) do
     Enum.count(data.rows)
+  end
+  def count(data, {:distinct, expr}) do
+    expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
+    Enum.reduce(data.rows, MapSet.new(), fn row, acc ->
+      case ExoSQL.Expr.run_expr(expr, {row, %{}}) do
+        nil -> acc
+        val -> MapSet.put(acc, val)
+      end
+    end) |> Enum.count
+  end
+  def count(data, expr) do
+    expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
+    Enum.reduce(data.rows, 0, fn row, acc ->
+      case ExoSQL.Expr.run_expr(expr, {row, %{}}) do
+        nil -> acc
+        _other -> 1 + acc
+      end
+    end)
   end
 
   def avg(data, expr) do
   # Logger.debug("Avg of #{inspect data} by #{inspect expr}")
-    sum(data, expr) / count(data, nil)
+    if data.columns == [] do
+      nil
+    else
+      sum(data, expr) / count(data, {:lit, '*'})
+    end
   end
 
   def sum(data, expr) do
@@ -364,7 +420,7 @@ defmodule ExoSQL.Builtins do
     Enum.reduce(data.rows, nil, fn row, acc ->
       n = ExoSQL.Expr.run_expr(expr, {row, %{}})
       {:ok, n} = ExoSQL.Utils.to_number(n)
-      if not acc or n > acc do
+      if n != nil and (acc == nil or n > acc) do
         n
       else
         acc
@@ -376,7 +432,7 @@ defmodule ExoSQL.Builtins do
     Enum.reduce(data.rows, nil, fn row, acc ->
       n = ExoSQL.Expr.run_expr(expr, {row, %{}})
       {:ok, n} = ExoSQL.Utils.to_number(n)
-      if not acc or n < acc do
+      if n != nil and (acc == nil or n < acc) do
         n
       else
         acc

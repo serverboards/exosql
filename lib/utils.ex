@@ -59,6 +59,7 @@ defmodule ExoSQL.Utils do
       c = Enum.join(Enum.map( Enum.zip(widths, r), fn {w, r} ->
         r = case r do
           r when is_list(r) -> "[#{Enum.join(r, ", ")}]"
+          nil -> "NULL"
           other -> other
         end
 

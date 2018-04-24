@@ -108,7 +108,7 @@ defmodule ExecutorTest do
           {:execute, {"A","products"}, [], [{"A","products","id"},{"A","products","name"}]},
           [{:lit, true}]
         },
-        [{:fn, {"count", [{:column, 1}, {:lit, "*"}]}}]
+        [{:fn, {"count", [{:column, 1}, {:pass, {:lit, "*"}}]}}]
       }
     {:ok, result} = ExoSQL.Executor.execute(plan, @context)
     assert result == %ExoSQL.Result{columns: [{:tmp, :tmp, "col_1"}], rows: [[4]]}
@@ -122,7 +122,7 @@ defmodule ExecutorTest do
           [{:column, {"A","purchases", "product_id"}}]
         },
         [ {:column, {"A","purchases", "product_id"}},
-          {:fn, {"count", [{:column, 1}, {:lit, "*"}]}}
+          {:fn, {"count", [{:column, 1}, {:pass, {:lit, "*"}}]}}
         ]
       }
     {:ok, result} = ExoSQL.Executor.execute(plan, @context)
@@ -133,7 +133,7 @@ defmodule ExecutorTest do
   end
 
   test "Execute complex aggregation 2" do
-      # SELECT users.name, SUM(price*ammount) FROM users, purchases, products
+      # SELECT users.name, SUM(price*amount) FROM users, purchases, products
       # WHERE users.id = purchases.user_id AND products.id = purchases.product_id
       # GROUP BY product.id
       plan =
@@ -143,7 +143,7 @@ defmodule ExecutorTest do
               {:cross_join,
                 {:execute, {"A","users"}, [], [{"A", "users", "id"}, {"A", "users", "name"}]} ,
                   {:cross_join,
-                    {:execute, {"A","purchases"}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}, {"A","purchases","ammount"}]},
+                    {:execute, {"A","purchases"}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}, {"A","purchases","amount"}]},
                     {:execute, {"A","products"}, [], [{"A","products","id"},{"A","products","name"}, {"A","products","price"}]}
                 },
               },
@@ -160,7 +160,7 @@ defmodule ExecutorTest do
               {:column, 1},
               {:pass, {:op, {"*",
                 {:column, {"A","products","price"}},
-                {:column, {"A","purchases","ammount"}}
+                {:column, {"A","purchases","amount"}}
               } } }
             ] } }
           ]
@@ -173,6 +173,21 @@ defmodule ExecutorTest do
         rows: [["David", 550], ["Javier", 1300], ["Patricio", 30]]
       }
       Logger.info ExoSQL.format_result(result)
+  end
+
+  test "extra quals on = and ==" do
+    q = ExoSQL.Executor.get_extra_quals(
+      %{ columns: [{:tmp, :tmp, "A"}], rows: []},
+      {:op, {"=", {:column, {:tmp, :tmp, "A"}}, {:column, {:tmp, "B", "B"}}}},
+      @context
+      )
+    assert q != []
+    q = ExoSQL.Executor.get_extra_quals(
+      %{ columns: [{:tmp, :tmp, "A"}], rows: []},
+      {:op, {"==", {:column, {:tmp, :tmp, "A"}}, {:column, {:tmp, "B", "B"}}}},
+      @context
+      )
+    assert q != []
   end
 
 end

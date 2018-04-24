@@ -18,7 +18,7 @@ defmodule ExoSQL.Executor do
       Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, {row, context}) )
     end)
 
-    columns = resolve_column_names(columns)
+    columns = resolve_column_names(columns, rcolumns)
 
     {:ok, %ExoSQL.Result{ rows: rows, columns: columns}}
   end
@@ -168,7 +168,7 @@ defmodule ExoSQL.Executor do
       group ++ [table]
     end)
 
-    columns = resolve_column_names(groups) ++ ["group_by"]
+    columns = resolve_column_names(groups, data.columns) ++ ["group_by"]
     # Logger.debug("Grouped rows: #{inspect columns}\n #{inspect rows, pretty: true}")
 
     {:ok, %ExoSQL.Result{
@@ -228,6 +228,7 @@ defmodule ExoSQL.Executor do
     columns = Enum.map(data.columns, fn {_db, _table, column} ->
       {:tmp, alias_, column}
     end)
+    # Logger.debug("Set alias for #{inspect alias_} #{inspect data} -> #{inspect columns}")
     {:ok, %ExoSQL.Result{
       columns: columns,
       rows: data.rows
@@ -250,6 +251,20 @@ defmodule ExoSQL.Executor do
       columns: data.columns,
       rows: rows
     }}
+  end
+
+  def execute({:union, froma, fromb}, context) do
+    {:ok, dataa} = execute(froma, context)
+    {:ok, datab} = execute(fromb, context)
+
+    if Enum.count(dataa.columns) != Enum.count(datab.columns) do
+      {:error, :union_column_count_mismatch}
+    else
+      {:ok, %ExoSQL.Result{
+        columns: dataa.columns,
+        rows: dataa.rows ++ datab.rows
+      }}
+    end
   end
 
 
@@ -278,10 +293,23 @@ defmodule ExoSQL.Executor do
 
     # Logger.debug("Left join of\n\n#{inspect res1, pretty: true}\n\n#{inspect res2, pretty: true}\n\n#{inspect expr}")
 
+
+    # Use hashmap or loop strategy depending on size of second table.
+    # The size limit is a very arbitrary number that balances the
+    # cost of creating an M the map and looking into it N times (N*log M+M*logM),
+    # vs looping and checking N*M. N is out of control, so we focus on M.
+    rows = if Enum.count(res2.rows) > 50 do
+      execute_join_hashmap(res1, res2, expr, context, no_match_strategy)
+    else
+      execute_join_loop(res1, res2, expr, context, no_match_strategy)
+    end
+  end
+
+  def execute_join_loop(res1, res2, expr, context, no_match_strategy) do
     columns = res1.columns ++ res2.columns
-    # Logger.debug("Columns #{inspect columns}")
     rexpr = simplify_expr_columns(expr, columns, context["__vars__"])
     empty_row2 = Enum.map(res2.columns, fn _ -> nil end)
+    # Logger.debug("Columns #{inspect columns}")
     rows = Enum.reduce( res1.rows, [], fn row1, acc ->
       nrows = Enum.map( res2.rows, fn row2 ->
         row = row1 ++ row2
@@ -308,6 +336,64 @@ defmodule ExoSQL.Executor do
       rows: rows
     }}
   end
+
+  def execute_join_hashmap(res1, res2, expr, context, no_match_strategy) do
+    case hashmap_decompose_expr(res1.columns, expr) do
+      {expra, exprb} ->
+        expra = simplify_expr_columns(expra, res1.columns, context["__vars__"])
+        exprb = simplify_expr_columns(exprb, res2.columns, context["__vars__"])
+
+        mapb = Enum.reduce(res2.rows, %{}, fn row, acc ->
+          {_, map} = Map.get_and_update( acc, ExoSQL.Expr.run_expr(exprb, {row, context}),  fn
+            nil -> {nil, [row]}
+            list -> {nil, [row | list]}
+          end)
+          map
+        end)
+        empty_row2 = Enum.map(res2.columns, fn _ -> nil end)
+
+        rows = Enum.reduce(res1.rows, [], fn row1, acc ->
+          vala = ExoSQL.Expr.run_expr(expra, {row1, context})
+          rows2 = Map.get(mapb, vala, [])
+          nrows = if rows2 == [] and no_match_strategy == :left do
+            [row1 ++ empty_row2]
+          else
+            Enum.map(rows2, fn row2 ->
+              row1 ++ row2
+            end)
+          end
+
+          nrows ++ acc
+        end)
+
+        columns = res1.columns ++ res2.columns
+        {:ok, %ExoSQL.Result{
+          columns: columns,
+          rows: rows
+        }}
+      _ ->
+        Logger.debug("Cant decompose expr, use loop strategy")
+        execute_join_loop(res1, res2, expr, context, no_match_strategy)
+    end
+  end
+
+  def hashmap_decompose_expr(columns, {:op, {"=", {:column, a}, {:column, b}}}) do
+    at_a = Enum.any?(columns, &(&1 == a))
+    if at_a do
+      {{:column, a}, {:column, b}}
+    else
+      {{:column, b}, {:column, a}}
+    end
+  end
+  def hashmap_decompose_expr(columns, {:op, {"==", {:column, a}, {:column, b}}}) do
+    at_a = Enum.any?(columns, &(&1 == a))
+    if at_a do
+      {{:column, a}, {:column, b}}
+    else
+      {{:column, b}, {:column, a}}
+    end
+  end
+  def hashmap_decompose_expr(_, _), do: nil
 
   def quals_with_vars(quals, vars) do
     Enum.map(quals, fn
@@ -339,28 +425,33 @@ defmodule ExoSQL.Executor do
   def get_extra_quals(res1, expr, context) do
     case expr do
       {:op, {"=", {:column, a}, {:column, b}}} ->
-        res1_contains_a = Enum.find(res1.columns, fn
-          ^a -> true
-          _ -> false
-        end)
-
-        {idf, idt} = if res1_contains_a do
-          {a, b}
-        else
-          {b, a}
-        end
-
-        ids = simplify_expr_columns({:column, idf}, res1.columns, context["__vars__"])
-        # Logger.debug("From ltable get #{inspect idf} #{inspect ids}")
-        inids = Enum.reduce(res1.rows, [], fn row, acc ->
-          [ExoSQL.Expr.run_expr(ids, {row, context}) | acc]
-        end) |> Enum.uniq
-        # Logger.debug("inids #{inspect inids}")
-        {_db, _table, columnname} = idt
-        [{:in, columnname, inids}]
+        get_extra_quals_from_eq(res1, a, b, context)
+      {:op, {"==", {:column, a}, {:column, b}}} ->
+        get_extra_quals_from_eq(res1, a, b, context)
       _expr ->
         []
     end
+  end
+  def get_extra_quals_from_eq(res1, a, b, context) do
+    res1_contains_a = Enum.find(res1.columns, fn
+      ^a -> true
+      _ -> false
+    end)
+
+    {idf, idt} = if res1_contains_a do
+      {a, b}
+    else
+      {b, a}
+    end
+
+    ids = simplify_expr_columns({:column, idf}, res1.columns, context["__vars__"])
+    # Logger.debug("From ltable get #{inspect idf} #{inspect ids}")
+    inids = Enum.reduce(res1.rows, [], fn row, acc ->
+      [ExoSQL.Expr.run_expr(ids, {row, context}) | acc]
+    end) |> Enum.uniq
+    # Logger.debug("inids #{inspect inids}")
+    {_db, _table, columnname} = idt
+    [{columnname, "IN", inids}]
   end
 
 
@@ -395,8 +486,17 @@ defmodule ExoSQL.Executor do
     params = Enum.map(params, &simplify_expr_columns(&1, names, vars))
     {:fn, {f, params}}
   end
+
   def simplify_expr_columns({:parent_column, column}, _names, _vars) do
     {:parent_column, column}
+  end
+
+  def simplify_expr_columns({:case, list}, names, vars) do
+    list = Enum.map(list, fn {e, v} ->
+      {simplify_expr_columns(e, names, vars), simplify_expr_columns(v, names, vars)}
+    end)
+
+    {:case, list}
   end
   def simplify_expr_columns(other, _names, _vars), do: other
 
@@ -411,16 +511,21 @@ defmodule ExoSQL.Executor do
   # end
   # def simplify_expr_columns_nofn(other, _names), do: other
 
-  defp resolve_column_names(columns), do: resolve_column_names(columns, 1)
-  defp resolve_column_names([{:column, col} | rest], count) do
-    [col | resolve_column_names(rest, count + 1)]
+  defp resolve_column_names(columns, pcolumns), do: resolve_column_names(columns, pcolumns, 1)
+
+  defp resolve_column_names([{:column, col} | rest], pcolumns, count) when is_tuple(col) do
+    [col | resolve_column_names(rest, pcolumns, count + 1)]
   end
-  defp resolve_column_names([{:alias, {oldcol, name}} | rest], count) do
-    [{_db, table, _column}] = resolve_column_names([oldcol], 1) # to keep the table name
-    [{:tmp, table, name} | resolve_column_names(rest, count + 1)]
+  defp resolve_column_names([{:column, col} | rest], pcolumns, count) when is_number(col) do
+    col = Enum.at(pcolumns, col)
+    [col | resolve_column_names(rest, pcolumns, count + 1)]
   end
-  defp resolve_column_names([_other | rest], count) do
-    [{:tmp, :tmp, "col_#{count}"} | resolve_column_names(rest, count + 1)]
+  defp resolve_column_names([{:alias, {oldcol, name}} | rest], pcolumns, count) do
+    [{_db, table, _column}] = resolve_column_names([oldcol], pcolumns, 1) # to keep the table name
+    [{:tmp, table, name} | resolve_column_names(rest, pcolumns, count + 1)]
   end
-  defp resolve_column_names([], _count), do: []
+  defp resolve_column_names([_other | rest], pcolumns, count) do
+    [{:tmp, :tmp, "col_#{count}"} | resolve_column_names(rest, pcolumns, count + 1)]
+  end
+  defp resolve_column_names([], _pcolumns, _count), do: []
 end

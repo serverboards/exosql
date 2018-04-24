@@ -61,16 +61,19 @@ defmodule ExoSQL.Planner do
   TODO: explore different plans acording to some weights and return the optimal one.
   """
   def plan(query) do
+    where = ExoSQL.Expr.simplify(query.where)
+    select = ExoSQL.Expr.simplify(query.select)
+
     all_expressions = [
-      query.where,
-      query.select,
+      where,
+      select,
       query.groupby,
       Enum.map(query.orderby, fn {_type, expr} -> expr end),
       Enum.map(query.join, fn {_join, {_from, expr}} -> expr end),
     ]
     # Logger.debug("All expressions: #{inspect all_expressions}")
     # Logger.debug("From #{inspect query.from, pretty: true}")
-    from = Enum.map(query.from, &plan_execute(&1, query.where, all_expressions))
+    from = Enum.map(query.from, &plan_execute(&1, where, all_expressions))
 
     from_plan = if from == [] do
       %ExoSQL.Result{columns: ["?NONAME"], rows: [[1]]} # just one element
@@ -86,8 +89,8 @@ defmodule ExoSQL.Planner do
         {join_type, acc, from, expr}
     end)
 
-    where_plan = if query.where do
-      {:filter, join_plan, query.where}
+    where_plan = if where do
+      {:filter, join_plan, where}
     else
       join_plan
     end
@@ -151,8 +154,22 @@ defmodule ExoSQL.Planner do
         {:limit, number, limit_plan}
     end
 
+    union_plan = case query.union do
+      nil -> limit_plan
+      {:distinct, other} ->
+        {:ok, other_plan} = plan(other)
+        {
+          :distinct,
+          :all_columns,
+          {:union, limit_plan, other_plan}
+        }
+      {:all, other} ->
+        {:ok, other_plan} = plan(other)
+        {:union, limit_plan, other_plan}
+    end
 
-    plan = limit_plan
+
+    plan = union_plan
 
     {:ok, plan}
   end
@@ -166,7 +183,7 @@ defmodule ExoSQL.Planner do
   defp plan_execute({:alias, {{db, table}, alias_}}, where, all_expressions) do
     columns = Enum.uniq(get_table_columns_at_expr(:tmp, alias_, all_expressions))
     columns = Enum.map(columns, fn {:tmp, ^alias_, column} -> {db, table, column} end)
-    quals = get_quals(db, table, where)
+    quals = get_quals(:tmp, alias_, where)
     ex = {:execute, {db, table}, quals, columns}
     {:alias, ex, alias_}
   end
@@ -206,6 +223,14 @@ defmodule ExoSQL.Planner do
     res = get_parent_columns(plan)
     Logger.debug("Get parents from #{inspect plan, pretty: true}: #{inspect res}")
     res
+  end
+  defp get_table_columns_at_expr(db, table, {:case, list}) do
+    Enum.flat_map(list, fn {e,v} ->
+      Enum.flat_map([e,v], &get_table_columns_at_expr(db, table, &1))
+    end)
+  end
+  defp get_table_columns_at_expr(db, table, {:distinct, expr}) do
+    get_table_columns_at_expr(db, table, expr)
   end
   defp get_table_columns_at_expr(_db, _table, _other), do: []
 
@@ -249,10 +274,18 @@ defmodule ExoSQL.Planner do
       {:fn, {f, args}}
     end
   end
-  defp fix_aggregates_select(other, _), do: other
+  defp fix_aggregates_select({:alias, {expr, alias_}}, aggregate_column) do
+    {:alias, {fix_aggregates_select(expr, aggregate_column), alias_}}
+  end
+  defp fix_aggregates_select(other, _) do
+    other
+  end
 
   defp has_aggregates({:op, {_op, op1, op2}}) do
     has_aggregates(op1) or has_aggregates(op2)
+  end
+  defp has_aggregates({:alias, {expr, _alias}}) do
+    has_aggregates(expr)
   end
   defp has_aggregates({:fn, {f, args}}) do
     if not ExoSQL.Builtins.is_aggregate(f) do
@@ -281,6 +314,9 @@ defmodule ExoSQL.Planner do
   end
   defp get_quals(db, table, {:op, {op, {:var, variable}}, {:column, {db, table, column}}}) do
     [[column, op, {:var, variable}]]
+  end
+  defp get_quals(db, table, {:op, {"IN", {:column, {db, table, column}}, {:lit, list}}}) when is_list(list) do
+    [[column, "IN", list]]
   end
   defp get_quals(db, table, {:op, {"AND", op1, op2}}) do
     Enum.flat_map([op1, op2], &(get_quals(db, table, &1)))

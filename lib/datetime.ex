@@ -51,5 +51,24 @@ defmodule ExoSQL.DateTime do
   def to_datetime(other) do
     raise ArgumentError, message: "cant convert #{inspect other} to date"
   end
-
+  def to_datetime(dt, "-" <> mod) do
+    dt = to_datetime(dt)
+    mod = if String.starts_with?(mod, "P") do
+      mod
+    else
+      "P" <> mod
+    end
+    duration = Timex.Duration.parse!(mod)
+    Timex.subtract(dt, duration)
+  end
+  def to_datetime(dt, mod) do
+    dt = to_datetime(dt)
+    mod = if String.starts_with?(mod, "P") do
+      mod
+    else
+      "P" <> mod
+    end
+    duration = Timex.Duration.parse!(mod)
+    Timex.add(dt, duration)
+  end
 end

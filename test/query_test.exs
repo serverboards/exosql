@@ -82,6 +82,31 @@ defmodule QueryTest do
 
     res = analyze_query!("SELECT NOT false AND true")
     assert res.rows == [[true]]
+
+    res = analyze_query!("SELECT NOT 'test'")
+    assert res.rows == [[false]]
+
+    res = analyze_query!("SELECT NOT ''")
+    assert res.rows == [[true]]
+
+    res = analyze_query!("SELECT NOT format('')")
+    assert res.rows == [[true]]
+
+    res = analyze_query!("SELECT NOT NOT 'test'")
+    assert res.rows == [[true]]
+
+    res = analyze_query!("SELECT 1 IS (0 + 1)")
+    assert res.rows == [[ true ]]
+
+    res = analyze_query!("SELECT 1 IS '1'")
+    assert res.rows == [[ false ]]
+
+    res = analyze_query!("SELECT 1 == '1'")
+    assert res.rows == [[ true ]]
+
+
+    res = analyze_query!("SELECT 115 % 60")
+    assert res.rows == [[ 55 ]]
   end
 
   test "Select * from" do
@@ -310,6 +335,32 @@ defmodule QueryTest do
     assert result.rows == [["09:51"]]
   end
 
+  test "Datetime operations" do
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', '-1D'))")
+    assert result.rows == [["2018-02-04T09:51:45.489Z"]]
+
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', '1D'))")
+    assert result.rows == [["2018-02-06T09:51:45.489Z"]]
+
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', 'P1M'))")
+    Logger.warn("Adding 1 month gives extra days for feb!")
+    assert result.rows == [["2018-03-07T09:51:45.489Z"]]
+
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', '-1M'))")
+    assert result.rows == [["2018-01-06T09:51:45.489Z"]]
+
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', 'P2Y'))")
+    # Logger.warn("Adding 2 years add a day!")
+    assert result.rows == [["2020-02-05T09:51:45.489Z"]]
+
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', '2YT1M'))")
+    assert result.rows == [["2020-02-05T09:52:45.489Z"]]
+
+    result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', 'PT45M'))")
+    assert result.rows == [["2018-02-05T10:36:45.489Z"]]
+end
+
+
   test "Query node proc" do
     context = %{ "A" => {ExoSQL.Node, []}}
     result = analyze_query!("SELECT * FROM proc", context)
@@ -388,19 +439,36 @@ defmodule QueryTest do
     assert result.rows == [["st-mystri"]]
   end
 
+  test "Join and split strings" do
+    result = analyze_query!("SELECT join(['the', 'answer', 42], ' ')")
+    assert result.rows == [["the answer 42"]]
+
+    result = analyze_query!("SELECT join([1,2,3])")
+    assert result.rows == [["1,2,3"]]
+
+    result = analyze_query!("SELECT split('the#answer#is#42', '#')")
+    assert result.rows == [[ ["the", "answer", "is", "42"] ]]
+
+    result = analyze_query!("SELECT split('the,answer is, 42')")
+    assert result.rows == [[ ["the", "answer", "is", "42"] ]]
+
+    result = analyze_query!("SELECT split('the answer is, 42')")
+    assert result.rows == [[ ["the", "answer", "is", "42"] ]]
+  end
 
   test "Query with if" do
     res = analyze_query!("""
-      SELECT name, IF(ammount>20, "Gold", "Silver")
+      SELECT name, (IF amount>20 THEN "Gold" ELSE "Silver" END) as metal
         FROM users
        INNER JOIN purchases ON user_id = users.id
       """)
+    [{_, _, "name"}, {_, _, "metal"}] =  res.columns
     assert Enum.count(res.rows) >= 1
   end
 
   test "Query with format() and not top level aggregation" do
     res = analyze_query!("""
-      SELECT name, format("%.2f €", SUM(ammount*price)) FROM purchases
+      SELECT name, format("%.2f €", SUM(amount*price)) FROM purchases
       INNER JOIN products ON products.id = product_id
       GROUP BY name
     """)
@@ -413,7 +481,7 @@ defmodule QueryTest do
 
     # No group by
     res = analyze_query!("""
-      SELECT format("%d units sold", SUM(ammount)) FROM purchases
+      SELECT format("%d units sold", SUM(amount)) FROM purchases
     """)
 
     assert Enum.count(res.rows) == 1
@@ -421,8 +489,8 @@ defmodule QueryTest do
 
   test "Width bucket to create histograms. Sales by month." do
     res = analyze_query!("""
-    SELECT col_1, sum(ammount) FROM
-      (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+    SELECT col_1, sum(amount) FROM
+      (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), amount
        FROM purchases)
       GROUP BY col_1
     """)
@@ -483,15 +551,16 @@ defmodule QueryTest do
       generate_series(12) AS months
     """)
 
+    assert res.columns == [{:tmp, "months", "months"}]
     assert Enum.count(res.rows) == 12
   end
 
   test "Width bucket to create histograms. INNER JOIN. 5 months." do
     res = analyze_query!("""
-    SELECT month, sum(ammount) FROM
+    SELECT month, sum(amount) FROM
       generate_series(12) AS month
       JOIN
-        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), amount
          FROM purchases)
       ON
         month = col_1
@@ -503,10 +572,10 @@ defmodule QueryTest do
 
   test "Width bucket to create histograms. LEFT JOIN Return all months." do
     res = analyze_query!("""
-    SELECT month, sum(ammount) FROM
+    SELECT month, sum(amount) FROM
       generate_series(12) AS month
       LEFT OUTER JOIN
-        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), amount
          FROM purchases)
       ON
         month = col_1
@@ -518,8 +587,8 @@ defmodule QueryTest do
 
   test "Width bucket to create histograms. RIGHT JOIN. Return all months." do
     res = analyze_query!("""
-    SELECT month, sum(ammount) FROM
-        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), ammount
+    SELECT month, sum(amount) FROM
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12), amount
         FROM purchases)
       RIGHT OUTER JOIN
         generate_series(12) AS month
@@ -540,18 +609,26 @@ defmodule QueryTest do
     assert res.columns == [{:tmp, "us", "first_name"}]
   end
 
+  test "Simple table alias as" do
+    res = analyze_query!("""
+      SELECT * FROM users AS us
+      """)
+
+    assert res.columns == [{:tmp, "us", "id"}, {:tmp, "us", "name"}, {:tmp, "us", "email"}]
+  end
+
   test "Function table with alias" do
     res = analyze_query!("""
-      SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, ammount
+      SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, amount
         FROM purchases
       """)
-    assert res.columns == [{:tmp, :tmp, "month"}, {"A", "purchases", "ammount"}]
+    assert res.columns == [{:tmp, :tmp, "month"}, {"A", "purchases", "amount"}]
   end
 
   test "Width bucket, table alias and column alias" do
     res = analyze_query!("""
-    SELECT month.month, sum(ammount) FROM
-      (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, ammount
+    SELECT month.month, sum(amount) FROM
+      (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, amount
         FROM purchases) AS hist
       RIGHT OUTER JOIN
         generate_series(12) AS month
@@ -566,8 +643,8 @@ defmodule QueryTest do
   test "Ambiguous name in query, not smart enough for group removes columns. (FIXME)" do
     try do
       analyze_query!("""
-      SELECT month, sum(ammount) FROM
-        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, ammount
+      SELECT month, sum(amount) FROM
+        (SELECT width_bucket(strftime(date, "%m"), 0, 12, 12) AS month, amount
           FROM purchases) AS hist
         RIGHT OUTER JOIN
           generate_series(12) AS month
@@ -627,19 +704,299 @@ defmodule QueryTest do
   end
 
   test "Simple nested SELECT" do
-    analyze_query!("SELECT id, (SELECT now()), ammount FROM purchases")
+    analyze_query!("SELECT id, (SELECT now()), amount FROM purchases")
   end
 
   test "Complex nested SELECT" do
-    res = analyze_query!("SELECT id, (SELECT name FROM products WHERE id = product_id), ammount FROM purchases")
+    res = analyze_query!("SELECT id, (SELECT name FROM products WHERE id = product_id), amount FROM purchases")
     assert Enum.count(res.rows) == 6
     assert Enum.count(res.columns) == 3
     assert (hd res.rows) == ["1", "sugus", "10"]
 
-    analyze_query!("SELECT id, (SELECT name FROM products WHERE id = purchases.product_id), ammount FROM purchases")
+    analyze_query!("SELECT id, (SELECT name FROM products WHERE id = purchases.product_id), amount FROM purchases")
     assert Enum.count(res.rows) == 6
     assert Enum.count(res.columns) == 3
     assert (hd res.rows) == ["1", "sugus", "10"]
+  end
 
+  test "IN operator and lists" do
+    res = analyze_query!("SELECT [1,2,3,4]")
+
+    assert res.rows == [[ [1,2,3,4] ]]
+
+    res = analyze_query!("SELECT 2 IN [1,2,3,4]")
+    assert res.rows == [[ true ]]
+
+    res = analyze_query!("SELECT NOT (2 IN [1,2,3,4])")
+    assert res.rows == [[ false ]]
+
+    res = analyze_query!("SELECT 111 IN [1,2,3,4]")
+    assert res.rows == [[ false ]]
+  end
+
+  test "jp at arrays" do
+    res = analyze_query!("SELECT jp([1,2,3,4],'2')")
+    assert res.rows == [[ 3 ]]
+
+    res = analyze_query!("SELECT jp([1,2,3,4],2)")
+    assert res.rows == [[ 3 ]]
+  end
+
+  test "SELECT IN" do
+    res = analyze_query!("SELECT * FROM products WHERE id IN [1,2,3]")
+
+    assert Enum.count(res.rows) == 3
+  end
+
+  test "NULL" do
+    res = analyze_query!("SELECT NULL")
+
+    assert res.rows == [[ nil ]]
+
+    res = analyze_query!("SELECT * FROM generate_series(5) LEFT JOIN urls ON id = generate_series WHERE url is NULL")
+
+    assert Enum.count(res.rows) == 1
+  end
+
+  test "LIKE/ILIKE" do
+    assert ExoSQL.Expr.like("a", "a") == true
+    assert ExoSQL.Expr.like("a", "%a") == true
+    assert ExoSQL.Expr.like("a", "a%") == true
+    assert ExoSQL.Expr.like("a", "%a%") == true
+    assert ExoSQL.Expr.like("test", "test%") == true
+    assert ExoSQL.Expr.like("testing", "test%") == true
+    assert ExoSQL.Expr.like("testing", "%test%") == true
+    assert ExoSQL.Expr.like("testing", "%test") == false
+    assert ExoSQL.Expr.like("a", "%b") == false
+    assert ExoSQL.Expr.like("aaaaaa", "%b") == false
+    assert ExoSQL.Expr.like("aaaaaab", "%b") == true
+    assert ExoSQL.Expr.like("aaaaaabaaa", "%b") == false
+    assert ExoSQL.Expr.like("aaaaaabaaa", "%b%") == true
+    assert ExoSQL.Expr.like("axxa", "a__a") == true
+
+
+    res = analyze_query!("SELECT * FROM products WHERE name LIKE 'w%'")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE name LIKE 'W%'")
+    assert Enum.count(res.rows) == 0
+    res = analyze_query!("SELECT * FROM products WHERE name ILIKE 'W%'")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE name LIKE '%u%'")
+    assert Enum.count(res.rows) == 2
+
+    res = analyze_query!("SELECT * FROM products WHERE name LIKE 's%s'")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE name LIKE 's___s'")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE name LIKE '_o%'")
+    assert Enum.count(res.rows) == 2
+  end
+
+
+  test "REGEX" do
+    res = analyze_query!("SELECT * FROM products WHERE regex(name, '^.*$')")
+    assert Enum.count(res.rows) == 4
+
+    res = analyze_query!("SELECT * FROM products WHERE regex(name, '^s.*$')")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE regex(name, '^s(.*)$', 1)")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE regex(name, '^s(?<ug>.*)$', 'ug')")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE jp(regex(name, '^s(?<ug>.*)'), 'ug')")
+    assert Enum.count(res.rows) == 1
+
+    res = analyze_query!("SELECT * FROM products WHERE regex(name, 'https://.*')")
+    assert Enum.count(res.rows) == 0
+  end
+
+  test "CASE WHEN" do
+    res = analyze_query!("""
+      SELECT
+        name,
+        CASE
+          WHEN (price >= 20)
+           THEN 'expensive'
+          WHEN price >= 10
+           THEN 'ok'
+          ELSE 'cheap'
+        END
+      FROM products
+      ORDER BY name
+      """)
+
+    assert res.rows == [
+        ["donut", "expensive"],
+        ["lollipop", "ok"],
+        ["sugus", "cheap"],
+        ["water", "expensive"],
+      ]
+
+      res = analyze_query!("""
+        SELECT
+          name,
+          CASE
+            WHEN (price >= 20)
+             THEN 'expensive'
+          END
+        FROM products
+        ORDER BY name
+        """)
+
+      assert res.rows == [
+          ["donut", "expensive"],
+          ["lollipop", nil],
+          ["sugus", nil],
+          ["water", "expensive"],
+        ]
+  end
+
+  test "IF THEN" do
+    res = analyze_query!("""
+      SELECT
+        name,
+        IF   price >= 20 THEN 'expensive'
+        ELIF price >= 10 THEN 'ok'
+        ELSE 'cheap'
+        END
+      FROM products
+      ORDER BY name
+      """)
+
+    assert res.rows == [
+        ["donut", "expensive"],
+        ["lollipop", "ok"],
+        ["sugus", "cheap"],
+        ["water", "expensive"],
+      ]
+  end
+
+  test "RANDOM" do
+    res = analyze_query!("SELECT random() FROM generate_series(10000)")
+    assert Enum.all?(res.rows, fn [n] -> n >= 0.0 && n < 1.0 end)
+
+    res = analyze_query!("SELECT randint(100) FROM generate_series(10000)")
+    assert Enum.all?(res.rows, fn [n] -> n >= 0 && n < 100 end)
+
+    res = analyze_query!("SELECT randint(50, 100) FROM generate_series(10000)")
+    assert Enum.all?(res.rows, fn [n] -> n >= 50 && n < 100 end)
+  end
+
+  test "UNION" do
+    res = analyze_query!("SELECT DISTINCT * FROM (SELECT 1)")
+    assert res.rows == [[1]]
+
+    res = analyze_query!("SELECT 1 UNION ALL SELECT 1")
+    assert res.rows == [[1]]
+
+    res = analyze_query!("SELECT 1 UNION SELECT 2")
+    assert res.rows == [[1], [2]]
+
+    res = analyze_query!("SELECT 1 UNION ALL SELECT 2")
+    assert res.rows == [[1], [2]]
+
+    res = analyze_query!("SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 1")
+    assert res.rows == [[1], [2], [3]]
+
+    res = analyze_query!("SELECT 'product_' || id, name FROM products UNION ALL SELECT 'user_' || id, name FROM users")
+    assert Enum.count(res.rows) == 7
+
+    res = analyze_query!("SELECT 'product_' || id, name FROM products UNION ALL SELECT 'user_' || id, name FROM users")
+    assert Enum.count(res.rows) == 7
+
+    res = analyze_query!("SELECT MAX(a), MAX(b) FROM (SELECT 1 AS a, 0 AS b UNION SELECT 0, 1)")
+    assert Enum.count(res.rows) == 1
+    assert res.rows == [[1, 1]]
+  end
+
+
+  test "COUNT variations" do
+    # count all
+    res = analyze_query!("SELECT COUNT(*) FROM generate_series(10) LEFT JOIN purchases ON purchases.id = generate_series")
+    assert res.rows == [[10]]
+
+    # count not nulls
+    res = analyze_query!("SELECT COUNT(id) FROM generate_series(10) LEFT JOIN purchases ON purchases.id = generate_series")
+    assert res.rows == [[6]]
+
+    # count not nulls AND unique product_id
+    res = analyze_query!("SELECT COUNT(DISTINCT product_id) FROM generate_series(10) LEFT JOIN purchases ON purchases.id = generate_series")
+    assert res.rows == [[4]]
+    res = analyze_query!("SELECT count(DISTINCT product_id) FROM generate_series(10) LEFT JOIN purchases ON purchases.id = generate_series")
+    assert res.rows == [[4]]
+  end
+
+  test "Same table with alias and joins" do
+    res = analyze_query!("
+      SELECT 'returning customers', COUNT(DISTINCT old.user_id) AS count
+        FROM purchases AS new
+        INNER JOIN purchases AS old
+          ON old.user_id = new.user_id
+        WHERE
+          new.date >= '2017-01-01' AND new.date <= '2017-12-31' AND
+          old.date < '2017-01-01'
+      ")
+    assert res.rows == [["returning customers", 1]]
+
+    res = analyze_query!("
+      SELECT 'new customers', a - b
+        FROM (
+          SELECT COUNT(DISTINCT user_id) AS a
+          FROM purchases
+          WHERE date >= '2017-01-01' AND date <= '2017-12-31'
+        ), (
+          SELECT COUNT(DISTINCT old.user_id) AS b
+          FROM purchases AS new
+          INNER JOIN purchases AS old
+            ON old.user_id = new.user_id
+          WHERE
+            new.date >= '2017-01-01' AND new.date <= '2017-12-31' AND
+            old.date < '2017-01-01'
+        )
+      ")
+    assert res.rows == [["new customers", 2]]
+
+    res = analyze_query!("
+      SELECT 'total customers', COUNT(DISTINCT user_id)
+        FROM purchases
+        WHERE date >= '2017-01-01' AND date <= '2017-12-31'
+        ")
+
+    assert res.rows == [["total customers", 3]]
+  end
+
+  test "Huge JOIN do it fast" do
+    # Uses task to give a max time (5s) for execution.
+    pid = Task.async(fn ->
+      res = analyze_query!("
+        SELECT COUNT(*)
+         FROM generate_series(10000) AS a
+        INNER JOIN generate_series(10000) AS b
+         ON a == b
+      ")
+
+      assert res.rows == [[10_000]]
+    end)
+    Task.await(pid)
+
+    # same, use = to ensure works on both
+    pid = Task.async(fn ->
+      res = analyze_query!("
+        SELECT COUNT(*)
+         FROM generate_series(10000) AS a
+        INNER JOIN generate_series(10000) AS b
+         ON a = b
+      ")
+
+      assert res.rows == [[10_000]]
+    end)
+    Task.await(pid)
   end
 end
