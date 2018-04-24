@@ -206,8 +206,11 @@ defmodule ExoSQL.Expr do
     context = Map.put(context, :__parent_columns, context[:__row_columns])
     {:ok, res} = ExoSQL.Executor.execute(query, context)
     data = case res.rows do
-      [[data | _] | _ ] -> data
-      [[]] -> nil
+      [[data]] -> data
+      [_something | _] ->
+        throw {:error, {:nested_query_too_many_columns, Enum.count(res.rows)}}
+      [] ->
+        nil
     end
     data
   end

@@ -719,6 +719,21 @@ end
     assert (hd res.rows) == ["1", "sugus", "10"]
   end
 
+  test "nested SELECT corner cases" do
+    res = analyze_query!("SELECT 1, (SELECT generate_series FROM generate_series(1,10) WHERE generate_series == 0)")
+    assert res.rows == [[1, nil]]
+
+    try do
+      analyze_query!("SELECT 1, (SELECT generate_series FROM generate_series(1,10))")
+      flunk "Did not trhow error"
+    catch
+      {:error, {:nested_query_too_many_columns, 10}} -> :ok
+      other ->
+        flunk "Did not trhow error"
+    end
+
+  end
+
   test "IN operator and lists" do
     res = analyze_query!("SELECT [1,2,3,4]")
 
