@@ -61,8 +61,8 @@ defmodule ExoSQL.Planner do
   TODO: explore different plans acording to some weights and return the optimal one.
   """
   def plan(query) do
-    where = ExoSQL.Expr.simplify(query.where)
-    select = ExoSQL.Expr.simplify(query.select)
+    where = ExoSQL.Expr.simplify(query.where, %{})
+    select = ExoSQL.Expr.simplify(query.select, %{})
 
     all_expressions = [
       where,

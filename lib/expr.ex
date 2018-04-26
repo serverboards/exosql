@@ -287,10 +287,10 @@ defmodule ExoSQL.Expr do
 
   {:list, [lit: 1, lit: 2]} -> {:lit, [1,2]}
   """
-  def simplify({:lit, n}), do: {:lit, n}
-  def simplify({:op, {op, op1, op2}}) do
-    op1 = simplify(op1)
-    op2 = simplify(op2)
+  def simplify({:lit, n}, _context), do: {:lit, n}
+  def simplify({:op, {op, op1, op2}}, context) do
+    op1 = simplify(op1, context)
+    op2 = simplify(op2, context)
     case {op1, op2} do
       {{:lit, op1}, {:lit, op2}} ->
         {:lit, run_expr({:op, {op, {:lit, op1}, {:lit, op2}}}, [])}
@@ -298,8 +298,8 @@ defmodule ExoSQL.Expr do
         {:op, {op, op1, op2}}
     end
   end
-  def simplify({:list, list}) do
-    list = Enum.map(list, &simplify(&1))
+  def simplify({:list, list}, context) do
+    list = Enum.map(list, &simplify(&1, context))
     all_literals = Enum.all?(list, fn
       {:lit, _n} -> true
       _other -> false
@@ -311,11 +311,11 @@ defmodule ExoSQL.Expr do
       {:list, list}
     end
   end
-  def simplify(list) when is_list(list) do
-    Enum.map(list, &simplify/1)
+  def simplify(list, context) when is_list(list) do
+    Enum.map(list, &simplify(&1, context))
   end
-  def simplify({:op, {:not, op}}) do
-    case simplify(op) do
+  def simplify({:op, {:not, op}}, context) do
+    case simplify(op, context) do
       {:lit, op} ->
         cond do
           op == "" ->
@@ -329,5 +329,5 @@ defmodule ExoSQL.Expr do
         {:not, other}
     end
   end
-  def simplify(other), do: other
+  def simplify(other, _context), do: other
 end
