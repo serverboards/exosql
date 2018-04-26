@@ -218,7 +218,7 @@ defmodule ExoSQL.Planner do
   defp get_table_columns_at_expr(db, table, {:alias, {expr, _alias}}) do
     get_table_columns_at_expr(db, table, expr)
   end
-  defp get_table_columns_at_expr(db, table, {:select, query}) do
+  defp get_table_columns_at_expr(_db, _table, {:select, query}) do
     {:ok, plan} = plan(query)
     res = get_parent_columns(plan)
     Logger.debug("Get parents from #{inspect plan, pretty: true}: #{inspect res}")
@@ -251,7 +251,6 @@ defmodule ExoSQL.Planner do
     get_parent_columns(a) ++ get_parent_columns(b)
   end
   defp get_parent_columns(_other) do
-    Logger.debug("No parent columns from #{inspect _other}")
     []
   end
 

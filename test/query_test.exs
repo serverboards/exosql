@@ -728,8 +728,8 @@ end
       flunk "Did not trhow error"
     catch
       {:error, {:nested_query_too_many_columns, 10}} -> :ok
-      other ->
-        flunk "Did not trhow error"
+      _other ->
+        flunk "Did not throw error"
     end
 
   end

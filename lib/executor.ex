@@ -299,7 +299,7 @@ defmodule ExoSQL.Executor do
     # The size limit is a very arbitrary number that balances the
     # cost of creating an M the map and looking into it N times (N*log M+M*logM),
     # vs looping and checking N*M. N is out of control, so we focus on M.
-    rows = if Enum.count(res2.rows) > 50 do
+    if Enum.count(res2.rows) > 50 do
       execute_join_hashmap(res1, res2, expr, context, no_match_strategy)
     else
       execute_join_loop(res1, res2, expr, context, no_match_strategy)
