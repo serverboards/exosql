@@ -76,7 +76,7 @@ end
 * `CASE` `WHEN` `THEN` `ELSE` `END` / `IF` `THEN` `ELIF` `ELSE` `END`.
 * `UNION` and `UNION ALL`.
 * table and column alias with `AS`
-* nested `SELECT` at `FROM`
+* nested `SELECT`: At `FROM`, `SELECT`, `WHERE`...
 * `generate_series` function tables
 * Aggregation functions: `COUNT`, `SUM`, `AVG`...
 * Builtin functions and operators: * / + - || `or` `and` `in` `not`; `round` `concat`... [See all](#builtins).
