@@ -214,17 +214,6 @@ defmodule ExoSQL.Expr do
     data
   end
 
-  def run_expr({:parent_column, n}, context) do
-    idx = Enum.find_index(context[:parent_columns], &(&1 == n))
-    # Logger.debug("Get parent column #{inspect n} from #{inspect context}: #{inspect idx}")
-    if idx do
-      context[:parent_row] |> Enum.at(idx)
-    else
-      throw {:unknown_column, {:parent_column, n}}
-    end
-  end
-
-
   def run_expr({:list, data}, context) when is_list(data) do
     Enum.map(data, &(run_expr(&1, context)))
   end
@@ -361,8 +350,15 @@ defmodule ExoSQL.Expr do
     {:fn, {f, params}}
   end
 
-  def simplify({:parent_column, column}, _context) do
-    {:parent_column, column}
+  def simplify({:parent_column, column}, %{ parent_columns: parent_columns, parent_row: parent_row }) do
+    idx = Enum.find_index(parent_columns, &(&1 == column))
+    # Logger.debug("Get parent column #{inspect n} from #{inspect context}: #{inspect idx}")
+    val = if idx do
+      parent_row |> Enum.at(idx)
+    else
+      throw {:unknown_column, {:parent_column, column}}
+    end
+    {:lit, val}
   end
 
   def simplify({:case, list}, context) do
@@ -375,7 +371,4 @@ defmodule ExoSQL.Expr do
   def simplify(other, _context) do
     other
   end
-
-
-  def simplify(other, _context), do: other
 end
