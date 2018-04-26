@@ -25,6 +25,17 @@ defmodule QueryTest do
     analyze_query!("SELECT A.products.name, A.products.price FROM A.products")
   end
 
+  test "Comments" do
+    analyze_query!("
+      -- comment one
+      SELECT -- comment two
+      A.products.name,
+      -- comment three
+      A.products.price FROM A.products
+      -- comment four
+      ")
+  end
+
   test "No from" do
     context = %{}
 

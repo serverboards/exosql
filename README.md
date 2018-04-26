@@ -85,6 +85,7 @@ end
 * JSON support via [json pointer](#jp).
 * Array support: `[1, 2, 3, 4]`
 * Variables
+* Comments (-- SQL style)
 
 Check the tests for current available features.
 
