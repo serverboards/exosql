@@ -703,6 +703,37 @@ end
     assert (Enum.at res.rows, 9) == [20]
   end
 
+  test "Simple nested SELECT" do
+    analyze_query!("SELECT id, (SELECT now()), amount FROM purchases")
+  end
+
+  test "Complex nested SELECT" do
+    res = analyze_query!("SELECT id, (SELECT name FROM products WHERE id = product_id), amount FROM purchases")
+    assert Enum.count(res.rows) == 6
+    assert Enum.count(res.columns) == 3
+    assert (hd res.rows) == ["1", "sugus", "10"]
+
+    analyze_query!("SELECT id, (SELECT name FROM products WHERE id = purchases.product_id), amount FROM purchases")
+    assert Enum.count(res.rows) == 6
+    assert Enum.count(res.columns) == 3
+    assert (hd res.rows) == ["1", "sugus", "10"]
+  end
+
+  test "nested SELECT corner cases" do
+    res = analyze_query!("SELECT 1, (SELECT generate_series FROM generate_series(1,10) WHERE generate_series == 0)")
+    assert res.rows == [[1, nil]]
+
+    try do
+      analyze_query!("SELECT 1, (SELECT generate_series FROM generate_series(1,10))")
+      flunk "Did not trhow error"
+    catch
+      {:error, {:nested_query_too_many_columns, 10}} -> :ok
+      _other ->
+        flunk "Did not throw error"
+    end
+
+  end
+
   test "IN operator and lists" do
     res = analyze_query!("SELECT [1,2,3,4]")
 

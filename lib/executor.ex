@@ -10,11 +10,12 @@ defmodule ExoSQL.Executor do
     {:ok, %{ columns: rcolumns, rows: rows}} = execute(from, context)
     # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}. Context: #{inspect context}")
 
-    exprs = Enum.map(columns, &simplify_expr_columns(&1, rcolumns, context["__vars__"]))
-    # Logger.debug("From #{inspect rcolumns} get #{inspect exprs} / #{inspect columns}")
+    context = Map.put(context, :columns, rcolumns)
+    exprs = Enum.map(columns, &ExoSQL.Expr.simplify(&1, context))
+    # Logger.debug("From #{inspect rcolumns}\n get #{inspect exprs, pretty: true} /\n #{inspect columns, pretty: true}")
 
     rows = Enum.map(rows, fn row ->
-      Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, row) )
+      Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, Map.put(context, :row, row)))
     end)
 
     columns = resolve_column_names(columns, rcolumns)
@@ -31,9 +32,10 @@ defmodule ExoSQL.Executor do
           {row, row}
         end)
       what ->
-        expr = simplify_expr_columns(what, columns, context["__vars__"])
+        context = Map.put(context, :columns, columns)
+        expr = ExoSQL.Expr.simplify(what, context)
         Enum.map(rows, fn row ->
-          {ExoSQL.Expr.run_expr(expr, row), row}
+          {ExoSQL.Expr.run_expr(expr, Map.put(context, :row, row)), row}
         end)
     end
 
@@ -68,9 +70,9 @@ defmodule ExoSQL.Executor do
   end
   def execute({:execute, {:fn, {function, params}}, _quals, []}, context) do
     params = params
-      |> Enum.map(&simplify_expr_columns(&1, [], context["__vars__"]))
+      |> Enum.map(&ExoSQL.Expr.simplify(&1, context))
 
-    res = ExoSQL.Expr.run_expr({:fn, {function, params}}, [])
+    res = ExoSQL.Expr.run_expr({:fn, {function, params}}, context)
 
     res = %ExoSQL.Result{
       columns: [{:tmp, function, function}],
@@ -91,7 +93,7 @@ defmodule ExoSQL.Executor do
     }}
   end
   def execute({:execute, {db, table}, quals, columns}, context) do
-    # Logger.debug("#{inspect {db, table, columns}}")
+    # Logger.debug("#{inspect {db, table, columns, context}}")
     {dbmod, ctx} = context[db]
 
     quals = quals_with_vars(quals, Map.get(context, "__vars__", %{}))
@@ -107,9 +109,11 @@ defmodule ExoSQL.Executor do
   def execute({:filter, from, expr}, context) do
     {:ok, %{ columns: columns, rows: rows }} = execute(from, context)
 
-    expr = simplify_expr_columns(expr, columns, context["__vars__"])
+    context = Map.put(context, :columns, columns)
+    expr = ExoSQL.Expr.simplify(expr, context)
     rows = Enum.filter(rows, fn row ->
-      ExoSQL.Expr.run_expr(expr, row)
+      context = Map.put(context, :columns, columns)
+      ExoSQL.Expr.run_expr(expr, Map.put(context, :row, row))
     end)
     {:ok, %ExoSQL.Result{ columns: columns, rows: rows}}
   end
@@ -150,9 +154,12 @@ defmodule ExoSQL.Executor do
   def execute({:group_by, from, groups}, context) do
     {:ok, data} = execute(from, context)
 
-    sgroups = Enum.map(groups, &simplify_expr_columns(&1, data.columns, context["__vars__"]))
+    context = Map.put(context, :columns, data.columns)
+    sgroups = Enum.map(groups, &ExoSQL.Expr.simplify(&1, context))
     rows = Enum.reduce(data.rows, %{}, fn row, acc ->
-      set = Enum.map(sgroups, &ExoSQL.Expr.run_expr( &1, row ))
+      context = Map.put(context, :columns, data.columns)
+
+      set = Enum.map(sgroups, &ExoSQL.Expr.run_expr( &1, Map.put(context, :row, row)))
       # Logger.debug("Which set for #{inspect row} by #{inspect sgroups}/#{inspect groups} (#{inspect data.columns}): #{inspect set}")
       Map.put( acc, set, [row] ++ Map.get(acc, set, []))
     end) |> Enum.map(fn {group,row} ->
@@ -175,17 +182,18 @@ defmodule ExoSQL.Executor do
   def execute({:order_by, type, expr, from}, context) do
     {:ok, data} = execute(from, context)
 
+    context = Map.put(context, :columns, data.columns)
     expr = case expr do
       {:column, _} ->
-        simplify_expr_columns(expr, data.columns, context["__vars__"])
+        ExoSQL.Expr.simplify(expr, context)
       {:lit, n} ->
         {:column, n}
     end
 
     rows = if type == :asc do
-      Enum.sort_by(data.rows, &ExoSQL.Expr.run_expr(expr, &1))
+      Enum.sort_by(data.rows, &ExoSQL.Expr.run_expr(expr, Map.put(context, :row, &1)))
     else
-      Enum.sort_by(data.rows, &ExoSQL.Expr.run_expr(expr, &1), &>=/2)
+      Enum.sort_by(data.rows, &ExoSQL.Expr.run_expr(expr, Map.put(context, :row, &1)), &>=/2)
     end
 
     {:ok, %ExoSQL.Result{
@@ -205,9 +213,9 @@ defmodule ExoSQL.Executor do
   # alias of fn renames the table and the column inside
   def execute({:alias, {:fn, {function, params}}, alias_}, context) do
     params = params
-      |> Enum.map(&simplify_expr_columns(&1, [], context["__vars__"]))
+      |> Enum.map(&ExoSQL.Expr.simplify(&1, context))
 
-    res = ExoSQL.Expr.run_expr({:fn, {function, params}}, [])
+    res = ExoSQL.Expr.run_expr({:fn, {function, params}}, context)
     columns = Enum.map(res.columns, fn _column ->
       {:tmp, alias_, alias_}
     end)
@@ -291,7 +299,7 @@ defmodule ExoSQL.Executor do
     # The size limit is a very arbitrary number that balances the
     # cost of creating an M the map and looking into it N times (N*log M+M*logM),
     # vs looping and checking N*M. N is out of control, so we focus on M.
-    rows = if Enum.count(res2.rows) > 50 do
+    if Enum.count(res2.rows) > 50 do
       execute_join_hashmap(res1, res2, expr, context, no_match_strategy)
     else
       execute_join_loop(res1, res2, expr, context, no_match_strategy)
@@ -300,13 +308,14 @@ defmodule ExoSQL.Executor do
 
   def execute_join_loop(res1, res2, expr, context, no_match_strategy) do
     columns = res1.columns ++ res2.columns
-    rexpr = simplify_expr_columns(expr, columns, context["__vars__"])
+    context = Map.put(context, :columns, columns)
+    rexpr = ExoSQL.Expr.simplify(expr, context)
     empty_row2 = Enum.map(res2.columns, fn _ -> nil end)
     # Logger.debug("Columns #{inspect columns}")
     rows = Enum.reduce( res1.rows, [], fn row1, acc ->
       nrows = Enum.map( res2.rows, fn row2 ->
         row = row1 ++ row2
-        if ExoSQL.Expr.run_expr(rexpr, row) do
+        if ExoSQL.Expr.run_expr(rexpr, Map.put(context, :row, row)) do
           row
         else
           nil
@@ -333,11 +342,11 @@ defmodule ExoSQL.Executor do
   def execute_join_hashmap(res1, res2, expr, context, no_match_strategy) do
     case hashmap_decompose_expr(res1.columns, expr) do
       {expra, exprb} ->
-        expra = simplify_expr_columns(expra, res1.columns, context["__vars__"])
-        exprb = simplify_expr_columns(exprb, res2.columns, context["__vars__"])
+        expra = ExoSQL.Expr.simplify(expra, Map.put(context, :columns, res1.columns))
+        exprb = ExoSQL.Expr.simplify(exprb, Map.put(context, :columns, res2.columns))
 
         mapb = Enum.reduce(res2.rows, %{}, fn row, acc ->
-          {_, map} = Map.get_and_update( acc, ExoSQL.Expr.run_expr(exprb, row),  fn
+          {_, map} = Map.get_and_update( acc, ExoSQL.Expr.run_expr(exprb, Map.put(context, :row, row)),  fn
             nil -> {nil, [row]}
             list -> {nil, [row | list]}
           end)
@@ -346,7 +355,7 @@ defmodule ExoSQL.Executor do
         empty_row2 = Enum.map(res2.columns, fn _ -> nil end)
 
         rows = Enum.reduce(res1.rows, [], fn row1, acc ->
-          vala = ExoSQL.Expr.run_expr(expra, row1)
+          vala = ExoSQL.Expr.run_expr(expra, Map.put(context, :row, row1))
           rows2 = Map.get(mapb, vala, [])
           nrows = if rows2 == [] and no_match_strategy == :left do
             [row1 ++ empty_row2]
@@ -437,67 +446,15 @@ defmodule ExoSQL.Executor do
       {b, a}
     end
 
-    ids = simplify_expr_columns({:column, idf}, res1.columns, context["__vars__"])
+    ids = ExoSQL.Expr.simplify({:column, idf}, Map.put(context, :columns, res1.columns))
     # Logger.debug("From ltable get #{inspect idf} #{inspect ids}")
     inids = Enum.reduce(res1.rows, [], fn row, acc ->
-      [ExoSQL.Expr.run_expr(ids, row) | acc]
+      [ExoSQL.Expr.run_expr(ids, Map.put(context, :row, row)) | acc]
     end) |> Enum.uniq
     # Logger.debug("inids #{inspect inids}")
     {_db, _table, columnname} = idt
     [{columnname, "IN", inids}]
   end
-
-
-  @doc """
-  Simplify the column ids to positions on the list of columns, to ease operations.
-
-  This operation is required to change expressions from column names to column
-  positions, so that `ExoSQL.Expr` can perform its operations on rows.
-  """
-  def simplify_expr_columns({:column, cn}, _names, _vars) when is_number(cn) do
-    {:column, cn}
-  end
-  def simplify_expr_columns({:alias, {expr, _}}, names, vars) do
-    simplify_expr_columns(expr, names, vars)
-  end
-  def simplify_expr_columns({:column, cn}, names, _vars) do
-    i = Enum.find_index(names, &(&1 == cn))
-    if i == nil do
-      throw {:error, {:not_found, cn, :in, names}}
-    end
-    {:column, i}
-  end
-  def simplify_expr_columns({:var, cn}, _names, vars) do
-    {:lit, vars[cn]}
-  end
-  def simplify_expr_columns({:op, {op, op1, op2}}, names, vars) do
-    op1 = simplify_expr_columns(op1, names, vars)
-    op2 = simplify_expr_columns(op2, names, vars)
-    {:op, {op, op1, op2}}
-  end
-  def simplify_expr_columns({:fn, {f, params}}, names, vars) do
-    params = Enum.map(params, &simplify_expr_columns(&1, names, vars))
-    {:fn, {f, params}}
-  end
-  def simplify_expr_columns({:case, list}, names, vars) do
-    list = Enum.map(list, fn {e, v} ->
-      {simplify_expr_columns(e, names, vars), simplify_expr_columns(v, names, vars)}
-    end)
-
-    {:case, list}
-  end
-  def simplify_expr_columns(other, _names, _vars), do: other
-
-  # def simplify_expr_columns_nofn({:column, cn}, names) do
-  #   i = Enum.find_index(names, &(&1 == cn))
-  #   {:column, i}
-  # end
-  # def simplify_expr_columns_nofn({:op, {op, op1, op2}}, names) do
-  #   op1 = simplify_expr_columns(op1, names)
-  #   op2 = simplify_expr_columns(op2, names)
-  #   {:op, {op, op1, op2}}
-  # end
-  # def simplify_expr_columns_nofn(other, _names), do: other
 
   defp resolve_column_names(columns, pcolumns), do: resolve_column_names(columns, pcolumns, 1)
 

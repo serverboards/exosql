@@ -119,6 +119,7 @@ expr_atom -> 'TRUE' : {lit, true}.
 expr_atom -> 'FALSE' : {lit, false}.
 expr_atom -> 'NULL' : {lit, nil}.
 expr_atom -> var : {var, unwrap('$1')}.
+expr_atom -> open_par query close_par : {select, '$2'}.
 expr_atom -> open_par expr close_par : '$2'.
 expr_atom -> id open_par close_par : {fn, {unwrap_d('$1'), []}}.
 expr_atom -> id open_par expr_list close_par : {fn, {unwrap_d('$1'), '$3'}}.

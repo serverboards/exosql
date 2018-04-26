@@ -9,7 +9,7 @@ defmodule ExoSQL.Builtins do
   and the rest of parameters are the function calling parameters, unsolved.
 
   These expressions must be first simplified with
-  `ExoSQL.executor.simplify_expr_columns` and then executed on the rows with
+  `ExoSQL.Expr.simplify` and then executed on the rows with
   `ExoSQL.Expr.run_expr`.
   """
   import ExoSQL.Utils, only: [to_number: 1, to_float: 1]
@@ -374,18 +374,18 @@ defmodule ExoSQL.Builtins do
     Enum.count(data.rows)
   end
   def count(data, {:distinct, expr}) do
-    expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
+    expr = ExoSQL.Expr.simplify(expr, %{ columns: data.columns })
     Enum.reduce(data.rows, MapSet.new(), fn row, acc ->
-      case ExoSQL.Expr.run_expr(expr, row) do
+      case ExoSQL.Expr.run_expr(expr, %{ row: row }) do
         nil -> acc
         val -> MapSet.put(acc, val)
       end
     end) |> Enum.count
   end
   def count(data, expr) do
-    expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
+    expr = ExoSQL.Expr.simplify(expr, %{ columns: data.columns})
     Enum.reduce(data.rows, 0, fn row, acc ->
-      case ExoSQL.Expr.run_expr(expr, row) do
+      case ExoSQL.Expr.run_expr(expr, %{ row: row }) do
         nil -> acc
         _other -> 1 + acc
       end
@@ -403,10 +403,10 @@ defmodule ExoSQL.Builtins do
 
   def sum(data, expr) do
   # Logger.debug("Sum of #{inspect data} by #{inspect expr}")
-    expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
+    expr = ExoSQL.Expr.simplify(expr, %{ columns: data.columns})
     # Logger.debug("Simplified expression #{inspect expr}")
     Enum.reduce(data.rows, 0, fn row, acc ->
-      n = ExoSQL.Expr.run_expr(expr, row)
+      n = ExoSQL.Expr.run_expr(expr, %{ row: row })
       n = case ExoSQL.Utils.to_number(n) do
         {:ok, n} -> n
         {:error, nil} -> 0
@@ -416,9 +416,9 @@ defmodule ExoSQL.Builtins do
   end
 
   def max_(data, expr) do
-    expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
+    expr = ExoSQL.Expr.simplify(expr, %{ columns: data.columns})
     Enum.reduce(data.rows, nil, fn row, acc ->
-      n = ExoSQL.Expr.run_expr(expr, row)
+      n = ExoSQL.Expr.run_expr(expr, %{ row: row })
       {:ok, n} = ExoSQL.Utils.to_number(n)
       if n != nil and (acc == nil or n > acc) do
         n
@@ -428,9 +428,9 @@ defmodule ExoSQL.Builtins do
     end)
   end
   def min_(data, expr) do
-    expr = ExoSQL.Executor.simplify_expr_columns(expr, data.columns, nil)
+    expr = ExoSQL.Expr.simplify(expr, %{ columns: data.columns})
     Enum.reduce(data.rows, nil, fn row, acc ->
-      n = ExoSQL.Expr.run_expr(expr, row)
+      n = ExoSQL.Expr.run_expr(expr, %{ row: row })
       {:ok, n} = ExoSQL.Utils.to_number(n)
       if n != nil and (acc == nil or n < acc) do
         n
