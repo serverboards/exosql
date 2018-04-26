@@ -203,7 +203,7 @@ defmodule ExoSQL.Expr do
 
   def run_expr({:select, query}, {row, context}) do
     context = Map.put(context, :__parent_row, row)
-    context = Map.put(context, :__parent_columns, context[:__row_columns])
+    context = Map.put(context, :__parent_columns, context[:columns])
     {:ok, res} = ExoSQL.Executor.execute(query, context)
     data = case res.rows do
       [[data]] -> data
