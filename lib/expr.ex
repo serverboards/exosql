@@ -8,54 +8,53 @@ defmodule ExoSQL.Expr do
   columns names to column positions, and then use as:
 
     ```
-    iex> row = [1,2,3,4,5]
-    iex> context = %{}
+    iex> context = %{ row: [1,2,3,4,5] }
     iex> expr = {:op, {"*", {:column, 1}, {:column, 2}}}
-    iex> ExoSQL.Expr.run_expr(expr, {row, context})
+    iex> ExoSQL.Expr.run_expr(expr, context)
     6
     ```
   """
 
   import ExoSQL.Utils, only: [to_number: 1]
 
-  def run_expr({:op, {"and", op1, op2}}, cur) do
-    r1 = run_expr(op1, cur)
-    r2 = run_expr(op2, cur)
+  def run_expr({:op, {"and", op1, op2}}, context) do
+    r1 = run_expr(op1, context)
+    r2 = run_expr(op2, context)
     r1 && r2
   end
-  def run_expr({:op, {"AND", op1, op2}}, cur) do
-    r1 = run_expr(op1, cur)
-    r2 = run_expr(op2, cur)
+  def run_expr({:op, {"AND", op1, op2}}, context) do
+    r1 = run_expr(op1, context)
+    r2 = run_expr(op2, context)
     r1 && r2
   end
-  def run_expr({:op, {"or", op1, op2}}, cur) do
-    r1 = run_expr(op1, cur)
-    r2 = run_expr(op2, cur)
+  def run_expr({:op, {"or", op1, op2}}, context) do
+    r1 = run_expr(op1, context)
+    r2 = run_expr(op2, context)
     r1 || r2
   end
-  def run_expr({:op, {"OR", op1, op2}}, cur) do
-    r1 = run_expr(op1, cur)
-    r2 = run_expr(op2, cur)
+  def run_expr({:op, {"OR", op1, op2}}, context) do
+    r1 = run_expr(op1, context)
+    r2 = run_expr(op2, context)
     r1 || r2
   end
 
-  def run_expr({:op, {"=", op1, op2}}, cur) do
-    r1 = run_expr(op1, cur)
-    r2 = run_expr(op2, cur)
+  def run_expr({:op, {"=", op1, op2}}, context) do
+    r1 = run_expr(op1, context)
+    r2 = run_expr(op2, context)
 
     {r1, r2} = match_types(r1, r2)
 
     r1 == r2
   end
-  def run_expr({:op, {"IS", op1, op2}}, cur) do
-    r1 = run_expr(op1, cur)
-    r2 = run_expr(op2, cur)
+  def run_expr({:op, {"IS", op1, op2}}, context) do
+    r1 = run_expr(op1, context)
+    r2 = run_expr(op2, context)
 
     r1 === r2
   end
-  def run_expr({:op, {">", op1, op2}}, cur) do
-    r1 = run_expr(op1, cur)
-    r2 = run_expr(op2, cur)
+  def run_expr({:op, {">", op1, op2}}, context) do
+    r1 = run_expr(op1, context)
+    r2 = run_expr(op2, context)
     {r1, r2} = match_types(r1, r2)
 
     case {r1, r2} do
@@ -71,9 +70,9 @@ defmodule ExoSQL.Expr do
         end
     end
   end
-  def run_expr({:op, {">=", op1, op2}}, cur) do
-    r1 = run_expr(op1, cur)
-    r2 = run_expr(op2, cur)
+  def run_expr({:op, {">=", op1, op2}}, context) do
+    r1 = run_expr(op1, context)
+    r2 = run_expr(op2, context)
 
     {r1, r2} = match_types(r1, r2)
 
@@ -91,57 +90,57 @@ defmodule ExoSQL.Expr do
     end
   end
 
-  def run_expr({:op, {"==", op1, op2}}, cur), do: run_expr({:op, {"=", op1, op2}}, cur)
-  def run_expr({:op, {"!=", op1, op2}}, cur), do: not run_expr({:op, {"=", op1, op2}}, cur)
-  def run_expr({:op, {"<", op1, op2}}, cur), do: not run_expr({:op, {">=", op1, op2}}, cur)
-  def run_expr({:op, {"<=", op1, op2}}, cur), do: not run_expr({:op, {">", op1, op2}}, cur)
+  def run_expr({:op, {"==", op1, op2}}, context), do: run_expr({:op, {"=", op1, op2}}, context)
+  def run_expr({:op, {"!=", op1, op2}}, context), do: not run_expr({:op, {"=", op1, op2}}, context)
+  def run_expr({:op, {"<", op1, op2}}, context), do: not run_expr({:op, {">=", op1, op2}}, context)
+  def run_expr({:op, {"<=", op1, op2}}, context), do: not run_expr({:op, {">", op1, op2}}, context)
 
-  def run_expr({:op, {"*", op1, op2}}, cur) do
-    {:ok, n1} = to_number(run_expr(op1, cur))
-    {:ok, n2} = to_number(run_expr(op2, cur))
+  def run_expr({:op, {"*", op1, op2}}, context) do
+    {:ok, n1} = to_number(run_expr(op1, context))
+    {:ok, n2} = to_number(run_expr(op2, context))
 
     n1 * n2
   end
 
-  def run_expr({:op, {"/", op1, op2}}, cur) do
-    {:ok, n1} = to_number(run_expr(op1, cur))
-    {:ok, n2} = to_number(run_expr(op2, cur))
+  def run_expr({:op, {"/", op1, op2}}, context) do
+    {:ok, n1} = to_number(run_expr(op1, context))
+    {:ok, n2} = to_number(run_expr(op2, context))
 
     n1 / n2
   end
 
-  def run_expr({:op, {"%", op1, op2}}, cur) do
-    {:ok, n1} = to_number(run_expr(op1, cur))
-    {:ok, n2} = to_number(run_expr(op2, cur))
+  def run_expr({:op, {"%", op1, op2}}, context) do
+    {:ok, n1} = to_number(run_expr(op1, context))
+    {:ok, n2} = to_number(run_expr(op2, context))
 
     rem(n1, n2)
   end
 
-  def run_expr({:op, {"+", op1, op2}}, cur) do
-    {:ok, n1} = to_number(run_expr(op1, cur))
-    {:ok, n2} = to_number(run_expr(op2, cur))
+  def run_expr({:op, {"+", op1, op2}}, context) do
+    {:ok, n1} = to_number(run_expr(op1, context))
+    {:ok, n2} = to_number(run_expr(op2, context))
 
     n1 + n2
   end
 
-  def run_expr({:op, {"-", op1, op2}}, cur) do
-    {:ok, n1} = to_number(run_expr(op1, cur))
-    {:ok, n2} = to_number(run_expr(op2, cur))
+  def run_expr({:op, {"-", op1, op2}}, context) do
+    {:ok, n1} = to_number(run_expr(op1, context))
+    {:ok, n2} = to_number(run_expr(op2, context))
 
     n1 - n2
   end
 
-  def run_expr({:op, {"||", op1, op2}}, cur) do
-    s1 = to_string(run_expr(op1, cur))
-    s2 = to_string(run_expr(op2, cur))
+  def run_expr({:op, {"||", op1, op2}}, context) do
+    s1 = to_string(run_expr(op1, context))
+    s2 = to_string(run_expr(op2, context))
 
     s1<>s2
   end
 
-  def run_expr({:op, {:not, op}}, cur), do: run_expr({:not, op}, cur)
+  def run_expr({:op, {:not, op}}, context), do: run_expr({:not, op}, context)
 
-  def run_expr({:not, op}, cur) do
-    n = run_expr(op, cur)
+  def run_expr({:not, op}, context) do
+    n = run_expr(op, context)
 
     cond do
       n == "" -> true
@@ -150,9 +149,9 @@ defmodule ExoSQL.Expr do
     end
   end
 
-  def run_expr({:op, {"IN", op1, op2}}, cur) do
-    op1 = run_expr(op1, cur)
-    op2 = run_expr(op2, cur)
+  def run_expr({:op, {"IN", op1, op2}}, context) do
+    op1 = run_expr(op1, context)
+    op2 = run_expr(op2, context)
 
     Enum.any?(op2, fn el2 ->
       {op1, el2} = match_types(op1, el2)
@@ -160,28 +159,28 @@ defmodule ExoSQL.Expr do
     end)
   end
 
-  def run_expr({:op, {"LIKE", op1, op2}}, cur) do
-    op1 = run_expr(op1, cur)
-    op2 = run_expr(op2, cur)
+  def run_expr({:op, {"LIKE", op1, op2}}, context) do
+    op1 = run_expr(op1, context)
+    op2 = run_expr(op2, context)
 
     like(op1, op2)
   end
 
-  def run_expr({:op, {"ILIKE", op1, op2}}, cur) do
-    op1 = run_expr(op1, cur)
-    op2 = run_expr(op2, cur)
+  def run_expr({:op, {"ILIKE", op1, op2}}, context) do
+    op1 = run_expr(op1, context)
+    op2 = run_expr(op2, context)
 
     like(String.downcase(op1), String.downcase(op2))
   end
 
 
-  def run_expr({:case, list}, cur) do
+  def run_expr({:case, list}, context) do
     Enum.find_value(list, fn {condition, expr} ->
-      case run_expr(condition, cur) do
+      case run_expr(condition, context) do
         "" -> nil
         val ->
           if val do
-            run_expr(expr, cur)
+            run_expr(expr, context)
           else
             nil
           end
@@ -189,21 +188,21 @@ defmodule ExoSQL.Expr do
     end)
   end
 
-  def run_expr({:fn, {fun, exprs}}, cur) do
-    params = for e <- exprs, do: run_expr(e, cur)
+  def run_expr({:fn, {fun, exprs}}, context) do
+    params = for e <- exprs, do: run_expr(e, context)
     ExoSQL.Builtins.call_function(fun, params)
   end
-  def run_expr({:pass, val}, _cur), do: val
+  def run_expr({:pass, val}, _context), do: val
 
-  def run_expr({:lit, val}, _cur), do: val
+  def run_expr({:lit, val}, _context), do: val
 
-  def run_expr({:column, n}, {row, _context}) when is_number(n) do
+  def run_expr({:column, n}, %{ row: row }) when is_number(n) do
     Enum.at(row, n)
   end
 
-  def run_expr({:select, query}, {row, context}) do
-    context = Map.put(context, :__parent_row, row)
-    context = Map.put(context, :__parent_columns, context[:columns])
+  def run_expr({:select, query}, context) do
+    context = Map.put(context, :parent_row, context[:row])
+    context = Map.put(context, :parent_columns, context[:columns])
     {:ok, res} = ExoSQL.Executor.execute(query, context)
     data = case res.rows do
       [[data]] -> data
@@ -215,19 +214,19 @@ defmodule ExoSQL.Expr do
     data
   end
 
-  def run_expr({:parent_column, n}, {_row, context}) do
-    idx = Enum.find_index(context[:__parent_columns], &(&1 == n))
+  def run_expr({:parent_column, n}, context) do
+    idx = Enum.find_index(context[:parent_columns], &(&1 == n))
     # Logger.debug("Get parent column #{inspect n} from #{inspect context}: #{inspect idx}")
     if idx do
-      context[:__parent_row] |> Enum.at(idx)
+      context[:parent_row] |> Enum.at(idx)
     else
       throw {:unknown_column, {:parent_column, n}}
     end
   end
 
 
-  def run_expr({:list, data}, cur) when is_list(data) do
-    Enum.map(data, &(run_expr(&1, cur)))
+  def run_expr({:list, data}, context) when is_list(data) do
+    Enum.map(data, &(run_expr(&1, context)))
   end
 
 

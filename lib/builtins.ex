@@ -376,7 +376,7 @@ defmodule ExoSQL.Builtins do
   def count(data, {:distinct, expr}) do
     expr = ExoSQL.Executor.simplify_expr_columns(expr, %{ columns: data.columns })
     Enum.reduce(data.rows, MapSet.new(), fn row, acc ->
-      case ExoSQL.Expr.run_expr(expr, {row, %{}}) do
+      case ExoSQL.Expr.run_expr(expr, %{ row: row }) do
         nil -> acc
         val -> MapSet.put(acc, val)
       end
@@ -385,7 +385,7 @@ defmodule ExoSQL.Builtins do
   def count(data, expr) do
     expr = ExoSQL.Executor.simplify_expr_columns(expr, %{ columns: data.columns})
     Enum.reduce(data.rows, 0, fn row, acc ->
-      case ExoSQL.Expr.run_expr(expr, {row, %{}}) do
+      case ExoSQL.Expr.run_expr(expr, %{ row: row }) do
         nil -> acc
         _other -> 1 + acc
       end
@@ -406,7 +406,7 @@ defmodule ExoSQL.Builtins do
     expr = ExoSQL.Executor.simplify_expr_columns(expr, %{ columns: data.columns})
     # Logger.debug("Simplified expression #{inspect expr}")
     Enum.reduce(data.rows, 0, fn row, acc ->
-      n = ExoSQL.Expr.run_expr(expr, {row, %{}})
+      n = ExoSQL.Expr.run_expr(expr, %{ row: row })
       n = case ExoSQL.Utils.to_number(n) do
         {:ok, n} -> n
         {:error, nil} -> 0
@@ -418,7 +418,7 @@ defmodule ExoSQL.Builtins do
   def max_(data, expr) do
     expr = ExoSQL.Executor.simplify_expr_columns(expr, %{ columns: data.columns})
     Enum.reduce(data.rows, nil, fn row, acc ->
-      n = ExoSQL.Expr.run_expr(expr, {row, %{}})
+      n = ExoSQL.Expr.run_expr(expr, %{ row: row })
       {:ok, n} = ExoSQL.Utils.to_number(n)
       if n != nil and (acc == nil or n > acc) do
         n
@@ -430,7 +430,7 @@ defmodule ExoSQL.Builtins do
   def min_(data, expr) do
     expr = ExoSQL.Executor.simplify_expr_columns(expr, %{ columns: data.columns})
     Enum.reduce(data.rows, nil, fn row, acc ->
-      n = ExoSQL.Expr.run_expr(expr, {row, %{}})
+      n = ExoSQL.Expr.run_expr(expr, %{ row: row })
       {:ok, n} = ExoSQL.Utils.to_number(n)
       if n != nil and (acc == nil or n < acc) do
         n
