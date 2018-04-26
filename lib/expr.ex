@@ -4,7 +4,7 @@ defmodule ExoSQL.Expr do
   @moduledoc """
   Expression executor.
 
-  Requires a simplified expression from `simplify_expr_columns` that converts
+  Requires a simplified expression from `ExoSQL.Expr.simplify` that converts
   columns names to column positions, and then use as:
 
     ```
@@ -329,5 +329,53 @@ defmodule ExoSQL.Expr do
         {:not, other}
     end
   end
+  @doc """
+  Simplify the column ids to positions on the list of columns, to ease operations.
+
+  This operation is required to change expressions from column names to column
+  positions, so that `ExoSQL.Expr` can perform its operations on rows.
+  """
+  def simplify({:column, cn}, _context) when is_number(cn) do
+    {:column, cn}
+  end
+  def simplify({:alias, {expr, _}}, context) do
+    simplify(expr, context)
+  end
+  def simplify({:column, cn}, %{ columns: names }) do
+    i = Enum.find_index(names, &(&1 == cn))
+    if i == nil do
+      throw {:error, {:not_found, cn, :in, names}}
+    end
+    {:column, i}
+  end
+  def simplify({:var, cn}, %{ "__vars__" => vars}) do
+    {:lit, vars[cn]}
+  end
+  def simplify({:op, {op, op1, op2}}, context) do
+    op1 = simplify(op1, context)
+    op2 = simplify(op2, context)
+    {:op, {op, op1, op2}}
+  end
+  def simplify({:fn, {f, params}}, context) do
+    params = Enum.map(params, &simplify(&1, context))
+    {:fn, {f, params}}
+  end
+
+  def simplify({:parent_column, column}, _context) do
+    {:parent_column, column}
+  end
+
+  def simplify({:case, list}, context) do
+    list = Enum.map(list, fn {e, v} ->
+      {simplify(e, context), simplify(v, context)}
+    end)
+
+    {:case, list}
+  end
+  def simplify(other, _context) do
+    other
+  end
+
+
   def simplify(other, _context), do: other
 end
