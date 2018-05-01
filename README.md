@@ -75,6 +75,7 @@ end
 * `LIKE` and `ILIKE`
 * `CASE` `WHEN` `THEN` `ELSE` `END` / `IF` `THEN` `ELIF` `ELSE` `END`.
 * `UNION` and `UNION ALL`.
+* `RANGE`
 * table and column alias with `AS`
 * nested `SELECT`: At `FROM`, `SELECT`, `WHERE`...
 * `generate_series` function tables
@@ -140,9 +141,28 @@ Formats a String using C sprintf-like parameters. Known placeholders are:
 * `%.2k` -- Metric System suffix with precision
 * `%,2k` -- Metric System, using `.` to separate thousands and `,` for decimals. Follow Spanish numbering system.
 
+#### `greatest(a, b[, c, d, e])`
+
+Get the greatest value of all the given ones.
+
+It's similar to `max` in other languages, but in SQL can not use `max` as it is
+an aggregation function with different semantics.
+
+#### `least(a, b[, c, d, e])`
+
+Get the lowest value of all the given ones.
+
+It's similar to `min` in other languages, but in SQL can not use `min` as it is
+an aggregation function with different semantics.
+
+
 #### `lower(str)`
 
-Lower case a full string
+Lower case a full string.
+
+#### `lower(range)`
+
+Get the lower bound of a range.
 
 #### `join(str, sep=",")`
 
@@ -186,6 +206,10 @@ to_string(1)
 #### `upper(str)`
 
 Upper cases a full string
+
+#### `upper(range)`
+
+Get the upper bound of a range.
 
 ### Date time functions
 

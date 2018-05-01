@@ -96,10 +96,22 @@ defmodule ExoSQL.Expr do
   def run_expr({:op, {"<=", op1, op2}}, context), do: not run_expr({:op, {">", op1, op2}}, context)
 
   def run_expr({:op, {"*", op1, op2}}, context) do
-    {:ok, n1} = to_number(run_expr(op1, context))
-    {:ok, n2} = to_number(run_expr(op2, context))
+    op1 = run_expr(op1, context)
+    op2 = run_expr(op2, context)
 
-    n1 * n2
+    case {op1, op2} do
+      {{:range, {starta, enda}}, {:range, {startb, endb}}} ->
+        if (enda < startb) or (endb < starta) do
+          nil
+        else
+          {:range, {ExoSQL.Builtins.greatest(starta, startb), ExoSQL.Builtins.least(enda, endb)}}
+        end
+      _ ->
+        {:ok, n1} = to_number(op1)
+        {:ok, n2} = to_number(op2)
+
+        n1 * n2
+    end
   end
 
   def run_expr({:op, {"/", op1, op2}}, context) do
@@ -153,10 +165,17 @@ defmodule ExoSQL.Expr do
     op1 = run_expr(op1, context)
     op2 = run_expr(op2, context)
 
-    Enum.any?(op2, fn el2 ->
-      {op1, el2} = match_types(op1, el2)
-      op1 == el2
-    end)
+    case op2 do
+      op2 when is_list(op2) ->
+        Enum.any?(op2, fn el2 ->
+          {op1, el2} = match_types(op1, el2)
+          op1 == el2
+        end)
+      {:range, {start, end_}} ->
+        (op1 >= start) and (op1 <= end_)
+      other ->
+        throw {:invalid_argument, {:in, other}}
+    end
   end
 
   def run_expr({:op, {"LIKE", op1, op2}}, context) do

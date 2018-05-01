@@ -36,6 +36,9 @@ defmodule ExoSQL.Builtins do
     "regex" => {ExoSQL.Builtins, :regex},
     "random" => {ExoSQL.Builtins, :random},
     "randint" => {ExoSQL.Builtins, :randint},
+    "range" => {ExoSQL.Builtins, :range},
+    "greatest" => {ExoSQL.Builtins, :greatest},
+    "lowest" => {ExoSQL.Builtins, :lowest},
 
     ## Aggregates
     "count" => {ExoSQL.Builtins, :count},
@@ -89,7 +92,12 @@ defmodule ExoSQL.Builtins do
   def bool(false), do: false
   def bool(_), do: true
 
+  def lower(nil), do: nil
+  def lower({:range, {a, _b}}), do: a
   def lower(s), do: String.downcase(s)
+
+  def upper(nil), do: nil
+  def upper({:range, {_a, b}}), do: b
   def upper(s), do: String.upcase(s)
 
   def to_string_(%DateTime{} = d), do: DateTime.to_iso8601(d)
@@ -361,6 +369,51 @@ defmodule ExoSQL.Builtins do
   def jp(json, ["" | rest]), do: jp(json, rest)
   def jp(json, [head | rest]), do: jp(Map.get(json, head, nil), rest)
   def jp(json, []), do: json
+
+
+
+  @doc ~S"""
+  Creates a range, which can later be used in:
+
+  * `IN` -- Subset / element contains
+  * `*` -- Interesection -> nil if no intersection, the intersected range if any.
+  """
+  def range(a, b), do: {:range, {a,b}}
+
+  @doc ~S"""
+  Get the greatest of arguments
+  """
+  def greatest(a, nil), do: a
+  def greatest(nil, b), do: b
+  def greatest(a, b) do
+    if a > b do
+      a
+    else
+      b
+    end
+  end
+  def greatest(a, b, c), do: Enum.reduce([a, b, c], nil, &greatest/2)
+  def greatest(a, b, c, d), do: Enum.reduce([a, b, c, d], nil, &greatest/2)
+  def greatest(a, b, c, d, e), do: Enum.reduce([a, b, c, d, e], nil, &greatest/2)
+
+  @doc ~S"""
+  Get the least of arguments.
+
+  Like min, for not for aggregations.
+  """
+  def least(a, nil), do: a
+  def least(nil, b), do: b
+  def least(a, b) do
+    if a < b do
+      a
+    else
+      b
+    end
+  end
+  def least(a, b, c), do: Enum.reduce([a, b, c], nil, &least/2)
+  def least(a, b, c, d), do: Enum.reduce([a, b, c, d], nil, &least/2)
+  def least(a, b, c, d, e), do: Enum.reduce([a, b, c, d, e], nil, &least/2)
+
 
   ### Aggregate functions
   def is_aggregate("count"), do: true

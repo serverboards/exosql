@@ -1025,4 +1025,22 @@ end
     end)
     Task.await(pid)
   end
+
+  test "Ranges" do
+    res = analyze_query!("SELECT COUNT(*) FROM purchases WHERE date IN range('2017-01-01', '2017-12-31')")
+    assert res.rows == [[4]]
+
+    # availability of product
+    res = analyze_query!("SELECT COUNT(*) FROM campaigns WHERE range(datestart,dateend) * range('2017-01-15', '2017-09-15')")
+    assert res.rows == [[3]]
+
+    res = analyze_query!("
+      SELECT lower(match), upper(match) FROM (
+        SELECT (range(datestart,dateend) * range('2017-01-15', '2017-09-15')) AS match FROM campaigns
+        )")
+    assert res.rows == [
+       ["2017-01-15", "2017-03-31"], ["2017-04-01", "2017-05-31"],
+       ["2017-06-01", "2017-09-15"], [nil, nil]]
+
+  end
 end
