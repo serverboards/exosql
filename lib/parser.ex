@@ -20,6 +20,7 @@ defmodule ExoSQL.Parser do
   """
   defp real_parse(parsed, context) do
     %{
+      with: with_,
       select: select,
       from: from,
       where: where,
@@ -32,6 +33,19 @@ defmodule ExoSQL.Parser do
     } = parsed
     {select, select_options} = select
 
+    context = if with_ != [] do
+      Logger.debug("#{inspect parsed, pretty: true}")
+      context = Map.put(context, :with, %{})
+      context = Enum.reduce(with_, context, fn {name, select}, context ->
+        {:ok, parsed} = real_parse(select, context)
+        Logger.debug("parse with #{inspect parsed}")
+        context.put(context, :with, Map.put(context.with, name, parsed))
+      end)
+      Logger.debug("context #{inspect context}")
+    else
+      context
+    end
+
     from = Enum.map(from, &resolve_table(&1, context))
 
     all_tables = if join != [] do
@@ -41,7 +55,7 @@ defmodule ExoSQL.Parser do
     end
 
     all_schemas = resolve_all_columns(all_tables, context)
-    # Logger.debug("All tables: #{inspect all_tables}")
+    Logger.debug("All tables: #{inspect all_tables}")
     # Logger.debug("Resolved schemas: #{inspect all_schemas}")
 
     groupby = if groupby do
@@ -154,12 +168,16 @@ defmodule ExoSQL.Parser do
   specially when aliases are taken into account
   """
   def resolve_all_columns(tables, context) do
-    context_tables_columns = Enum.flat_map(context, fn {db, _config} ->
-      {:ok, tables} = ExoSQL.schema(db, context)
-      Enum.flat_map(tables, fn table ->
-        {:ok, schema} = ExoSQL.schema(db, table, context)
-        Enum.map(schema[:columns], &({db, table, &1}))
-      end)
+    context_tables_columns = Enum.flat_map(context, fn
+      {:with, tables} ->
+        Logger.debug("TODO")
+        []
+      {db, _config} ->
+        {:ok, tables} = ExoSQL.schema(db, context)
+        Enum.flat_map(tables, fn table ->
+          {:ok, schema} = ExoSQL.schema(db, table, context)
+          Enum.map(schema[:columns], &({db, table, &1}))
+        end)
     end)
 
     Enum.flat_map(tables, &resolve_columns(&1, context_tables_columns))

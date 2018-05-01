@@ -1054,7 +1054,6 @@ end
     end)
     Task.await(pid)
   end
-
   test "Ranges" do
     res = analyze_query!("SELECT COUNT(*) FROM purchases WHERE date IN range('2017-01-01', '2017-12-31')")
     assert res.rows == [[4]]
@@ -1091,5 +1090,25 @@ end
     # This is a pattern used to change simple values, normally empty strings and so on
     res = analyze_query!("SELECT COALESCE(NULLIF(name, 'David'), 'Me') FROM users")
     assert res.rows == [["Me"], ["Javier"], ["Patricio"]]
+  end
+
+  test "WITH" do
+    analyze_query!("
+      WITH customers AS (
+        SELECT * FROM users
+      ),
+      buy_per_customer AS (
+        SELECT customers.id, customers.name, SUM(purchases.quantity * product.price)
+          FROM products
+        INNER JOIN purchases
+           ON purchases.product_id = products.id
+        INNER JOIN customers
+           ON purchases.user_id = customers.id
+        GROUP BY customers.id, customers.name
+     )
+     SELECT name AS Bourgeoisie
+      FROM buy_per_customer
+      WHERE ammount > 10
+    ")
   end
 end

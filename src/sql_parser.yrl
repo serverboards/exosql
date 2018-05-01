@@ -1,5 +1,6 @@
 Nonterminals
-query complex_query
+  query simple_query complex_query
+  with_list with
   select select_expr select_expr_list
   from table_list
   where expr_list
@@ -15,7 +16,7 @@ Terminals
 id comma dot lit litn litf var
 open_par close_par open_br close_br open_sqb close_sqb
 op1 op2 op3 op4 op5 op6
-'SELECT' 'FROM' 'AS'
+'SELECT' 'FROM' 'AS' 'WITH'
 'OUTER' 'LEFT' 'RIGHT' 'INNER' 'CROSS' 'JOIN' 'ON'
 'WHERE' 'GROUP' 'BY' 'ORDER' 'ASC' 'DESC'
 'TRUE' 'FALSE' 'NOT' 'NULL'
@@ -25,19 +26,27 @@ op1 op2 op3 op4 op5 op6
 'UNION'
 .
 
-Rootsymbol complex_query.
+Rootsymbol query.
 
-complex_query -> query 'UNION' complex_query: maps:put(union, {all, '$3'}, '$1').
-complex_query -> query 'UNION' 'ALL' complex_query: maps:put(union, {distinct, '$4'}, '$1').
+query -> 'WITH' with_list complex_query: maps:put(with, '$2', '$3').
+query -> complex_query: '$1'.
 
-complex_query -> query: '$1'.
+complex_query -> simple_query 'UNION' complex_query: maps:put(union, {all, '$3'}, '$1').
+complex_query -> simple_query 'UNION' 'ALL' complex_query: maps:put(union, {distinct, '$4'}, '$1').
 
-query -> select from join where groupby orderby offset limit:
+complex_query -> simple_query: '$1'.
+
+simple_query -> select from join where groupby orderby offset limit:
     #{select => '$1', from => '$2', join => '$3', where => '$4',
-      groupby => '$5', orderby => '$6', offset => '$7', limit => '$8', union => nil}.
-query -> select:
+      groupby => '$5', orderby => '$6', offset => '$7', limit => '$8', union => nil, with => []}.
+simple_query -> select:
     #{select => '$1', from => [], join => [], where => nil, groupby => nil,
-      orderby => [], limit => nil, offset => nil, union => nil}.
+      orderby => [], limit => nil, offset => nil, union => nil, with => []}.
+
+with_list -> with: ['$1'].
+with_list -> with comma with_list: ['$1' | '$3'].
+
+with -> id 'AS' open_par complex_query close_par: {unwrap('$1'), '$4'}.
 
 select -> 'SELECT' 'DISTINCT' 'ON' open_par expr close_par select_expr_list : {'$7', [{distinct, '$5'}]}.
 select -> 'SELECT' 'DISTINCT' select_expr_list : {'$3', [{distinct, all_columns}]}.
@@ -119,7 +128,7 @@ expr_atom -> 'TRUE' : {lit, true}.
 expr_atom -> 'FALSE' : {lit, false}.
 expr_atom -> 'NULL' : {lit, nil}.
 expr_atom -> var : {var, unwrap('$1')}.
-expr_atom -> open_par query close_par : {select, '$2'}.
+expr_atom -> open_par simple_query close_par : {select, '$2'}.
 expr_atom -> open_par expr close_par : '$2'.
 expr_atom -> id open_par close_par : {fn, {unwrap_d('$1'), []}}.
 expr_atom -> id open_par expr_list close_par : {fn, {unwrap_d('$1'), '$3'}}.
