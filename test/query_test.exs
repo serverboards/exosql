@@ -1041,6 +1041,26 @@ end
     assert res.rows == [
        ["2017-01-15", "2017-03-31"], ["2017-04-01", "2017-05-31"],
        ["2017-06-01", "2017-09-15"], [nil, nil]]
+  end
 
+  test "Coalesce and NULLIF" do
+    res = analyze_query!("""
+      SELECT oid, users.name, products.name, COALESCE(users.name, products.name, 'no name')
+      FROM users
+      RIGHT JOIN products
+      ON products.id = users.id
+      RIGHT JOIN generate_series(6) AS oid
+      ON oid = products.id
+      ORDER BY oid
+      """)
+
+    assert res.rows == [
+       [1, "David", "sugus", "David"], [2, "Javier", "lollipop", "Javier"],
+       [3, "Patricio", "donut", "Patricio"], [4, nil, "water", "water"],
+       [5, nil, nil, "no name"], [6, nil, nil, "no name"]]
+
+    # This is a pattern used to change simple values, normally empty strings and so on
+    res = analyze_query!("SELECT COALESCE(NULLIF(name, 'David'), 'Me') FROM users")
+    assert res.rows == [["Me"], ["Javier"], ["Patricio"]]
   end
 end

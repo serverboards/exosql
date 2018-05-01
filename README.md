@@ -141,28 +141,9 @@ Formats a String using C sprintf-like parameters. Known placeholders are:
 * `%.2k` -- Metric System suffix with precision
 * `%,2k` -- Metric System, using `.` to separate thousands and `,` for decimals. Follow Spanish numbering system.
 
-#### `greatest(a, b[, c, d, e])`
-
-Get the greatest value of all the given ones.
-
-It's similar to `max` in other languages, but in SQL can not use `max` as it is
-an aggregation function with different semantics.
-
-#### `least(a, b[, c, d, e])`
-
-Get the lowest value of all the given ones.
-
-It's similar to `min` in other languages, but in SQL can not use `min` as it is
-an aggregation function with different semantics.
-
-
 #### `lower(str)`
 
 Lower case a full string.
-
-#### `lower(range)`
-
-Get the lower bound of a range.
 
 #### `join(str, sep=",")`
 
@@ -206,10 +187,6 @@ to_string(1)
 #### `upper(str)`
 
 Upper cases a full string
-
-#### `upper(range)`
-
-Get the upper bound of a range.
 
 ### Date time functions
 
@@ -304,6 +281,10 @@ there are no rows, returns 0.
 
 ### Miscellaneous functions
 
+#### `coalesce(a, b, ...)`
+
+Returns the first not NULL value.
+
 #### `generate_series(end)` / `generate_series(start, end, step=0)`
 
 This function generates a virtual table with one column and on each row a value of the series.
@@ -322,6 +303,13 @@ GROUP BY month
 
 This will return 0 for empty months on the purchases table.
 
+#### `greatest(a, b[, c, d, e])`
+
+Get the greatest value of all the given ones.
+
+It's similar to `max` in other languages, but in SQL can not use `max` as it is
+an aggregation function with different semantics.
+
 #### `jp(json, selector)`
 
 Does [JSON Pointer](https://tools.ietf.org/html/rfc6901) selection:
@@ -329,11 +317,32 @@ Does [JSON Pointer](https://tools.ietf.org/html/rfc6901) selection:
 * Use / to navigate through the object keys or array indexes.
 * If no data found, return `NULL`
 
-#### `RANDOM()`
+#### `least(a, b[, c, d, e])`
+
+Get the lowest value of all the given ones.
+
+It's similar to `min` in other languages, but in SQL can not use `min` as it is
+an aggregation function with different semantics.
+
+#### `lower(range)`
+
+Get the lower bound of a range.
+
+#### `nullif(a,b)`
+
+Returns NULL if A and B are equal. Else returns A.
+
+This is used for example to set a default value:
+
+```sql
+SELECT coalesce(nullif(name, ''), 'John Doe') FROM users
+```
+ 
+#### `random()`
 
 Return a random float between 0 and 1.
 
-#### `RANDINT(max)` / `RANDINT(min, max)`
+#### `randint(max)` / `RANDINT(min, max)`
 
 Returns a random integer between `min` and `max`.
 
@@ -353,6 +362,10 @@ as a boolean.
 #### `round(number, precision=0)`
 
 Returns the number rounded to the given precission. May be convert to integer if precission is 0.
+
+#### `upper(range)`
+
+Get the upper bound of a range.
 
 #### `urlparse(string, sel="")`
 

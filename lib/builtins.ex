@@ -39,6 +39,8 @@ defmodule ExoSQL.Builtins do
     "range" => {ExoSQL.Builtins, :range},
     "greatest" => {ExoSQL.Builtins, :greatest},
     "lowest" => {ExoSQL.Builtins, :lowest},
+    "coalesce" => {ExoSQL.Builtins, :coalesce},
+    "nullif" => {ExoSQL.Builtins, :nullif},
 
     ## Aggregates
     "count" => {ExoSQL.Builtins, :count},
@@ -414,6 +416,19 @@ defmodule ExoSQL.Builtins do
   def least(a, b, c, d), do: Enum.reduce([a, b, c, d], nil, &least/2)
   def least(a, b, c, d, e), do: Enum.reduce([a, b, c, d, e], nil, &least/2)
 
+  @doc ~S"""
+  Returns the first not NULL
+  """
+  def coalesce(a, b), do: Enum.find([a, b], &(&1 != nil))
+  def coalesce(a, b, c), do: Enum.find([a, b, c], &(&1 != nil))
+  def coalesce(a, b, c, d), do: Enum.find([a, b, c, d], &(&1 != nil))
+  def coalesce(a, b, c, d, e), do: Enum.find([a, b, c, d, e], &(&1 != nil))
+
+  @doc ~S"""
+  Returns NULL if both equal, first argument if not.
+  """
+  def nullif(a, a), do: nil
+  def nullif(a, _), do: a
 
   ### Aggregate functions
   def is_aggregate("count"), do: true
