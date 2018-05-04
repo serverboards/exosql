@@ -118,6 +118,16 @@ defmodule QueryTest do
 
     res = analyze_query!("SELECT 115 % 60")
     assert res.rows == [[ 55 ]]
+
+    res = analyze_query!("SELECT round(1.2), round(1), round('1.6')")
+    assert res.rows == [[1,1,2 ]]
+
+    res = analyze_query!("SELECT ceil(1.2), ceil(1), ceil('1.6')")
+    assert res.rows == [[2,1,2 ]]
+
+    res = analyze_query!("SELECT floor(1.2), floor(1), floor('1.6')")
+    assert res.rows == [[1,1,1 ]]
+
   end
 
   test "Select * from" do

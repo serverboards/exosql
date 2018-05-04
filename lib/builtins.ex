@@ -41,6 +41,8 @@ defmodule ExoSQL.Builtins do
     "lowest" => {ExoSQL.Builtins, :lowest},
     "coalesce" => {ExoSQL.Builtins, :coalesce},
     "nullif" => {ExoSQL.Builtins, :nullif},
+    "floor" => {ExoSQL.Builtins, :floor},
+    "ceil" => {ExoSQL.Builtins, :ceil},
 
     ## Aggregates
     "count" => {ExoSQL.Builtins, :count},
@@ -372,8 +374,6 @@ defmodule ExoSQL.Builtins do
   def jp(json, [head | rest]), do: jp(Map.get(json, head, nil), rest)
   def jp(json, []), do: json
 
-
-
   @doc ~S"""
   Creates a range, which can later be used in:
 
@@ -429,6 +429,14 @@ defmodule ExoSQL.Builtins do
   """
   def nullif(a, a), do: nil
   def nullif(a, _), do: a
+
+  def floor(n) when is_float(n), do: trunc(Float.floor(n))
+  def floor(n) when is_number(n), do: n
+  def floor(n), do: floor(ExoSQL.Utils.to_number!(n))
+
+  def ceil(n) when is_float(n), do: trunc(Float.ceil(n))
+  def ceil(n) when is_number(n), do: n
+  def ceil(n), do: ceil(ExoSQL.Utils.to_number!(n))
 
   ### Aggregate functions
   def is_aggregate("count"), do: true
