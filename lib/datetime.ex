@@ -38,7 +38,7 @@ defmodule ExoSQL.DateTime do
           {:ok, td, 0} = DateTime.from_iso8601(n)
           td
         24 ->
-          {:ok, td, 0} = DateTime.from_iso8601(n)
+          {:ok, td, _} = DateTime.from_iso8601(n)
           td
       end
     else

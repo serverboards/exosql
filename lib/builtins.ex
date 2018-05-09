@@ -108,7 +108,8 @@ defmodule ExoSQL.Builtins do
   def to_string_(%DateTime{} = d), do: DateTime.to_iso8601(d)
   def to_string_(s), do: to_string(s)
 
-  def now(), do: DateTime.utc_now()
+  def now(), do: Timex.local()
+  def now(tz), do: Timex.now(tz)
   def to_datetime(other), do: ExoSQL.DateTime.to_datetime(other)
   def to_datetime(other, mod), do: ExoSQL.DateTime.to_datetime(other, mod)
   def to_timestamp(%DateTime{} = d), do: DateTime.to_unix(d)
