@@ -223,7 +223,7 @@ Most common markers:
 * `%F` -- ISO year: yyyy-mm-dd
 * `%H` -- Time: HH:MM:SS
 
-#### `to_datetime(str | int, mod \\ nil)`
+#### `to_datetime(str | int, mod \\ nil)` / `to_datetime(str | int, timezone)`
 
 Converts the given string or integer to a date.
 
@@ -238,18 +238,36 @@ The string must be in ISO8859 sub string format:
 
 This is called implicitly on `strftime` calls, and normally is not needed.
 
+Last argument can be a modifier to add or subtract time, or a timezone shifter.
+
+##### Datetime modifier
+
+`mod` MUST start with `+` or `-`
+
 If `mod` is given it is a duration modifier as defined by
 [ISO8601](https://en.wikipedia.org/wiki/ISO_8601#Durations), with the following
 changes:
 
-* Initial `P` is optional
-* Can start with a sign to donte subtraction: `-`
+* Must start with `+` or `-`
+* A subsequent `P` is optional
 
 For example:
 
 * Subtract one month `to_datetime(NOW(), "-1M")`
-* Add 30 minutes: `to_datetime(NOW(), "T30M")`
+* Add 30 minutes: `to_datetime(NOW(), "+T30M")`
 * One year and a half and 6 minutes ago: `to_datetime(NOW(), "-1Y1MT6M")`
+
+
+##### Datetime timezone change
+
+If a timezone is provided the datetime will be changed from the current timezone
+to the provided one, making the appropiate changes to the datetime.
+
+For example, `to_datetime(0, 'Europe/Madrid')` gives the Madrid time for unix
+epoch 0: `1970-01-01 01:00:00+01:00 CET Europe/Madrid`.
+
+Check https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for the
+timezone names.
 
 ### Boolean functions
 

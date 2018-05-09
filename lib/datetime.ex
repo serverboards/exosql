@@ -61,7 +61,7 @@ defmodule ExoSQL.DateTime do
     duration = Timex.Duration.parse!(mod)
     Timex.subtract(dt, duration)
   end
-  def to_datetime(dt, mod) do
+  def to_datetime(dt, "+" <> mod) do
     dt = to_datetime(dt)
     mod = if String.starts_with?(mod, "P") do
       mod
@@ -70,6 +70,11 @@ defmodule ExoSQL.DateTime do
     end
     duration = Timex.Duration.parse!(mod)
     Timex.add(dt, duration)
+  end
+  def to_datetime(dt, tz) do
+    dt = to_datetime(dt)
+
+    Timex.to_datetime(dt, tz)
   end
 
   @units %{

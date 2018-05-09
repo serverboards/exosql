@@ -64,9 +64,15 @@ defmodule ExoSQL do
 
   def query(sql, context) do
     # Logger.debug(inspect sql)
-    with {:ok, parsed} <- ExoSQL.Parser.parse(sql, context),
-         {:ok, plan} <- ExoSQL.Planner.plan(parsed) do
-         ExoSQL.Executor.execute(plan, context)
+    try do
+      with {:ok, parsed} <- ExoSQL.Parser.parse(sql, context),
+           {:ok, plan} <- ExoSQL.Planner.plan(parsed) do
+           ExoSQL.Executor.execute(plan, context)
+      end
+    catch
+      any -> {:error, any}
+    rescue
+      any -> {:error, any}
     end
     # Logger.debug("parsed #{inspect parsed, pretty: true}")
     # Logger.debug("planned #{inspect plan, pretty: true}")
@@ -112,7 +118,11 @@ defmodule ExoSQL do
   def repl(context \\ @default_context) do
     input = IO.gets("exosql> ") |> String.trim
     case input do
-      "" -> :eof
+      "\q" -> :eof
+      "exit" -> :eof
+      "quit" -> :eof
+      "" ->
+        repl(context)
       _other ->
         case query(input, context) do
           {:ok, result} ->
