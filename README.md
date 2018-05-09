@@ -337,7 +337,7 @@ This is used for example to set a default value:
 ```sql
 SELECT coalesce(nullif(name, ''), 'John Doe') FROM users
 ```
- 
+
 #### `random()`
 
 Return a random float between 0 and 1.
@@ -345,6 +345,21 @@ Return a random float between 0 and 1.
 #### `randint(max)` / `RANDINT(min, max)`
 
 Returns a random integer between `min` and `max`.
+
+### `range(start, end)`
+
+Returns a range that later can be used to get intersection `*` or membership.
+
+For example, the following query will check if `NOW()` is in the intersection of
+some range given by parameters `$start` and `$end` and the range set by the columns
+`start` and `end`.
+
+```sql
+SELECT NOW() IN (range(start, end) * range($start, $end))
+FROM dates
+```
+
+It works for both dates, texts and numbers.
 
 #### `regex(str, regex, query \\ nil)`
 
