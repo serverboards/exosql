@@ -71,4 +71,56 @@ defmodule ExoSQL.DateTime do
     duration = Timex.Duration.parse!(mod)
     Timex.add(dt, duration)
   end
+
+  @units %{
+    "minutes" => 60,
+    "hours" => 60 * 60,
+    "days" => 24 * 60 * 60,
+    "weeks" => 7 * 24 * 60 * 60,
+  }
+
+  def datediff({:range, start, end_}), do: datediff(start, end_, "days")
+  def datediff({:range, start, end_}, units), do: datediff(start, end_, units)
+  def datediff(start, end_), do: datediff(start, end_, "days")
+  def datediff(%DateTime{} = start, %DateTime{} = end_, "years") do
+    if start > end_ do
+      -datediff(end_, start, :years)
+    else
+      years = end_.year - start.year
+
+      if end_.month < start.month do
+        years - 1
+      else
+        years
+      end
+    end
+  end
+  def datediff(%DateTime{} = start, %DateTime{} = end_, "months") do
+    if start > end_ do
+      -datediff(end_, start, :months)
+    else
+      years = datediff(start, end_, "years")
+
+      months = if start.month < end_.month do
+        end_.month - start.month
+      else
+        end_.month + 12 - start.month
+      end
+
+      years * 12 + months
+    end
+  end
+  def datediff(%DateTime{} = start, %DateTime{} = end_, "seconds") do
+    DateTime.diff(end_, start, :second)
+  end
+  def datediff(%DateTime{} = start, %DateTime{} = end_, unit) do
+    div( DateTime.diff(end_, start, :second), Map.get(@units, unit))
+  end
+  def datediff(start, end_, unit) do
+    start = to_datetime(start)
+    end_ = to_datetime(end_)
+
+    datediff(start, end_, unit)
+  end
+
 end

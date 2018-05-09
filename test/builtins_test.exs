@@ -127,4 +127,20 @@ defmodule ExoSQL.BuiltinsTest do
     assert ExoSQL.Builtins.format("%,k €", 2_001_000.53) == "2MM €"
     assert ExoSQL.Builtins.format("%,k €", 2_200_000.53) == "2,2MM €"
   end
+
+  test "datediff" do
+    assert ExoSQL.DateTime.datediff("2018-01-01", "2018-02-01", "months") == 1
+    assert ExoSQL.DateTime.datediff("2018-01-01", "2018-02-01", "years") == 0
+    assert ExoSQL.DateTime.datediff("2018-01-01", "2018-02-01", "seconds") == 31*24*60*60
+    assert ExoSQL.DateTime.datediff("2018-01-01", "2018-02-01", "days") == 31
+    assert ExoSQL.DateTime.datediff("2018-01-01", "2018-02-01", "weeks") == 4
+
+    assert ExoSQL.DateTime.datediff("2017-01-01", "2018-02-01", "months") == 13
+    assert ExoSQL.DateTime.datediff("2017-01-01", "2018-02-01", "years") == 1
+
+    assert ExoSQL.DateTime.datediff("2018-01-01", "2017-02-01", "months") == -11
+    assert ExoSQL.DateTime.datediff("2018-01-01", "2017-02-01", "years") == -1
+
+    assert ExoSQL.DateTime.datediff("2018-03-01", "2018-02-01", "seconds") == -2419200
+  end
 end

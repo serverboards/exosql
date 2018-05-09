@@ -190,6 +190,10 @@ Upper cases a full string
 
 ### Date time functions
 
+#### `datediff(start, end, unit \\ "days")` / `datediff(range, unit \\ "days")`
+
+Returns how many `unit` has passed since start to end.
+
 #### `now()`
 
 Returns current datetime.

@@ -43,6 +43,7 @@ defmodule ExoSQL.Builtins do
     "nullif" => {ExoSQL.Builtins, :nullif},
     "floor" => {ExoSQL.Builtins, :floor},
     "ceil" => {ExoSQL.Builtins, :ceil},
+    "datediff" => {ExoSQL.DateTime, :datediff},
 
     ## Aggregates
     "count" => {ExoSQL.Builtins, :count},
