@@ -48,6 +48,7 @@ defmodule ExoSQL do
       limit: nil,
       offset: nil,
       union: nil,
+      with: [],
     ]
   end
 

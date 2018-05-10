@@ -169,7 +169,12 @@ defmodule ExoSQL.Planner do
     end
 
 
-    plan = union_plan
+    with_plan = Enum.reduce(query.with, union_plan, fn {name, query}, prev_plan ->
+      {:ok, plan} = plan(query)
+      {:with, {name, plan}, prev_plan}
+    end)
+
+    plan = with_plan
 
     {:ok, plan}
   end
