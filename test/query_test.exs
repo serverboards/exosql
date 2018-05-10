@@ -2,7 +2,7 @@ require Logger
 
 defmodule QueryTest do
   use ExUnit.Case
-  @moduletag :capture_log
+  # @moduletag :capture_log
 
   @context %{
     "A" => {ExoSQL.Csv, path: "test/data/csv/"},
@@ -47,6 +47,13 @@ defmodule QueryTest do
 
     result = analyze_query!("SELECT upper(\"test\")", context)
     assert result.rows == [["TEST"]]
+  end
+
+  # This BUG caused infinite recursion ant finally timeout.
+  test "No column at table" do
+    analyze_query!("
+      SELECT SUM(products.quantity*id) FROM products
+      ")
   end
 
   test "Simple WHERE" do
@@ -1098,7 +1105,7 @@ end
         SELECT * FROM users
       ),
       buy_per_customer AS (
-        SELECT customers.id, customers.name, SUM(purchases.quantity * product.price)
+        SELECT customers.id, customers.name, SUM(purchases.amount * products.price) as amount
           FROM products
         INNER JOIN purchases
            ON purchases.product_id = products.id
@@ -1108,7 +1115,7 @@ end
      )
      SELECT name AS Bourgeoisie
       FROM buy_per_customer
-      WHERE ammount > 10
+      WHERE amount > 10
     ")
   end
 end
