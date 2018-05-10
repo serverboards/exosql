@@ -76,6 +76,7 @@ end
 * `CASE` `WHEN` `THEN` `ELSE` `END` / `IF` `THEN` `ELIF` `ELSE` `END`.
 * `UNION` and `UNION ALL`.
 * `RANGE`
+* `WITH` common table expressions
 * table and column alias with `AS`
 * nested `SELECT`: At `FROM`, `SELECT`, `WHERE`...
 * `generate_series` function tables
