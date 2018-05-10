@@ -2,7 +2,7 @@ require Logger
 
 defmodule QueryTest do
   use ExUnit.Case
-  # @moduletag :capture_log
+  @moduletag :capture_log
 
   @context %{
     "A" => {ExoSQL.Csv, path: "test/data/csv/"},
@@ -51,9 +51,13 @@ defmodule QueryTest do
 
   # This BUG caused infinite recursion ant finally timeout.
   test "No column at table" do
-    analyze_query!("
-      SELECT SUM(products.quantity*id) FROM products
-      ")
+    try do
+      analyze_query!("
+        SELECT SUM(products.quantity*id) FROM products
+        ")
+    rescue
+      _ in MatchError -> :ok
+    end
   end
 
   test "Simple WHERE" do

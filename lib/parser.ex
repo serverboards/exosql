@@ -123,6 +123,8 @@ defmodule ExoSQL.Parser do
       {type, other}
     end
 
+    with_ = Map.get(context, :with, %{})
+
     {:ok, %ExoSQL.Query{
       select: select,
       distinct: distinct,
@@ -134,7 +136,7 @@ defmodule ExoSQL.Parser do
       limit: limit,
       offset: offset,
       union: union,
-      with: context.with
+      with: with_
     }}
   end
 

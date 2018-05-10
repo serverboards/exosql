@@ -92,6 +92,12 @@ defmodule ExoSQL.Executor do
       rows: res.rows
     }}
   end
+
+  def execute({:execute, {:with, table}, _quals, columns}, context) do
+    data = context[:with][table]
+    column_reselect(data, columns, :with, table, context)
+  end
+
   def execute({:execute, {db, table}, quals, columns}, context) do
     # Logger.debug("#{inspect {db, table, columns, context}}")
     {dbmod, ctx} = context[db]
@@ -102,7 +108,7 @@ defmodule ExoSQL.Executor do
       column
     end)
 
-    data = apply(dbmod, :execute, [ctx, table, quals, scolumns])
+    {:ok, data} = apply(dbmod, :execute, [ctx, table, quals, scolumns])
     column_reselect(data, columns, db, table, context)
   end
 
@@ -268,6 +274,19 @@ defmodule ExoSQL.Executor do
     end
   end
 
+  def execute({:with, {name, plan}, next}, context) do
+    {:ok, data} = execute(plan, context)
+
+    data = %{ data |
+      columns: Enum.map(data.columns, fn {_, _, name} -> name end)
+    }
+
+    newwith = Map.put(Map.get(context, :with, %{}), name, data)
+    context = Map.put(context, :with, newwith)
+
+    execute(next, context)
+  end
+
 
   def execute(%ExoSQL.Result{} = res, _context), do: {:ok, res}
   def execute(%{ rows: rows, columns: columns}, _context), do: {:ok, %ExoSQL.Result{ rows: rows, columns: columns }}
@@ -408,12 +427,12 @@ defmodule ExoSQL.Executor do
   # common data that given a result, reorders the columns as required
   def column_reselect(data, columns, db, table, context) do
     case data do
-      {:ok, %{ columns: ^columns, rows: rows}} ->
+      %{ columns: ^columns, rows: rows} ->
         {:ok, %ExoSQL.Result{
           columns: Enum.map(columns, fn c -> {db, table, c} end),
           rows: rows
         }}
-      {:ok, %{ columns: rcolumns, rows: rows}} ->
+      %{ columns: rcolumns, rows: rows} ->
         result = %ExoSQL.Result{
           columns: Enum.map(rcolumns, fn c -> {db, table, c} end),
           rows: rows
