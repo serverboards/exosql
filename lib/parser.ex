@@ -33,6 +33,9 @@ defmodule ExoSQL.Parser do
     } = parsed
     {select, select_options} = select
 
+    all_tables_at_context = resolve_all_tables(context)
+    Logger.debug("All tables #{inspect all_tables_at_context}")
+
     context = if with_ != [] do
       Logger.debug("#{inspect parsed, pretty: true}")
       context = Map.put(context, :with, %{})
@@ -46,27 +49,28 @@ defmodule ExoSQL.Parser do
       context
     end
 
-    from = Enum.map(from, &resolve_table(&1, context))
+    from = Enum.map(from, &resolve_table(&1, all_tables_at_context, context))
 
     all_tables = if join != [] do
-      from ++ Enum.map(join, fn {_type, {table, _expr}} -> resolve_table(table, context) end)
+      from ++ Enum.map(join, fn {_type, {table, _expr}} -> resolve_table(table, all_tables_at_context, context) end)
     else
       from
     end
+    Logger.debug("All tables at all columns #{inspect all_tables}")
 
-    all_schemas = resolve_all_columns(all_tables, context)
-    Logger.debug("All tables: #{inspect all_tables}")
-    # Logger.debug("Resolved schemas: #{inspect all_schemas}")
+    all_columns = resolve_all_columns(all_tables, context)
+    # Logger.debug("All tables: #{inspect all_tables}")
+    Logger.debug("Resolved columns at query: #{inspect all_columns}")
 
     groupby = if groupby do
-      Enum.map(groupby, &resolve_column(&1, all_schemas, context))
+      Enum.map(groupby, &resolve_column(&1, all_columns, context))
     else nil end
 
     # Logger.debug("All tables #{inspect all_tables}")
     join = Enum.map(join, fn {type, {table, expr}} ->
       {type, {
-        resolve_table(table, context),
-        resolve_column(expr, all_schemas, context)
+        resolve_table(table, all_tables_at_context, context),
+        resolve_column(expr, all_columns, context)
       }}
     end)
 
@@ -88,29 +92,29 @@ defmodule ExoSQL.Parser do
                 {:column, col}
             end)
           {:alias, {{db, table}, alias_}} ->
-            {:ok, %{ columns: columns }} = ExoSQL.schema(db, table, context)
+            columns = get_table_columns({:tmp, alias_}, all_columns)
             Enum.map(columns, &{:column, {:tmp, alias_, &1}})
           {db, table} ->
-            {:ok, %{ columns: columns }} = ExoSQL.schema(db, table, context)
+            columns = get_table_columns({db, table}, all_columns)
             Enum.map(columns, &{:column, {db, table, &1}})
         end)
       _other  ->
-        Enum.map(select, &resolve_column(&1, all_schemas, context))
+        Enum.map(select, &resolve_column(&1, all_columns, context))
     end
     # Logger.debug("Resolved: #{inspect select}")
     distinct = case Keyword.get(select_options, :distinct) do
       nil -> nil
-      other -> resolve_column(other, all_schemas, context)
+      other -> resolve_column(other, all_columns, context)
     end
 
     where = if where do
-      resolve_column(where, all_schemas, context)
+      resolve_column(where, all_columns, context)
     else nil end
 
     # Resolve orderby
     orderby = Enum.map(orderby, fn
       {type, expr} ->
-        {type, resolve_column(expr, all_schemas, context)}
+        {type, resolve_column(expr, all_columns, context)}
     end)
 
     # resolve union
@@ -168,47 +172,44 @@ defmodule ExoSQL.Parser do
   specially when aliases are taken into account
   """
   def resolve_all_columns(tables, context) do
-    context_tables_columns = Enum.flat_map(context, fn
-      {:with, tables} ->
-        Logger.debug("TODO")
+    all_columns = Enum.flat_map(tables, fn
+      {:alias, {{:fn, {_function, _params}}, alias_}} ->
+        [{:tmp, alias_, alias_}]
+      {:alias, {table, alias_}} ->
+        resolve_all_columns([table], context) |> Enum.map(fn
+          {_db, _table, column} -> {:tmp, alias_, column}
+        end)
+      {db, table} when is_binary(table)->
+        {:ok, schema} = ExoSQL.schema(db, table, context)
+        Enum.map(schema[:columns], &({db, table, &1}))
+      {:fn, {function, _params}} ->
+        [{:tmp, function, function}]
+      other ->
+        resolve_columns(other)
+    end)
+
+    all_columns
+  end
+
+  @doc ~S"""
+  Resolves all known tables at this context. This helps to fully qualify tables.
+
+  TODO Could be more efficient accessing as little as possible the schemas, but
+  maybe not possible.
+  """
+  def resolve_all_tables(context) do
+    Logger.debug("#{inspect context}")
+    Enum.flat_map(context, fn
+      {:with, _} ->
+        Logger.debug("TODO WITH")
         []
       {db, _config} ->
         {:ok, tables} = ExoSQL.schema(db, context)
-        Enum.flat_map(tables, fn table ->
-          {:ok, schema} = ExoSQL.schema(db, table, context)
-          Enum.map(schema[:columns], &({db, table, &1}))
-        end)
+        tables |> Enum.map( &{db, &1})
     end)
-
-    Enum.flat_map(tables, &resolve_columns(&1, context_tables_columns))
   end
 
-  # if alias is for a function, also re-alias column names for ease of use (NON SQL)
-  def resolve_columns({:alias, {{:fn, _} = aliased, alias_}}, context_tables_columns) do
-    columns = resolve_columns(aliased, context_tables_columns)
-    Enum.map(columns, fn {_, _, _} ->
-      {:tmp, alias_, alias_}
-    end)
-  end
-  def resolve_columns({:alias, {aliased, alias_}}, context_tables_columns) do
-    columns = resolve_columns(aliased, context_tables_columns)
-    # Logger.debug("Get column from aliased #{inspect {aliased, alias_}}: #{inspect columns}")
-    Enum.map(columns, fn {_, _, column} ->
-      {:tmp, alias_, column}
-    end)
-  end
-  def resolve_columns({:fn, {function, _params}}, _context_tables_columns) do
-    [{:tmp, function, function}]
-  end
-  def resolve_columns({nil, table}, context_tables_columns) do
-    columns = Enum.flat_map(context_tables_columns, fn
-      {db, ^table, column} -> [{db, table, column}]
-      _other -> []
-    end)
-    # Logger.debug("Get column from table #{inspect table}: #{inspect columns}")
-    columns
-  end
-  def resolve_columns({:select, query}, _context_tables_columns) do
+  def resolve_columns({:select, query}) do
     {columns, _} = Enum.reduce(query[:select], {[], 1}, fn column, {acc, count} ->
       # Logger.debug("Resolve column name for: #{inspect column}")
       column = case column do
@@ -224,31 +225,18 @@ defmodule ExoSQL.Parser do
     # Logger.debug("Get column from select #{inspect query[:select]}: #{inspect columns}")
     columns
   end
-  def resolve_columns({:table, {db, table}}, context_tables_columns) do
-    resolve_columns({db, table}, context_tables_columns)
-  end
-  def resolve_columns({db, table}, context_tables_columns) do
-    columns = Enum.flat_map(context_tables_columns, fn
-      {^db, ^table, column} -> [{db, table, column}]
-      _other -> []
-    end)
-    # Logger.debug("Get column from table #{inspect {db,table}}: #{inspect columns}")
-    columns
-  end
-  def resolve_columns(%ExoSQL.Query{  } = q, _context_tables_columns) do
+  def resolve_columns(%ExoSQL.Query{  } = q) do
     get_query_columns(q)
   end
 
-  def resolve_table({:table, {nil, name}}, context) when is_binary(name) do
-    # Logger.debug("#{inspect context}")
-    options = Enum.flat_map(context, fn {dbname, _db} ->
-      {:ok, tables} = ExoSQL.schema(dbname, context)
-      # Logger.debug("Resolved #{inspect tables}")
-      tables
-        |> Enum.filter(&(&1 == name))
-        |> Enum.map(&{dbname, &1})
-    end)
+  def get_table_columns({db, table}, all_columns) do
+    for {^db, ^table, column} <- all_columns, do: column
+  end
 
+  def resolve_table({:table, {nil, name}}, all_tables, context) when is_binary(name) do
+    # Logger.debug("Resolve #{inspect name} at #{inspect all_tables}")
+    options = for {db, ^name} <- all_tables, do: {db, name}
+    # Logger.debug("Options are #{inspect options}")
 
     case options do
       [table] -> table
@@ -256,14 +244,14 @@ defmodule ExoSQL.Parser do
       _other -> throw {:ambiguous_table_name, name}
     end
   end
-  def resolve_table({:table, {_db, _name} = orig} , _context), do: orig
-  def resolve_table({:select, query}, context) do
+  def resolve_table({:table, {_db, _name} = orig}, _all_tables, _context), do: orig
+  def resolve_table({:select, query}, _all_tables, context) do
     {:ok, parsed} = real_parse(query, context)
     parsed
   end
-  def resolve_table({:fn, _function} = orig, _context), do: orig
-  def resolve_table({:alias, {table, alias_}}, context) do
-    {:alias, {resolve_table(table, context), alias_}}
+  def resolve_table({:fn, _function} = orig, _all_tables, _context), do: orig
+  def resolve_table({:alias, {table, alias_}}, all_tables, context) do
+    {:alias, {resolve_table(table, all_tables, context), alias_}}
   end
 
   @doc ~S"""
