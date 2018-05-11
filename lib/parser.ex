@@ -158,7 +158,7 @@ defmodule ExoSQL.Parser do
       real_parse(parsed, context)
     catch
       {line_number, :sql_lexer, msg} ->
-        {:error, {:syntax  {msg, line_number}}}
+        {:error, {:syntax, {msg, line_number}}}
       {line_number, :sql_parser, msg} ->
         {:error, {:syntax, {to_string(msg), line_number}}}
       any ->
