@@ -265,7 +265,7 @@ defmodule ExoSQL.Executor do
     {:ok, datab} = execute(fromb, context)
 
     if Enum.count(dataa.columns) != Enum.count(datab.columns) do
-      {:error, :union_column_count_mismatch}
+      {:error, {:union_column_count_mismatch}}
     else
       {:ok, %ExoSQL.Result{
         columns: dataa.columns,
