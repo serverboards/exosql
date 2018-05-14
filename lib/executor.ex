@@ -108,8 +108,13 @@ defmodule ExoSQL.Executor do
       column
     end)
 
-    {:ok, data} = apply(dbmod, :execute, [ctx, table, quals, scolumns])
-    column_reselect(data, columns, db, table, context)
+    executor_res = apply(dbmod, :execute, [ctx, table, quals, scolumns])
+    case executor_res do
+      {:ok, data} ->
+        column_reselect(data, columns, db, table, context)
+      {:error, other} ->
+        {:error, {:extractor, {db, table}, other}}
+    end
   end
 
   def execute({:filter, from, expr}, context) do
