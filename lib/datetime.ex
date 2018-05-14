@@ -84,8 +84,8 @@ defmodule ExoSQL.DateTime do
     "weeks" => 7 * 24 * 60 * 60,
   }
 
-  def datediff({:range, start, end_}), do: datediff(start, end_, "days")
-  def datediff({:range, start, end_}, units), do: datediff(start, end_, units)
+  def datediff({:range, {start, end_}}), do: datediff(start, end_, "days")
+  def datediff({:range, {start, end_}}, units), do: datediff(start, end_, units)
   def datediff(start, end_), do: datediff(start, end_, "days")
   def datediff(%DateTime{} = start, %DateTime{} = end_, "years") do
     if start > end_ do

@@ -371,7 +371,11 @@ Returns a random integer between `min` and `max`.
 
 ### `range(start, end)`
 
-Returns a range that later can be used to get intersection `*` or membership.
+Returns a halt open interval `[start, end)` that later can be used to get
+intersection `*` or membership.
+
+The range includes the `start` but not the `end` (`all X | start >= X < end`).
+This is important for later datediff and similar.
 
 For example, the following query will check if `NOW()` is in the intersection of
 some range given by parameters `$start` and `$end` and the range set by the columns
