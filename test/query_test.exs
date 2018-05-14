@@ -1080,6 +1080,10 @@ end
     assert res.rows == [
        ["2017-01-15", "2017-03-31"], ["2017-04-01", "2017-05-31"],
        ["2017-06-01", "2017-09-15"], [nil, nil]]
+
+
+    res = analyze_query!("SELECT lower(range(1,1000)), upper(range(1,1000))")
+    assert res.rows == [[1, 1000]]
   end
 
   test "Coalesce and NULLIF" do

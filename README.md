@@ -388,6 +388,8 @@ FROM dates
 
 It works for both dates, texts and numbers.
 
+Ranges can be decomposed with `lower(range)` and `upper(range)`.
+
 #### `regex(str, regex, query \\ nil)`
 
 Performs a regex search on the string.
