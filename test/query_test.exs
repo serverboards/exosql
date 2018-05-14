@@ -371,7 +371,7 @@ defmodule QueryTest do
     assert String.ends_with?(dt, "Z")
 
     result = analyze_query!("SELECT to_string(now())")
-    [[dt]] = result.rows
+    [[_dt]] = result.rows
     # assert not String.ends_with?(dt, "Z")
 
     result = analyze_query!("SELECT to_string(now('US/Eastern'))")

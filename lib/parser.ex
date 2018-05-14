@@ -37,10 +37,10 @@ defmodule ExoSQL.Parser do
     context = if with_ != [] do
       # Logger.debug("Parsed #{inspect parsed, pretty: true}")
       context = Map.put(context, :with, %{})
-      context = Enum.reduce(with_, context, fn {name, select}, context ->
+      Enum.reduce(with_, context, fn {name, select}, context ->
         {:ok, parsed} = real_parse(select, context)
         # Logger.debug("parse with #{inspect parsed}")
-        context = Map.put(context, :with, Map.put(context.with, name, parsed))
+        Map.put(context, :with, Map.put(context.with, name, parsed))
       end)
     else
       context
@@ -90,7 +90,7 @@ defmodule ExoSQL.Parser do
               {_orig, col} ->
                 {:column, col}
             end)
-          {:alias, {{db, table}, alias_}} ->
+          {:alias, {{_db, _table}, alias_}} ->
             columns = get_table_columns({:tmp, alias_}, all_columns)
             Enum.map(columns, &{:column, {:tmp, alias_, &1}})
           {db, table} ->
@@ -237,7 +237,7 @@ defmodule ExoSQL.Parser do
     for {^db, ^table, column} <- all_columns, do: column
   end
 
-  def resolve_table({:table, {nil, name}}, all_tables, context) when is_binary(name) do
+  def resolve_table({:table, {nil, name}}, all_tables, _context) when is_binary(name) do
     # Logger.debug("Resolve #{inspect name} at #{inspect all_tables}")
     options = for {db, ^name} <- all_tables, do: {db, name}
     # Logger.debug("Options are #{inspect options}")
