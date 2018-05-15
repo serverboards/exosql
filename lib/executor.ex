@@ -108,8 +108,13 @@ defmodule ExoSQL.Executor do
       column
     end)
 
-    {:ok, data} = apply(dbmod, :execute, [ctx, table, quals, scolumns])
-    column_reselect(data, columns, db, table, context)
+    executor_res = apply(dbmod, :execute, [ctx, table, quals, scolumns])
+    case executor_res do
+      {:ok, data} ->
+        column_reselect(data, columns, db, table, context)
+      {:error, other} ->
+        {:error, {:extractor, {db, table}, other}}
+    end
   end
 
   def execute({:filter, from, expr}, context) do
@@ -265,7 +270,7 @@ defmodule ExoSQL.Executor do
     {:ok, datab} = execute(fromb, context)
 
     if Enum.count(dataa.columns) != Enum.count(datab.columns) do
-      {:error, :union_column_count_mismatch}
+      {:error, {:union_column_count_mismatch}}
     else
       {:ok, %ExoSQL.Result{
         columns: dataa.columns,

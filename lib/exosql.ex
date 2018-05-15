@@ -73,6 +73,13 @@ defmodule ExoSQL do
     catch
       any -> {:error, any}
     rescue
+      err in MatchError->
+        case err.term do
+          {:error, error} ->
+            {:error, error}
+          other ->
+            {:error, {:match, other}}
+        end
       any -> {:error, any}
     end
     # Logger.debug("parsed #{inspect parsed, pretty: true}")

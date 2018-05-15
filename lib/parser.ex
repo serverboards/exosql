@@ -37,10 +37,10 @@ defmodule ExoSQL.Parser do
     context = if with_ != [] do
       # Logger.debug("Parsed #{inspect parsed, pretty: true}")
       context = Map.put(context, :with, %{})
-      context = Enum.reduce(with_, context, fn {name, select}, context ->
+      Enum.reduce(with_, context, fn {name, select}, context ->
         {:ok, parsed} = real_parse(select, context)
         # Logger.debug("parse with #{inspect parsed}")
-        context = Map.put(context, :with, Map.put(context.with, name, parsed))
+        Map.put(context, :with, Map.put(context.with, name, parsed))
       end)
     else
       context
@@ -90,7 +90,7 @@ defmodule ExoSQL.Parser do
               {_orig, col} ->
                 {:column, col}
             end)
-          {:alias, {{db, table}, alias_}} ->
+          {:alias, {{_db, _table}, alias_}} ->
             columns = get_table_columns({:tmp, alias_}, all_columns)
             Enum.map(columns, &{:column, {:tmp, alias_, &1}})
           {db, table} ->
@@ -148,7 +148,7 @@ defmodule ExoSQL.Parser do
       sql = String.to_charlist(sql)
       lexed = case :sql_lexer.string(sql) do
         {:ok, lexed, _lines} -> lexed
-        {:error, other, _} -> throw other
+        {:error, {other, _}} -> throw other
       end
       parsed = case :sql_parser.parse(lexed) do
         {:ok, parsed} -> parsed
@@ -158,9 +158,9 @@ defmodule ExoSQL.Parser do
       real_parse(parsed, context)
     catch
       {line_number, :sql_lexer, msg} ->
-        {:error, {[syntax: msg, at_line: line_number]}}
+        {:error, {:syntax, {msg, line_number}}}
       {line_number, :sql_parser, msg} ->
-        {:error, {[syntax: to_string(msg), at_line: line_number]}}
+        {:error, {:syntax, {to_string(msg), line_number}}}
       any ->
         Logger.debug("Generic error at SQL parse: #{inspect any}")
         {:error, any}
@@ -237,7 +237,7 @@ defmodule ExoSQL.Parser do
     for {^db, ^table, column} <- all_columns, do: column
   end
 
-  def resolve_table({:table, {nil, name}}, all_tables, context) when is_binary(name) do
+  def resolve_table({:table, {nil, name}}, all_tables, _context) when is_binary(name) do
     # Logger.debug("Resolve #{inspect name} at #{inspect all_tables}")
     options = for {db, ^name} <- all_tables, do: {db, name}
     # Logger.debug("Options are #{inspect options}")

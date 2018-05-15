@@ -142,6 +142,11 @@ defmodule ExoSQL.BuiltinsTest do
     assert ExoSQL.DateTime.datediff("2018-01-01", "2017-02-01", "years") == -1
 
     assert ExoSQL.DateTime.datediff("2018-03-01", "2018-02-01", "seconds") == -2419200
+    assert ExoSQL.DateTime.datediff(ExoSQL.Builtins.range("2018-01-01", "2018-01-02"), "seconds") == 24 * 60 * 60
+    assert ExoSQL.DateTime.datediff(ExoSQL.Builtins.range("2018-01-01", "2018-01-02")) == 1
+    assert ExoSQL.DateTime.datediff(ExoSQL.Builtins.range("2018-01-01", "2018-01-08")) == 7
+    assert ExoSQL.DateTime.datediff(ExoSQL.Builtins.range("2018-01-01", "2018-01-08"), "days") == 7
+    assert ExoSQL.DateTime.datediff(ExoSQL.Builtins.range("2018-01-01", "2018-01-08"), "seconds") == 7 * 24 * 60 * 60
   end
 
   test "format string" do
