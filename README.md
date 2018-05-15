@@ -135,9 +135,14 @@ SELECT url, status_code
 Formats a String using C sprintf-like parameters. Known placeholders are:
 
 * `%s` -- String
-* `%d` -- Number
+* `%10s` -- String. String at the right, add spaces until 10 chars. (padleft)
+* `%-10s` -- String. String at the left, add spaces until 10 chars. (padright)
+* `%d` -- Integer number
+* `+%d` -- Integer number, always add sign
+* `%02d` -- Number padded with 0 to fill 2 chars
 * `%f` -- Float
 * `%.2f` -- Float with precision
+* `+%f` -- Float, always add sign. 2 chars of precision.
 * `%k` -- Metric System suffix: k, M, G, T. Try to show most relevant information.
 * `%.2k` -- Metric System suffix with precision
 * `%,2k` -- Metric System, using `.` to separate thousands and `,` for decimals. Follow Spanish numbering system.

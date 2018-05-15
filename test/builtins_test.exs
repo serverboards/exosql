@@ -143,4 +143,13 @@ defmodule ExoSQL.BuiltinsTest do
 
     assert ExoSQL.DateTime.datediff("2018-03-01", "2018-02-01", "seconds") == -2419200
   end
+
+  test "format string" do
+    assert ExoSQL.Format.format("%02d-%02d-%02d", [2018, 10, 1]) == "2018-10-01"
+    assert ExoSQL.Format.format("%+d %+d %+d", [2018, -10, 0]) == "+2018 -10 0"
+
+    assert ExoSQL.Format.format("%+f %+f %+f %+f", [2018, -0.43, 0.43, 0]) == "+2018.00 -0.43 +0.43 0.00"
+
+    assert ExoSQL.Format.format("%10s|%-5s|%3s", ["spaces", "hash", "slash"]) == "    spaces|hash |slash"
+  end
 end

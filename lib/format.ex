@@ -1,11 +1,11 @@
 require Logger
 
 defmodule ExoSQL.Format do
-  @format_re ~r/%[\d\.,\-]*[%fsdk]/
-  @format_re_one ~r/([\d\.,\-]*)([fsdk])/
+  @format_re ~r/%[\d\.,\-+]*[%fsdk]/
+  @format_re_one ~r/([\d\.,\-+]*)([fsdk])/
 
   def format(str, params) do
-    {str, []} = Regex.split(@format_re, str, include_captures: true)
+    res = Regex.split(@format_re, str, include_captures: true)
       |> Enum.reduce({"", params}, fn
         ("%%", {acc, params}) ->
           {acc <> "%", params}
@@ -16,8 +16,13 @@ defmodule ExoSQL.Format do
         (other, {acc, params}) ->
           {acc <> other, params}
     end)
+    case res do
+      {str, []} ->
+        str
+      {_str, other} ->
+        throw {:error, {:format, {:pending, Enum.count(other)}}}
+    end
 
-    str
   end
 
 
@@ -55,6 +60,22 @@ defmodule ExoSQL.Format do
     Regex.replace(@format_re_one, type, fn
       _, "", "s" ->
         to_string(data)
+      _, "-" <> count, "s" ->
+        data = to_string(data)
+        count = ExoSQL.Utils.to_number!(count) - String.length(data)
+        if count > 0 do
+          data <> String.duplicate(" ", count) 
+        else
+          data
+        end
+      _, count, "s" ->
+        data = to_string(data)
+        count = ExoSQL.Utils.to_number!(count) - String.length(data)
+        if count > 0 do
+          String.duplicate(" ", count) <> data
+        else
+          data
+        end
       _, "", "f" ->
         {:ok, data} = ExoSQL.Utils.to_float(data)
         :erlang.float_to_binary(data, decimals: 2)
@@ -62,10 +83,36 @@ defmodule ExoSQL.Format do
         {:ok, data} = ExoSQL.Utils.to_float(data)
         {:ok, decimals} = ExoSQL.Utils.to_number(decimals)
         :erlang.float_to_binary(data, decimals: decimals)
+      _, "+", "f" ->
+        {:ok, datan} = ExoSQL.Utils.to_float(data)
+        data = :erlang.float_to_binary(datan, decimals: 2)
+        if datan <= 0 do
+          "#{data}"
+        else
+          "+#{data}"
+        end
       _, "", "d" ->
         {:ok, data} = ExoSQL.Utils.to_number(data)
         data = Kernel.trunc(data)
         "#{data}"
+      _, "+", "d" ->
+        datan = ExoSQL.Utils.to_number!(data)
+        datan = Kernel.trunc(data)
+        if datan <= 0 do
+          "#{data}"
+        else
+          "+#{data}"
+        end
+      _, <<fill::size(8)>> <> count, "d" ->
+        {:ok, data} = ExoSQL.Utils.to_number(data)
+        data = Kernel.trunc(data)
+        data = "#{data}"
+        count = ExoSQL.Utils.to_number!(count) - String.length(data)
+        if count > 0 do
+          String.duplicate(<<fill::utf8>>, count) <> data
+        else
+          data
+        end
       _, ".", "k" ->
         {:ok, data} = ExoSQL.Utils.to_float(data)
         {data, sufix} = cond do
