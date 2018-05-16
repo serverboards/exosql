@@ -63,6 +63,9 @@ defmodule QueryTest do
   test "MAX/MIN on dates" do
     res = analyze_query!("SELECT MIN(date), MAX(date) FROM purchases")
     assert res.rows == [["2015-08-10", "2018-01-02"]]
+
+    res = analyze_query!("SELECT strftime(MIN(to_datetime(date))), strftime(MAX(to_datetime(date))) FROM purchases")
+    assert res.rows == [["2015-08-10T00:00:00Z", "2018-01-02T00:00:00Z"]]
   end
 
   test "Simple WHERE" do

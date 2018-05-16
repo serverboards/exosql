@@ -499,23 +499,32 @@ defmodule ExoSQL.Builtins do
 
       n = ExoSQL.Expr.run_expr(expr, %{ row: row })
       {acc, n} = ExoSQL.Expr.match_types(acc, n)
-      if n != nil and (acc == nil or n > acc) do
-        n
-      else
+
+      if ExoSQL.Expr.is_greater(acc, n) do
         acc
+      else
+        n
       end
+
     end)
   end
   def min_(data, expr) do
     expr = ExoSQL.Expr.simplify(expr, %{ columns: data.columns})
     Enum.reduce(data.rows, nil, fn row, acc ->
+
       n = ExoSQL.Expr.run_expr(expr, %{ row: row })
       {acc, n} = ExoSQL.Expr.match_types(acc, n)
-      if n != nil and (acc == nil or n < acc) do
-        n
-      else
+
+      Logger.debug("Is greater #{inspect {acc, n}} / #{inspect (n != nil and ExoSQL.Expr.is_greater(acc, n))}")
+
+      res = if acc != nil and ExoSQL.Expr.is_greater(n, acc) do
         acc
+      else
+        n
       end
+
+      Logger.debug("#{inspect res}")
+      res
     end)
   end
 end

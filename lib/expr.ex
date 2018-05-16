@@ -44,7 +44,7 @@ defmodule ExoSQL.Expr do
 
     {r1, r2} = match_types(r1, r2)
 
-    r1 == r2
+    is_equal(r1, r2)
   end
   def run_expr({:op, {"IS", op1, op2}}, context) do
     r1 = run_expr(op1, context)
@@ -57,37 +57,14 @@ defmodule ExoSQL.Expr do
     r2 = run_expr(op2, context)
     {r1, r2} = match_types(r1, r2)
 
-    case {r1, r2} do
-      {%DateTime{}, %DateTime{}} ->
-        DateTime.compare(r1, r2) == :gt
-      _ ->
-        with {:ok, n1} <- to_number(r1),
-             {:ok, n2} <- to_number(r2) do
-           n1 > n2
-        else
-          {:error, _} ->
-            r1 > r2
-        end
-    end
+    is_greater(r1, r2)
   end
   def run_expr({:op, {">=", op1, op2}}, context) do
     r1 = run_expr(op1, context)
     r2 = run_expr(op2, context)
 
     {r1, r2} = match_types(r1, r2)
-
-    case {r1, r2} do
-      {%DateTime{}, %DateTime{}} ->
-        DateTime.compare(r1, r2) == :eq
-      {a, b} ->
-        with {:ok, n1} <- to_number(r1),
-             {:ok, n2} <- to_number(r2) do
-          n1 >= n2
-        else
-          {:error, _} ->
-            a >= b
-        end
-    end
+    is_greater_or_equal(r1, r2)
   end
 
   def run_expr({:op, {"==", op1, op2}}, context), do: run_expr({:op, {"=", op1, op2}}, context)
@@ -281,6 +258,64 @@ defmodule ExoSQL.Expr do
         {t1, t2}
       _other ->
         {a, b}
+    end
+  end
+
+  @doc ~S"""
+  Unifies is greater comparison
+  """
+  def is_greater(nil, _b), do: false
+  def is_greater(_a, nil), do: true
+  def is_greater(%DateTime{} = r1, %DateTime{} = r2) do
+      DateTime.compare(r1, r2) == :gt
+  end
+  def is_greater(r1, r2) do
+    with {:ok, n1} <- to_number(r1),
+         {:ok, n2} <- to_number(r2) do
+       n1 > n2
+    else
+      {:error, _} ->
+        r1 > r2
+    end
+  end
+
+  @doc ~S"""
+  Unifies equal comparison
+  """
+  def is_equal(%DateTime{} = r1, %DateTime{} = r2) do
+      DateTime.compare(r1, r2) == :eq
+  end
+
+  def is_equal(r1, r2) when is_binary(r1) and is_binary(r2) do
+    r1 == r2
+  end
+  def is_equal(r1, r2)  do
+    with {:ok, n1} <- to_number(r1),
+         {:ok, n2} <- to_number(r2) do
+      n1 == n2
+    else
+      {:error, _} ->
+        r1 == r2
+    end
+  end
+
+  @doc ~S"""
+  Unifies greater or equal comparison
+  """
+  def is_greater_or_equal(nil, _b), do: false
+  def is_greater_or_equal(_a, nil), do: true
+  def is_greater_or_equal(%DateTime{} = r1, %DateTime{} = r2) do
+      res =DateTime.compare(r1, r2)
+      (res == :gt) or (res == :eq)
+  end
+
+  def is_greater_or_equal(r1, r2) do
+    with {:ok, n1} <- to_number(r1),
+         {:ok, n2} <- to_number(r2) do
+      n1 >= n2
+    else
+      {:error, _} ->
+        r1 >= r2
     end
   end
 
