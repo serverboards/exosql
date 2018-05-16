@@ -267,6 +267,8 @@ defmodule ExoSQL.Expr do
     case {a, b} do
       {t1, t2} when is_number(t1) and is_number(t2) ->
         {a, b}
+      {nil, _} -> {a, b}
+      {_, nil} -> {a, b}
       {%DateTime{}, _} ->
         {a, ExoSQL.Builtins.to_datetime(b)}
       {_, %DateTime{}} ->

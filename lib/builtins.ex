@@ -496,8 +496,9 @@ defmodule ExoSQL.Builtins do
   def max_(data, expr) do
     expr = ExoSQL.Expr.simplify(expr, %{ columns: data.columns})
     Enum.reduce(data.rows, nil, fn row, acc ->
+
       n = ExoSQL.Expr.run_expr(expr, %{ row: row })
-      {:ok, n} = ExoSQL.Utils.to_number(n)
+      {acc, n} = ExoSQL.Expr.match_types(acc, n)
       if n != nil and (acc == nil or n > acc) do
         n
       else
@@ -509,7 +510,7 @@ defmodule ExoSQL.Builtins do
     expr = ExoSQL.Expr.simplify(expr, %{ columns: data.columns})
     Enum.reduce(data.rows, nil, fn row, acc ->
       n = ExoSQL.Expr.run_expr(expr, %{ row: row })
-      {:ok, n} = ExoSQL.Utils.to_number(n)
+      {acc, n} = ExoSQL.Expr.match_types(acc, n)
       if n != nil and (acc == nil or n < acc) do
         n
       else

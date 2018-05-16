@@ -49,7 +49,7 @@ defmodule QueryTest do
     assert result.rows == [["TEST"]]
   end
 
-  # This BUG caused infinite recursion ant finally timeout.
+  # This BUG caused infinite recursion and finally timeout.
   test "No column at table" do
     try do
       analyze_query!("
@@ -58,6 +58,11 @@ defmodule QueryTest do
     rescue
       _ in MatchError -> :ok
     end
+  end
+
+  test "MAX/MIN on dates" do
+    res = analyze_query!("SELECT MIN(date), MAX(date) FROM purchases")
+    assert res.rows == [["2015-08-10", "2018-01-02"]]
   end
 
   test "Simple WHERE" do
