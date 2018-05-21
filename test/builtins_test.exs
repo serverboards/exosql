@@ -157,4 +157,22 @@ defmodule ExoSQL.BuiltinsTest do
 
     assert ExoSQL.Format.format("%10s|%-5s|%3s", ["spaces", "hash", "slash"]) == "    spaces|hash |slash"
   end
+
+  test "Builtin simplifications" do
+    assert ExoSQL.Builtins.simplify("json", [{:lit, nil}]) == {:lit, nil}
+    assert ExoSQL.Builtins.simplify("json", [{:lit, "1"}]) == {:lit, 1}
+    assert (
+      ExoSQL.Builtins.simplify("regex", [{:column, {:tmp, :tmp, "a"}}, {:lit, ".*"}]) ==
+      {:fn, {{ExoSQL.Builtins, :regex, "regex"}, [column: {:tmp, :tmp, "a"}, lit: ~r/.*/, lit: false]}}
+      )
+    assert (
+      ExoSQL.Builtins.simplify("jp", [{:column, {:tmp, :tmp, "a"}}, {:lit, "a/b/c"}]) ==
+      {:fn, {{ExoSQL.Builtins, :jp, "jp"}, [column: {:tmp, :tmp, "a"}, lit: ["a", "b", "c"]]}}
+      )
+
+    assert (
+      ExoSQL.Builtins.simplify("format", [{:lit, "W%02, %,k €"}, {:column, {:tmp, :tmp, "a"}}, {:column, {:tmp, :tmp, "b"}}]) ==
+      {:fn, {{ExoSQL.Builtins, :format, "format"}, [lit: [" €", {",", "k"}, "W%02, "], column: {:tmp, :tmp, "a"}, column: {:tmp, :tmp, "b"}]}}
+      )
+  end
 end

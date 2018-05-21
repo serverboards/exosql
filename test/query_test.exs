@@ -1157,4 +1157,14 @@ end
 
     assert type == :error
   end
+
+  @tag skip: "Only manual. Comment this line."
+  test "Speed test" do
+    {time, _data} = :timer.tc(fn ->
+      ExoSQL.query("SELECT format('%05d', n) FROM generate_series(1000000) n", @context)
+    end)
+    Logger.debug("#{inspect time / 1_000_000}")
+
+    flunk 1
+  end
 end

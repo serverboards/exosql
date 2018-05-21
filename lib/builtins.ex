@@ -57,19 +57,21 @@ defmodule ExoSQL.Builtins do
     try do
       apply(mod, fun, params)
     rescue
-      _ ->
+      _excp ->
+        # Logger.debug("Exception #{inspect _excp}: #{inspect {{mod, fun}, params}}")
         throw {:function, {name, params}}
     end
   end
   def call_function(name, params) do
     case @functions[name] do
       nil ->
-      raise BadFunctionError, {:builtin, name}
+      raise {:unknown_function, name}
     {mod, fun} ->
       try do
         apply(mod, fun, params)
       rescue
-        _ ->
+        _excp ->
+          # Logger.debug("Exception #{inspect _excp}: #{inspect {{mod, fun}, params}}")
           throw {:function, {name, params}}
       end
     end
@@ -189,7 +191,7 @@ defmodule ExoSQL.Builtins do
   %k - integer with k, M sufix
   %.k - float with k, M sufix, uses float part
   """
-  def format(str), do: str
+  def format(str), do: ExoSQL.Format.format(str, [])
   def format(str, args) when is_list(args) do
     ExoSQL.Format.format(str, args)
   end
@@ -551,6 +553,11 @@ defmodule ExoSQL.Builtins do
   ## Simplications.
 
   # Precompile regex
+  def simplify("format", [{:lit, format} | rest]) when is_binary(format) do
+    compiled = ExoSQL.Format.compile_format(format)
+    # Logger.debug("Simplify format: #{inspect compiled}")
+    simplify("format", [{:lit, compiled} | rest])
+  end
   def simplify("regex", [str, {:lit, regexs}]) when is_binary(regexs) do
     regex = Regex.compile!(regexs)
     captures = String.contains?(regexs, "(?<")
@@ -570,7 +577,7 @@ defmodule ExoSQL.Builtins do
     simplify("jp", params)
   end
   def simplify("jp", [json, {:lit, path}]) when is_binary(path) do
-    Logger.debug("JP #{inspect json}")
+    # Logger.debug("JP #{inspect json}")
     simplify("jp", [json, {:lit, String.split(path, "/")}])
   end
 

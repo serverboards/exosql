@@ -4,25 +4,46 @@ defmodule ExoSQL.Format do
   @format_re ~r/%[\d\.,\-+]*[%fsdk]/
   @format_re_one ~r/([\d\.,\-+]*)([fsdk])/
 
-  def format(str, params) do
-    res = Regex.split(@format_re, str, include_captures: true)
-      |> Enum.reduce({"", params}, fn
-        ("%%", {acc, params}) ->
-          {acc <> "%", params}
-        ("%" <> fs, {acc, params}) ->
+  def compile_format(str) do
+    Regex.split(@format_re, str, include_captures: true)
+      |> Enum.reduce([], fn
+        ("%%", acc) ->
+          ["%" | acc]
+        ("%" <> fs, acc) ->
+          [_all, mod, type] = Regex.run(@format_re_one, fs)
+          [{mod, type} | acc]
+        ("", acc) ->
+          acc
+        (other, acc) ->
+          [other | acc]
+      end)
+  end
+
+  def format(str, params) when is_binary(str) do
+    # Logger.debug("Compile str #{inspect str}")
+    precompiled = compile_format(str)
+    # Logger.debug("Precompiled: #{inspect precompiled}")
+    format(precompiled, params)
+  end
+
+  def format([], _params), do: ""
+  def format(precompiled, params) when is_list(precompiled) do
+    # Logger.debug("Format #{inspect {precompiled, params}}")
+    res = Enum.reduce(precompiled, {[], Enum.reverse(params)}, fn
+        ({mod, type}, {acc, params}) ->
           [head | rest] = params
-          repl = format_one(fs, head)
-          {acc <> repl, rest}
-        (other, {acc, params}) ->
-          {acc <> other, params}
+          repl = format_one(mod, type, head)
+          {[repl | acc], rest}
+        (str, {acc, params}) ->
+          {[str | acc], params}
     end)
+    # Logger.debug("Result #{inspect {precompiled, params}} -> #{inspect res}")
     case res do
       {str, []} ->
-        str
+        to_string(str)
       {_str, other} ->
         throw {:error, {:format, {:pending, Enum.count(other)}}}
     end
-
   end
 
 
@@ -55,12 +76,12 @@ defmodule ExoSQL.Format do
     end
   end
 
-  def format_one(type, data) do
+  def format_one(mod, type, data) do
     # to_string(data)
-    Regex.replace(@format_re_one, type, fn
-      _, "", "s" ->
+    case {mod, type} do
+      {"", "s"} ->
         to_string(data)
-      _, "-" <> count, "s" ->
+      {"-" <> count, "s"} ->
         data = to_string(data)
         count = ExoSQL.Utils.to_number!(count) - String.length(data)
         if count > 0 do
@@ -68,7 +89,7 @@ defmodule ExoSQL.Format do
         else
           data
         end
-      _, count, "s" ->
+      {count, "s"} ->
         data = to_string(data)
         count = ExoSQL.Utils.to_number!(count) - String.length(data)
         if count > 0 do
@@ -76,14 +97,14 @@ defmodule ExoSQL.Format do
         else
           data
         end
-      _, "", "f" ->
+      {"", "f"} ->
         {:ok, data} = ExoSQL.Utils.to_float(data)
         :erlang.float_to_binary(data, decimals: 2)
-      _, "." <> decimals, "f" ->
+      {"." <> decimals, "f"} ->
         {:ok, data} = ExoSQL.Utils.to_float(data)
         {:ok, decimals} = ExoSQL.Utils.to_number(decimals)
         :erlang.float_to_binary(data, decimals: decimals)
-      _, "+", "f" ->
+      {"+", "f"} ->
         {:ok, datan} = ExoSQL.Utils.to_float(data)
         data = :erlang.float_to_binary(datan, decimals: 2)
         if datan <= 0 do
@@ -91,11 +112,11 @@ defmodule ExoSQL.Format do
         else
           "+#{data}"
         end
-      _, "", "d" ->
+      {"", "d"} ->
         {:ok, data} = ExoSQL.Utils.to_number(data)
         data = Kernel.trunc(data)
         "#{data}"
-      _, "+", "d" ->
+      {"+", "d"} ->
         datan = ExoSQL.Utils.to_number!(data)
         datan = Kernel.trunc(datan)
         if datan <= 0 do
@@ -103,7 +124,7 @@ defmodule ExoSQL.Format do
         else
           "+#{data}"
         end
-      _, <<fill::size(8)>> <> count, "d" ->
+      {<<fill::size(8)>> <> count, "d"} ->
         {:ok, data} = ExoSQL.Utils.to_number(data)
         data = Kernel.trunc(data)
         data = "#{data}"
@@ -113,7 +134,7 @@ defmodule ExoSQL.Format do
         else
           data
         end
-      _, ".", "k" ->
+      {".", "k"} ->
         {:ok, data} = ExoSQL.Utils.to_float(data)
         {data, sufix} = cond do
           data >= 1_000_000 ->
@@ -132,7 +153,7 @@ defmodule ExoSQL.Format do
             {data, ""}
         end
         "#{data}#{sufix}"
-      _, ",", "k" ->
+      {",", "k"} ->
         {:ok, data} = ExoSQL.Utils.to_float(data)
         {data, sufix} = cond do
           data >= 1_000_000 ->
@@ -151,7 +172,7 @@ defmodule ExoSQL.Format do
             {data, ""}
         end
         "#{data}#{sufix}"
-      _, "", "k" ->
+      {"", "k"} ->
         {:ok, data} = ExoSQL.Utils.to_number(data)
         data = Kernel.trunc(data)
         {data, sufix} = cond do
@@ -163,7 +184,6 @@ defmodule ExoSQL.Format do
             {data, ""}
         end
         "#{data}#{sufix}"
-    end)
+    end
   end
-
 end
