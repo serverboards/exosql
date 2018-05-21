@@ -56,7 +56,7 @@ defmodule ExoSQL.Format do
   end
 
   def format_one(type, data) do
-    to_string(data)
+    # to_string(data)
     Regex.replace(@format_re_one, type, fn
       _, "", "s" ->
         to_string(data)
@@ -64,7 +64,7 @@ defmodule ExoSQL.Format do
         data = to_string(data)
         count = ExoSQL.Utils.to_number!(count) - String.length(data)
         if count > 0 do
-          data <> String.duplicate(" ", count) 
+          data <> String.duplicate(" ", count)
         else
           data
         end
@@ -97,7 +97,7 @@ defmodule ExoSQL.Format do
         "#{data}"
       _, "+", "d" ->
         datan = ExoSQL.Utils.to_number!(data)
-        datan = Kernel.trunc(data)
+        datan = Kernel.trunc(datan)
         if datan <= 0 do
           "#{data}"
         else

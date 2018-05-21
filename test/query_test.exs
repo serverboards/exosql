@@ -1141,9 +1141,8 @@ end
   end
 
   test "SQL improved errors" do
-    {type, data} = ExoSQL.query("SELECT format('%2d', id) FROM purchases", @context)
+    {type, _data} = ExoSQL.query("SELECT format('%2d', id) FROM purchases", @context)
 
     assert type == :error
-    
   end
 end
