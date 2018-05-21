@@ -1134,4 +1134,9 @@ end
       WHERE amount > 10
     ")
   end
+
+  test "SQL standard table alias" do
+    analyze_query!("SELECT * FROM purchases pur")
+    analyze_query!("SELECT name n FROM products pro")
+  end
 end

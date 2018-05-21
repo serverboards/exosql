@@ -56,6 +56,7 @@ select_expr_list -> select_expr : ['$1'].
 select_expr_list -> select_expr comma select_expr_list: ['$1'] ++ '$3'.
 select_expr -> expr: '$1'.
 select_expr -> expr 'AS' id: {alias, {'$1', unwrap('$3')}}.
+select_expr -> expr id: {alias, {'$1', unwrap('$2')}}.
 select_expr -> op5: tag('$1', "*"), {all_columns}.
 
 from -> 'FROM' table_list : '$2'.
@@ -155,6 +156,7 @@ column -> id dot id : {nil, unwrap('$1'), unwrap('$3')}.
 column -> id : {nil, nil, unwrap('$1')}.
 
 table -> tableid 'AS' id : {alias, {'$1', unwrap('$3')}}.
+table -> tableid id : {alias, {'$1', unwrap('$2')}}.
 table -> tableid : '$1'.
 tableid -> id dot id : {table, {unwrap('$1'), unwrap('$3')}}.
 tableid -> id : {table, {nil, unwrap('$1')}}.
