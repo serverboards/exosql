@@ -1139,4 +1139,11 @@ end
     analyze_query!("SELECT * FROM purchases pur")
     analyze_query!("SELECT name n FROM products pro")
   end
+
+  test "SQL improved errors" do
+    {type, data} = ExoSQL.query("SELECT format('%2d', id) FROM purchases", @context)
+
+    assert type == :error
+    
+  end
 end

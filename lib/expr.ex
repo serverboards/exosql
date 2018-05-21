@@ -186,7 +186,12 @@ defmodule ExoSQL.Expr do
 
   def run_expr({:fn, {fun, exprs}}, context) do
     params = for e <- exprs, do: run_expr(e, context)
-    ExoSQL.Builtins.call_function(fun, params)
+    try do
+      ExoSQL.Builtins.call_function(fun, params)
+    rescue 
+      _ ->
+      throw {:function, {fun, params}}
+    end
   end
   def run_expr({:pass, val}, _context), do: val
 
