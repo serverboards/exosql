@@ -186,12 +186,7 @@ defmodule ExoSQL.Expr do
 
   def run_expr({:fn, {fun, exprs}}, context) do
     params = for e <- exprs, do: run_expr(e, context)
-    try do
-      ExoSQL.Builtins.call_function(fun, params)
-    rescue 
-      _ ->
-      throw {:function, {fun, params}}
-    end
+    ExoSQL.Builtins.call_function(fun, params)
   end
   def run_expr({:pass, val}, _context), do: val
 
@@ -218,6 +213,7 @@ defmodule ExoSQL.Expr do
   def run_expr({:list, data}, context) when is_list(data) do
     Enum.map(data, &(run_expr(&1, context)))
   end
+  def run_expr({:alias, {expr, _}}, context), do: run_expr(expr, context)
 
 
   def like(str, str), do: true
@@ -388,8 +384,8 @@ defmodule ExoSQL.Expr do
   def simplify({:column, cn}, _context) when is_number(cn) do
     {:column, cn}
   end
-  def simplify({:alias, {expr, _}}, context) do
-    simplify(expr, context)
+  def simplify({:alias, {expr, alias_}}, context) do
+    {:alias, {simplify(expr, context), alias_}}
   end
   def simplify({:column, cn}, %{ columns: names }) do
     i = Enum.find_index(names, &(&1 == cn))
@@ -407,8 +403,12 @@ defmodule ExoSQL.Expr do
     {:op, {op, op1, op2}}
   end
   def simplify({:fn, {f, params}}, context) do
-    params = Enum.map(params, &simplify(&1, context))
-    {:fn, {f, params}}
+    if ExoSQL.Builtins.is_aggregate(f) do
+      {:fn, {f, params}}
+    else
+      params = Enum.map(params, &simplify(&1, context))
+      ExoSQL.Builtins.simplify(f, params)
+    end
   end
 
   def simplify({:parent_column, column}, %{ parent_columns: parent_columns, parent_row: parent_row }) do

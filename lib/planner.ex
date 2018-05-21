@@ -108,7 +108,7 @@ defmodule ExoSQL.Planner do
         {:order_by, type, expr, acc}
     end)
 
-    select = Enum.map(query.select, fn
+    select = Enum.map(select, fn
       {:select, query} ->
         {:ok, plan} = plan(query)
         {:select, plan}

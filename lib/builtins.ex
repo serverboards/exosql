@@ -33,6 +33,7 @@ defmodule ExoSQL.Builtins do
     "generate_series" => {ExoSQL.Builtins, :generate_series},
     "urlparse" => {ExoSQL.Builtins, :urlparse},
     "jp" => {ExoSQL.Builtins, :jp},
+    "json" => {ExoSQL.Builtins, :json},
     "regex" => {ExoSQL.Builtins, :regex},
     "random" => {ExoSQL.Builtins, :random},
     "randint" => {ExoSQL.Builtins, :randint},
@@ -52,15 +53,27 @@ defmodule ExoSQL.Builtins do
     "max" => {ExoSQL.Builtins, :max_},
     "min" => {ExoSQL.Builtins, :min_},
   }
-  def call_function(name, args) do
+  def call_function({mod, fun, name}, params) do
+    try do
+      apply(mod, fun, params)
+    rescue
+      _ ->
+        throw {:function, {name, params}}
+    end
+  end
+  def call_function(name, params) do
     case @functions[name] do
       nil ->
       raise BadFunctionError, {:builtin, name}
     {mod, fun} ->
-      apply(mod, fun, args)
+      try do
+        apply(mod, fun, params)
+      rescue
+        _ ->
+          throw {:function, {name, params}}
+      end
     end
   end
-
 
   def round(n) do
     {:ok, n} = to_float(n)
@@ -236,16 +249,18 @@ defmodule ExoSQL.Builtins do
 
   Returns NULL if no match (which is falsy, so can be used for expressions)
   """
-  def regex(str, regexs) do
-    regex = Regex.compile!(regexs) # slow. FIXME to precompile
-
-    if String.contains?(regexs, "(?<") do
+  def regex(str, regexs) when is_binary(regexs) do
+    regex = Regex.compile!(regexs) # slow. Should have been precompiled (simplify)
+    regex(str, regex, String.contains?(regexs, "(?<"))
+  end
+  def regex(str, %Regex{} = regex, captures) do
+    if captures do
       Regex.named_captures(regex, str)
     else
       Regex.run(regex, str)
     end
   end
-  def regex(str, regexs, query) do
+  def regex(str, regexs, query) when is_binary(regexs) do
     jp(regex(str, regexs), query)
   end
 
@@ -375,6 +390,14 @@ defmodule ExoSQL.Builtins do
   def jp(json, ["" | rest]), do: jp(json, rest)
   def jp(json, [head | rest]), do: jp(Map.get(json, head, nil), rest)
   def jp(json, []), do: json
+
+  @doc ~S"""
+  Convert from a string to a JSON object
+  """
+  def json(nil), do: nil
+  def json(str) when is_binary(str) do
+    Poison.decode!(str)
+  end
 
   @doc ~S"""
   Creates a range, which can later be used in:
@@ -524,4 +547,54 @@ defmodule ExoSQL.Builtins do
       res
     end)
   end
+
+  ## Simplications.
+
+  # Precompile regex
+  def simplify("regex", [str, {:lit, regexs}]) when is_binary(regexs) do
+    regex = Regex.compile!(regexs)
+    captures = String.contains?(regexs, "(?<")
+
+    simplify("regex", [str, {:lit, regex}, {:lit, captures}])
+  end
+  def simplify("regex", [str, {:lit, regexs}, {:lit, query}]) when is_binary(regexs) do
+    regex = Regex.compile!(regexs)
+    captures = String.contains?(regexs, "(?<")
+
+    # this way jq can be simplified too
+    params = [
+      simplify("regex", [str, {:lit, regex}, {:lit, captures}]),
+      {:lit, query}
+    ]
+
+    simplify("jp", params)
+  end
+  def simplify("jp", [json, {:lit, path}]) when is_binary(path) do
+    Logger.debug("JP #{inspect json}")
+    simplify("jp", [json, {:lit, String.split(path, "/")}])
+  end
+
+  # default: convert to {mod fun name} tuple
+  def simplify(name, params) when is_binary(name) do
+    # Logger.debug("Simplify #{inspect name} #{inspect params}")
+    if (not is_aggregate(name)) and Enum.all?(params, &is_lit(&1)) do
+      # Logger.debug("All is literal for #{inspect {name, params}}.. just do it once")
+      params = Enum.map(params, fn {:lit, n} -> n end)
+      ret = ExoSQL.Builtins.call_function(name, params)
+      {:lit, ret}
+    else
+      case @functions[name] do
+        nil ->
+        throw {:unknown_function, name}
+      {mod, fun} ->
+        {:fn, {{mod, fun, name}, params}}
+      end
+    end
+  end
+  def simplify(modfun, params), do: {:fn, {modfun, params}}
+
+  def is_lit({:lit, '*'}), do: false
+  def is_lit({:lit, _n}), do: true
+  def is_lit(_), do: false
+
 end

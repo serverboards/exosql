@@ -338,6 +338,10 @@ Get the greatest value of all the given ones.
 It's similar to `max` in other languages, but in SQL can not use `max` as it is
 an aggregation function with different semantics.
 
+#### `json(str)`
+
+Parses a string into a json object. NULL is nil.
+
 #### `jp(json, selector)`
 
 Does [JSON Pointer](https://tools.ietf.org/html/rfc6901) selection:

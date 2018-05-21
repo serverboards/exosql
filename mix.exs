@@ -42,7 +42,8 @@ PostgreSQL.
       {:ex_doc, ">= 0.0.0"},
       {:timex, "~> 3.0"},
       {:csv, "~> 2.1"},
-      {:httpoison, "~> 1.0"}
+      {:httpoison, "~> 1.0"},
+      {:poison,  "~> 3.1"},
     ]
   end
 end

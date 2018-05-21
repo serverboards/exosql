@@ -816,6 +816,18 @@ end
     assert res.rows == [[ 3 ]]
   end
 
+  test "jp at json" do
+    with {:ok, parsed} <- ExoSQL.Parser.parse("SELECT jp(json('{\"one\": 1, \"two\": {\"three\": 3}}'), 'two/three')", @context),
+      {:ok, planned} <- ExoSQL.Planner.plan(parsed) do
+
+          Logger.debug("#{inspect planned, pretty: true}")
+      assert planned == {:select, %ExoSQL.Result{columns: ["?NONAME"], rows: [[1]]}, [{:lit, 3}]}
+    end
+
+    res = analyze_query!("SELECT jp(json('{\"one\": 1, \"two\": {\"three\": 3}}'), 'two/three')")
+    assert res.rows == [[3]]
+  end
+
   test "SELECT IN" do
     res = analyze_query!("SELECT * FROM products WHERE id IN [1,2,3]")
 
