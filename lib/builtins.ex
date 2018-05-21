@@ -515,15 +515,12 @@ defmodule ExoSQL.Builtins do
       n = ExoSQL.Expr.run_expr(expr, %{ row: row })
       {acc, n} = ExoSQL.Expr.match_types(acc, n)
 
-      Logger.debug("Is greater #{inspect {acc, n}} / #{inspect (n != nil and ExoSQL.Expr.is_greater(acc, n))}")
-
       res = if acc != nil and ExoSQL.Expr.is_greater(n, acc) do
         acc
       else
         n
       end
 
-      Logger.debug("#{inspect res}")
       res
     end)
   end
