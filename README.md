@@ -572,3 +572,25 @@ to learn how to create an SQL engine. ExoSQL is currently used in
   by column position.
 
 * Can not use variables inside aggregation functions.
+
+## Future improvements
+
+* BEAM compile: expressions and functions first, then full plan. Now uses an AST
+  executor, which may be slower
+
+* Bytecode compile. Check also if compiling to a bytecode may improve
+  performance
+
+* `LIMIT`/`OFFSET` before `SELECT`. No need to do the full select over all the
+  data, specially if there are format, expressions, aggregations and other
+  expensive operations, if we only want some results. As it may be used with
+  `SORT BY` extra care is needed to calculate the required columns, and then
+  calculate the rest.
+
+* Streaming extractors. Now all is stored in memory, which can be a lot.
+
+* Multiprocessing. If possible calculate in other processes part of the
+  operations. This must be taking care of dependencies as `WITH` may depend on
+  previous queries, or not.
+
+* Allow user functions
