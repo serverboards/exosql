@@ -73,4 +73,21 @@ defmodule ExoSQL.Utils do
     # Logger.debug(inspect s)
     to_string(s)
   end
+
+  @doc ~S"""
+  Fron an initial input value, can generate a list.
+
+  The function receives a value and returns either:
+   * :halt
+   * {generated_value, next_input}
+
+  All the generated values are returned in order to the caller when :halt is
+  received.
+  """
+  def generate(input, func) do
+      case func.(input) do
+        :halt -> []
+        {value, next} -> [value | generate(next, func)]
+      end
+  end
 end

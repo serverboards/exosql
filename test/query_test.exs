@@ -585,6 +585,10 @@ end
         }})
 
     assert Enum.count(res.rows) == 53
+
+    res = analyze_query!("SELECT date FROM generate_series(to_datetime('2018-01-01'), to_datetime('2017-12-31')) AS date")
+
+    assert Enum.count(res.rows) == 365
   end
 
   test "Fail get non existant column" do

@@ -271,8 +271,27 @@ defmodule ExoSQL.Builtins do
   without holes.
   """
   def generate_series(end_), do: generate_series(1,end_,1)
-  def generate_series(start_,end_), do: generate_series(start_,end_,1)
-  def generate_series(start_,end_,step) do
+  def generate_series(start_, end_), do: generate_series(start_,end_,1)
+  def generate_series(%DateTime{} = start_, %DateTime{} = end_, days) do
+    if start_ > end_ or days <= 0 do
+      raise ArgumentError, "Start, end and step invalid. Will never reach end."
+    end
+
+    to_add = [days: days]
+    rows = ExoSQL.Utils.generate(start_, fn value ->
+      if DateTime.compare(value, end_) == :gt do
+        :halt
+      else
+        {[value], Timex.shift(value, to_add)}
+      end
+    end)
+
+    %{
+      columns: ["generate_series"],
+      rows: rows
+    }
+  end
+  def generate_series(start_, end_, step) do
     import ExoSQL.Utils, only: [to_number!: 1]
     start_ = to_number!(start_)
     end_ = to_number!(end_)
