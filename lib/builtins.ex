@@ -71,7 +71,7 @@ defmodule ExoSQL.Builtins do
         apply(mod, fun, params)
       rescue
         _excp ->
-          # Logger.debug("Exception #{inspect _excp}: #{inspect {{mod, fun}, params}}")
+          Logger.debug("Exception #{inspect _excp}: #{inspect {{mod, fun}, params}}")
           throw {:function, {name, params}}
       end
     end
@@ -272,17 +272,28 @@ defmodule ExoSQL.Builtins do
   """
   def generate_series(end_), do: generate_series(1,end_,1)
   def generate_series(start_, end_), do: generate_series(start_,end_,1)
-  def generate_series(%DateTime{} = start_, %DateTime{} = end_, days) do
-    if start_ > end_ or days <= 0 do
+  def generate_series(%DateTime{} = start_, %DateTime{} = end_, days) when is_number(days) do
+    generate_series(start_, end_, "P#{days}D")
+  end
+
+  def generate_series(%DateTime{} = start_, %DateTime{} = end_, mod) when is_binary(mod) do
+    if start_ > end_ do
       raise ArgumentError, "Start, end and step invalid. Will never reach end."
     end
 
-    to_add = [days: days]
+    mod = if String.starts_with?(mod, "P") do
+      mod
+    else
+      "P" <> mod
+    end
+    duration = ExoSQL.DateTime.Duration.parse!(mod)
+
     rows = ExoSQL.Utils.generate(start_, fn value ->
       if DateTime.compare(value, end_) == :gt do
         :halt
       else
-        {[value], Timex.shift(value, to_add)}
+        next = ExoSQL.DateTime.Duration.datetime_add(value, duration)
+        {[value], next}
       end
     end)
 

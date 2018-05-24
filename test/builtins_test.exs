@@ -175,4 +175,72 @@ defmodule ExoSQL.BuiltinsTest do
       {:fn, {{ExoSQL.Builtins, :format, "format"}, [lit: [" €", {",", "k"}, "W%02, "], column: {:tmp, :tmp, "a"}, column: {:tmp, :tmp, "b"}]}}
       )
   end
+
+  test "Duration parsing IS(8601)" do
+     duration = ExoSQL.DateTime.Duration.parse!("P1Y2M3D4WT10H20M30S")
+
+     assert duration.years == 1
+     assert duration.months == 2
+     assert duration.days == 7 * 4 + 3 # may be more than a month, but I dont know how much, so I will add days.
+
+     assert duration.seconds == 10 * 60 * 60 + 20 * 60 + 30
+
+     duration = ExoSQL.DateTime.Duration.parse!("-T10M")
+     assert duration.seconds == -10 * 60
+
+
+     duration = ExoSQL.DateTime.Duration.parse!("1Y")
+     assert duration == %ExoSQL.DateTime.Duration{ years: 1 }
+
+     {:error, _} = ExoSQL.DateTime.Duration.parse("nonsense")
+
+     duration = ExoSQL.DateTime.Duration.parse!("-30DT30M")
+     assert duration == %ExoSQL.DateTime.Duration{ days: -30, seconds: -30 * 60 }
+  end
+
+  test "Add durations" do
+    date = ExoSQL.DateTime.to_datetime("2016-02-01T10:30:00")
+
+    duration = ExoSQL.DateTime.Duration.parse!("1D")
+    ndate = ExoSQL.DateTime.Duration.datetime_add(date, duration)
+    assert date.year == ndate.year
+    assert date.month == ndate.month
+    assert date.day + 1 == ndate.day
+    assert date.hour == ndate.hour
+    assert date.minute == ndate.minute
+    assert date.second == ndate.second
+
+    ndate = ExoSQL.DateTime.Duration.datetime_add(date, "1Y1M")
+    assert date.year + 1 == ndate.year
+    assert date.month + 1 == ndate.month
+    assert date.day == ndate.day
+    assert date.hour == ndate.hour
+    assert date.minute == ndate.minute
+    assert date.second == ndate.second
+
+    ndate = ExoSQL.DateTime.Duration.datetime_add(date, "T29M10S")
+    assert date.year == ndate.year
+    assert date.month == ndate.month
+    assert date.day == ndate.day
+    assert date.hour == ndate.hour
+    assert date.minute + 29 == ndate.minute
+    assert date.second + 10 == ndate.second
+
+
+    ndate = ExoSQL.DateTime.Duration.datetime_add(date, "30D")
+    assert date.year == ndate.year
+    assert date.month + 1 == ndate.month
+    assert date.day + 1 == ndate.day
+    assert date.hour == ndate.hour
+    assert date.minute == ndate.minute
+    assert date.second == ndate.second
+
+    ndate = ExoSQL.DateTime.Duration.datetime_add(date, "-30DT2360M20S")
+    assert 2015 == ndate.year
+    assert 12 == ndate.month
+    assert 31 == ndate.day
+    assert 19 == ndate.hour
+    assert 9 == ndate.minute
+    assert 40 == ndate.second
+  end
 end

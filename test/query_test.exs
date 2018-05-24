@@ -396,11 +396,11 @@ defmodule QueryTest do
     assert result.rows == [["2018-02-06T09:51:45.489Z"]]
 
     result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', '+P1M'))")
-    Logger.warn("Adding 1 month gives extra days for feb!")
-    assert result.rows == [["2018-03-07T09:51:45.489Z"]]
+    # Logger.warn("Adding 1 month gives extra days for feb!") # NOT ANYMORE!
+    assert result.rows == [["2018-03-05T09:51:45.489Z"]]
 
     result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', '-1M'))")
-    assert result.rows == [["2018-01-06T09:51:45.489Z"]]
+    assert result.rows == [["2018-01-05T09:51:45.489Z"]]
 
     result = analyze_query!("SELECT to_string(to_datetime('2018-02-05T09:51:45.489Z', '+P2Y'))")
     # Logger.warn("Adding 2 years add a day!")
@@ -586,9 +586,11 @@ end
 
     assert Enum.count(res.rows) == 53
 
-    res = analyze_query!("SELECT date FROM generate_series(to_datetime('2018-01-01'), to_datetime('2017-12-31')) AS date")
-
+    res = analyze_query!("SELECT date FROM generate_series(to_datetime('2018-01-01'), to_datetime('2018-12-31')) AS date")
     assert Enum.count(res.rows) == 365
+
+    res = analyze_query!("SELECT date FROM generate_series(to_datetime('2018-01-01'), to_datetime('2018-12-31'), '1M') AS date")
+    assert Enum.count(res.rows) == 12
   end
 
   test "Fail get non existant column" do
