@@ -273,23 +273,21 @@ defmodule ExoSQL.Builtins do
   def generate_series(end_), do: generate_series(1,end_,1)
   def generate_series(start_, end_), do: generate_series(start_,end_,1)
   def generate_series(%DateTime{} = start_, %DateTime{} = end_, days) when is_number(days) do
-    generate_series(start_, end_, "P#{days}D")
+    generate_series(start_, end_, "#{days}D")
   end
 
   def generate_series(%DateTime{} = start_, %DateTime{} = end_, mod) when is_binary(mod) do
-    if start_ > end_ do
-      raise ArgumentError, "Start, end and step invalid. Will never reach end."
-    end
-
-    mod = if String.starts_with?(mod, "P") do
-      mod
-    else
-      "P" <> mod
-    end
     duration = ExoSQL.DateTime.Duration.parse!(mod)
 
+    cmp = if ExoSQL.DateTime.Duration.is_negative(duration) do
+      :lt
+    else
+      :gt
+    end
+
     rows = ExoSQL.Utils.generate(start_, fn value ->
-      if DateTime.compare(value, end_) == :gt do
+      cmpr = DateTime.compare(value, end_)
+      if cmpr == cmp do
         :halt
       else
         next = ExoSQL.DateTime.Duration.datetime_add(value, duration)
@@ -302,12 +300,7 @@ defmodule ExoSQL.Builtins do
       rows: rows
     }
   end
-  def generate_series(start_, end_, step) do
-    import ExoSQL.Utils, only: [to_number!: 1]
-    start_ = to_number!(start_)
-    end_ = to_number!(end_)
-    step = to_number!(step)
-
+  def generate_series(start_, end_, step) when is_number(start_) and is_number(end_) and is_number(step) do
     if step < 0 and start_ < end_ do
       raise ArgumentError, "Start, end and step invalid. Will never reach end."
     end
@@ -320,6 +313,20 @@ defmodule ExoSQL.Builtins do
       rows: generate_series_range(start_, end_, step)
     }
   end
+  def generate_series(start_, end_, step) do
+    import ExoSQL.Utils, only: [to_number!: 1, to_number: 1]
+
+    # there are two options: numbers or dates. Check if I can convert the start_ to a number
+    # and if so, do the generate_series for numbers
+
+    case to_number(start_) do
+      {:ok, start_} ->
+        generate_series(start_, to_number!(end_), to_number!(step))
+      {:error, _} -> # maybe a date
+        generate_series(to_datetime(start_), to_datetime(end_), step)
+    end
+  end
+  
   defp generate_series_range(current, stop, step) do
     cond do
       step > 0 and current > stop ->

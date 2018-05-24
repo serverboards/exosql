@@ -187,6 +187,9 @@ defmodule ExoSQL.DateTime.Duration do
   defp parse_time([{n, "M"} | rest], acc), do: parse_time(rest, Map.update(acc, :seconds, n * 60, &(&1 + n * 60)))
   defp parse_time([{n, "S"} | rest], acc), do: parse_time(rest, Map.update(acc, :seconds, n, &(&1 + n)))
 
+  def is_negative(%ExoSQL.DateTime.Duration{ seconds: seconds, days: days, months: months, years: years}) do
+    seconds < 0 or days < 0 or months < 0 or years < 0
+  end
 
   def datetime_add(date, duration) when is_binary(duration) do
     datetime_add(date, parse!(duration))

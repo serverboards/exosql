@@ -591,6 +591,16 @@ end
 
     res = analyze_query!("SELECT date FROM generate_series(to_datetime('2018-01-01'), to_datetime('2018-12-31'), '1M') AS date")
     assert Enum.count(res.rows) == 12
+
+    res = analyze_query!("SELECT date FROM generate_series(to_datetime('2018-05-15T22:00:00.000Z'), to_datetime('2018-05-16T21:59:59.000Z'), 'T1H') AS date")
+    assert Enum.count(res.rows) == 24
+
+    res = analyze_query!("SELECT date FROM generate_series(to_datetime('2018-05-17T22:00:00.000Z'), to_datetime('2018-05-16T21:59:59.000Z'), '-T1H') AS date")
+    assert Enum.count(res.rows) == 25 # There is a sneaky minute at the end range that makes it stop at 21h
+
+    res = analyze_query!("SELECT date FROM generate_series('2018-05-17T22:00:00.000Z', '2018-05-16T21:59:59.000Z', '-T1H') AS date")
+    assert Enum.count(res.rows) == 25 # There is a sneaky minute at the end range that makes it stop at 21h
+
   end
 
   test "Fail get non existant column" do
