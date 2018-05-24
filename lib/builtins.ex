@@ -277,7 +277,13 @@ defmodule ExoSQL.Builtins do
   end
 
   def generate_series(%DateTime{} = start_, %DateTime{} = end_, mod) when is_binary(mod) do
-    duration = ExoSQL.DateTime.Duration.parse!(mod)
+    duration = case ExoSQL.DateTime.Duration.parse(mod) do
+      {:error, other} ->
+        throw {:error, other}
+      %ExoSQL.DateTime.Duration{ seconds: 0, days: 0, months: 0, years: 0} ->
+        throw {:error, :invalid_duration}
+      {:ok, other} -> other
+    end
 
     cmp = if ExoSQL.DateTime.Duration.is_negative(duration) do
       :lt
@@ -301,10 +307,13 @@ defmodule ExoSQL.Builtins do
     }
   end
   def generate_series(start_, end_, step) when is_number(start_) and is_number(end_) and is_number(step) do
+    if step == 0 do
+      raise ArgumentError, "Step invalid. Will never reach end."
+    end
     if step < 0 and start_ < end_ do
       raise ArgumentError, "Start, end and step invalid. Will never reach end."
     end
-    if step >= 0 and start_ > end_ do
+    if step > 0 and start_ > end_ do
       raise ArgumentError, "Start, end and step invalid. Will never reach end."
     end
 
@@ -326,7 +335,7 @@ defmodule ExoSQL.Builtins do
         generate_series(to_datetime(start_), to_datetime(end_), step)
     end
   end
-  
+
   defp generate_series_range(current, stop, step) do
     cond do
       step > 0 and current > stop ->

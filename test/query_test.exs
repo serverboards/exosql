@@ -601,6 +601,14 @@ end
     res = analyze_query!("SELECT date FROM generate_series('2018-05-17T22:00:00.000Z', '2018-05-16T21:59:59.000Z', '-T1H') AS date")
     assert Enum.count(res.rows) == 25 # There is a sneaky minute at the end range that makes it stop at 21h
 
+
+    try do
+      res = analyze_query!("SELECT date FROM generate_series('2018-05-17T22:00:00.000Z', '2018-05-16T21:59:59.000Z', 'T0H') AS date")
+      assert "Fix bug no duration, infinite loop"
+    catch
+      {:error, :invalid_duration} ->
+        :ok
+    end
   end
 
   test "Fail get non existant column" do
