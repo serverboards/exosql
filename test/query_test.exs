@@ -1198,9 +1198,6 @@ end
     assert Enum.count(res2.rows) == 4
 
     res1 = analyze_query!("SELECT id, email, name FROM json, LATERAL unnest(json, 'email', 'name')")
-
     assert res1 == res2
-
-    flunk 1
   end
 end

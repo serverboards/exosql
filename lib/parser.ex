@@ -49,6 +49,7 @@ defmodule ExoSQL.Parser do
     all_tables_at_context = resolve_all_tables(context)
     # Logger.debug("All tables #{inspect all_tables_at_context}")
 
+    # Logger.debug("Resolve tables #{inspect from}")
     from = Enum.map(from, &resolve_table(&1, all_tables_at_context, context))
 
     all_tables = if join != [] do
@@ -64,7 +65,10 @@ defmodule ExoSQL.Parser do
     # Logger.debug("All tables at all columns #{inspect all_tables}")
 
     all_columns = resolve_all_columns(all_tables, context)
-    Logger.debug("Resolved columns at query: #{inspect all_columns}")
+
+    # Now resolve references to tables, as in FROM xx, LATERAL nested(xx.json, "a")
+    from = Enum.map(from, &resolve_column(&1, all_columns, context))
+    # Logger.debug("Resolved columns at query: #{inspect all_columns}")
 
     groupby = if groupby do
       Enum.map(groupby, &resolve_column(&1, all_columns, context))
@@ -201,7 +205,7 @@ defmodule ExoSQL.Parser do
         {:ok, schema} = ExoSQL.schema(db, table, context)
         Enum.map(schema[:columns], &({db, table, &1}))
       {:fn, {"unnest", [_expr | columns]}} ->
-        Logger.debug("Get columns from unnest #{inspect columns}")
+        # Logger.debug("Get columns from unnest #{inspect columns}")
         columns |> Enum.map(fn {:lit, col} -> {:tmp, "unnest", col} end)
       {:fn, {function, _params}} ->
         [{:tmp, function, function}]
@@ -247,6 +251,11 @@ defmodule ExoSQL.Parser do
   def resolve_columns(%ExoSQL.Query{  } = q) do
     get_query_columns(q)
   end
+  def resolve_columns({:lateral, expr}), do: resolve_columns(expr)
+  def resolve_columns({:fn, {"unnest", [_expr | columns]}}) do
+    Enum.map(columns, fn {:lit, col} -> {:tmp, "unnest", col} end)
+  end
+
 
   def get_table_columns({db, table}, all_columns) do
     for {^db, ^table, column} <- all_columns, do: column
@@ -272,6 +281,7 @@ defmodule ExoSQL.Parser do
   def resolve_table({:alias, {table, alias_}}, all_tables, context) do
     {:alias, {resolve_table(table, all_tables, context), alias_}}
   end
+  def resolve_table({:lateral, expr} = orig, _all_tables, _context), do: orig
 
   @doc ~S"""
   From the list of tables, and context, and an unknown column, return the
@@ -345,7 +355,6 @@ defmodule ExoSQL.Parser do
     {:case, list}
   end
 
-
   def resolve_column({:alias, {expr, alias_}}, all_columns, context) do
     {:alias, {resolve_column(expr, all_columns, context), alias_}}
   end
@@ -354,6 +363,10 @@ defmodule ExoSQL.Parser do
     context = Map.put(context, "__parent__", all_columns)
     {:ok, parsed} = real_parse(query, context)
     {:select, parsed}
+  end
+
+  def resolve_column({:lateral, expr}, all_columns, context) do
+    {:lateral, resolve_column(expr, all_columns, context)}
   end
 
   def resolve_column(other, _schema, _context) do

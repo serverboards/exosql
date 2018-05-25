@@ -73,17 +73,21 @@ defmodule ExoSQL.Planner do
       Enum.map(query.orderby, fn {_type, expr} -> expr end),
       Enum.map(query.join, fn {_join, {_from, expr}} -> expr end),
     ]
-    Logger.debug("All expressions: #{inspect all_expressions}")
+    # Logger.debug("All expressions: #{inspect all_expressions}")
     # Logger.debug("From #{inspect query.from, pretty: true}")
     from = Enum.map(query.from, &plan_execute(&1, where, all_expressions))
 
     from_plan = if from == [] do
       %ExoSQL.Result{columns: ["?NONAME"], rows: [[1]]} # just one element
     else
-      Enum.reduce((tl from), (hd from), fn fr, acc ->
-        {:cross_join, fr, acc}
+      Enum.reduce((tl from), (hd from), fn
+        {:execute, {:lateral, expr}, _, _}, acc ->
+          {:cross_join_lateral, acc, expr}
+        fr, acc ->
+          {:cross_join, fr, acc}
       end)
     end
+    # Logger.debug("From plan #{inspect from} -> #{inspect from_plan}")
 
     join_plan = Enum.reduce(query.join, from_plan, fn
       {:cross_join, toplan}, acc ->
@@ -243,7 +247,7 @@ defmodule ExoSQL.Planner do
   defp get_table_columns_at_expr(_db, _table, {:select, query}) do
     {:ok, plan} = plan(query)
     res = get_parent_columns(plan)
-    Logger.debug("Get parents from #{inspect plan, pretty: true}: #{inspect res}")
+    # Logger.debug("Get parents from #{inspect plan, pretty: true}: #{inspect res}")
     res
   end
   defp get_table_columns_at_expr(db, table, {:case, list}) do
@@ -255,6 +259,9 @@ defmodule ExoSQL.Planner do
     get_table_columns_at_expr(db, table, expr)
   end
   defp get_table_columns_at_expr(db, table, {:cross_join_lateral, expr}) do
+    get_table_columns_at_expr(db, table, expr)
+  end
+  defp get_table_columns_at_expr(db, table, {:lateral, expr}) do
     get_table_columns_at_expr(db, table, expr)
   end
   defp get_table_columns_at_expr(_db, _table, _other), do: []

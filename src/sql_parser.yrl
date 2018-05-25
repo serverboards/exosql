@@ -60,7 +60,8 @@ select_expr -> expr id: {alias, {'$1', unwrap('$2')}}.
 select_expr -> op5: tag('$1', "*"), {all_columns}.
 
 from -> 'FROM' table_list : '$2'.
-table_list -> 'LATERAL' expr: [lateral, '$2'].
+table_list -> 'LATERAL' expr: [{lateral, '$2'}].
+table_list -> 'LATERAL' expr comma table_list: [{lateral, '$2'}] ++ '$4'.
 table_list -> table : ['$1'].
 table_list -> table comma table_list : ['$1'] ++ '$3'.
 
@@ -68,13 +69,11 @@ join -> '$empty' : [].
 join -> cross_join table join : [{'$1', '$2'}] ++ '$3'.
 join -> join_type table 'ON' expr join : [{'$1', {'$2', '$4'}}] ++ '$5'.
 
-cross_join -> 'CROSS'         'JOIN' 'LATERAL': cross_join_lateral.
-cross_join -> 'CROSS' 'JOIN' : cross_join.
+cross_join -> 'CROSS' 'JOIN' 'LATERAL': cross_join_lateral.
+cross_join -> 'CROSS' 'JOIN'          : cross_join.
 
-join_type -> 'LEFT'          'JOIN' 'LATERAL': left_join_lateral.
-join_type -> 'LEFT'  'OUTER' 'JOIN' 'LATERAL': left_join_lateral.
-join_type -> 'RIGHT'         'JOIN' 'LATERAL': right_join_lateral.
-join_type -> 'RIGHT' 'OUTER' 'JOIN' 'LATERAL': right_join_lateral.
+join_type -> 'LEFT'         'JOIN' 'LATERAL': left_join_lateral.
+join_type -> 'LEFT' 'OUTER' 'JOIN' 'LATERAL': left_join_lateral.
 
 join_type -> 'JOIN' : inner_join.
 join_type -> 'INNER' 'JOIN' : inner_join.

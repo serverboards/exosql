@@ -164,7 +164,7 @@ defmodule ExoSQL.Executor do
   def execute({:cross_join_lateral, from, expr}, context) do
     {:ok, data} = execute(from, context)
 
-    Logger.debug("Cross join lateral #{inspect expr}")
+    # Logger.debug("Cross join lateral #{inspect expr}")
     ncolumns = case expr do
       {:fn, {"unnest", [_from | columns]}} ->
         Enum.map(columns, fn {:lit, col} -> {:tmp, "unnest", col} end)
