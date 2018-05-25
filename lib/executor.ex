@@ -177,8 +177,18 @@ defmodule ExoSQL.Executor do
     expr = ExoSQL.Expr.simplify(expr, context)
     nrows = Enum.flat_map(data.rows, fn row ->
       context = Map.put(context, :row, row)
-      ExoSQL.Expr.run_expr(expr, context)
-        |> Enum.map(&(&1 ++ row))
+      res = ExoSQL.Expr.run_expr(expr, context)
+      case res do
+        res when is_list(res) ->
+          res |> Enum.map(fn
+            nrow when is_list(nrow) ->
+              nrow ++ row
+            other ->
+              [other] ++ row
+          end)
+        other ->
+          [other] ++ row
+      end
     end)
 
     {:ok, %ExoSQL.Result{
