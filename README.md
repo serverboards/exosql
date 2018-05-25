@@ -77,6 +77,7 @@ end
 * `UNION` and `UNION ALL`.
 * `RANGE`
 * `WITH` common table expressions
+* `CROSS JOIN LATERAL`
 * table and column alias with `AS`
 * nested `SELECT`: At `FROM`, `SELECT`, `WHERE`...
 * `generate_series` function tables
@@ -125,6 +126,18 @@ SELECT url, status_code
   INNER JOIN request
   ON urls.url = request.url
 ```
+
+## CROSS JOIN LATERAL
+
+ExoSQL can do limited lateral joins on table expressions. This allow for example
+to use a JSON array to be unnested as several columns:
+
+```sql
+SELECT id, email, name FROM json CROSS JOIN LATERAL unnest(json, 'email', 'name')
+```
+
+Currently only support for expressions is ready, nested queries is not funcional
+yet.
 
 ## Builtins
 
@@ -415,6 +428,37 @@ as a boolean.
 #### `round(number, precision=0)`
 
 Returns the number rounded to the given precission. May be convert to integer if precission is 0.
+
+#### `unnest(json, col1...)`
+
+Expands a json or an array to be used on `LATERAL` joins.
+
+It converts the array or json representation of an array to a list of lists,
+as required by the `LATERAL` joins. Optionally, if column names are given the
+items are expanded as such columns.
+
+For example:
+
+```sql
+SELECT id, email, name FROM json CROSS JOIN LATERAL unnest(json, 'email', 'name')
+```
+
+For each column expands the `json` array, getting only the `email` and `name` of
+each item, so the final result has all the emails and names for all the arrays
+at the json table.
+
+
+A.json.id | tmp.unnest.email | tmp.unnest.name | A.json.json
+----------|------------------|-----------------|---------
+1         | one@example.com  | uno             | [{"email": "one@example.com", "name": "uno"}, {"email": "two@example.com", "name": "dos"}]
+1         | two@example.com  | dos             | [{"email": "one@example.com", "name": "uno"}, {"email": "two@example.com", "name": "dos"}]
+2         | three@example.com | tres            | [{"email": "three@example.com", "name": "tres"}, {"email": "four@example.com", "name": "cuatro"}]
+2         | four@example.com | cuatro          | [{"email": "three@example.com", "name": "tres"}, {"email": "four@example.com", "name": "cuatro"}]
+
+
+The last column has the original json fo the each json line (2 lines), but it is
+expanded to four lines.
+
 
 #### `upper(range)`
 
