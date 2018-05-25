@@ -1,0 +1,3 @@
+id,json
+1,"[{""email"": ""one@example.com"", ""name"": ""uno""}, {""email"": ""two@example.com"", ""name"": ""dos""}]"
+2,"[{""email"": ""three@example.com"", ""name"": ""tres""}, {""email"": ""four@example.com"", ""name"": ""cuatro""}]"

@@ -5,7 +5,7 @@ Nonterminals
   from table_list
   where expr_list
   column table tableid groupby
-  join join_type
+  join join_type cross_join
   orderby order_expr_list order_expr asc_desc
   limit offset
   expr expr_l2 expr_l3 expr_l4 expr_l5 expr_l6 expr_l7 expr_atom
@@ -17,7 +17,7 @@ id comma dot lit litn litf var
 open_par close_par open_br close_br open_sqb close_sqb
 op1 op2 op3 op4 op5 op6
 'SELECT' 'FROM' 'AS' 'WITH'
-'OUTER' 'LEFT' 'RIGHT' 'INNER' 'CROSS' 'JOIN' 'ON'
+'OUTER' 'LEFT' 'RIGHT' 'INNER' 'CROSS' 'JOIN' 'ON' 'LATERAL'
 'WHERE' 'GROUP' 'BY' 'ORDER' 'ASC' 'DESC'
 'TRUE' 'FALSE' 'NOT' 'NULL'
 'DISTINCT' 'LIMIT' 'ALL' 'OFFSET'
@@ -60,15 +60,24 @@ select_expr -> expr id: {alias, {'$1', unwrap('$2')}}.
 select_expr -> op5: tag('$1', "*"), {all_columns}.
 
 from -> 'FROM' table_list : '$2'.
+table_list -> 'LATERAL' expr: [lateral, '$2'].
 table_list -> table : ['$1'].
 table_list -> table comma table_list : ['$1'] ++ '$3'.
 
 join -> '$empty' : [].
+join -> cross_join table join : [{'$1', '$2'}] ++ '$3'.
 join -> join_type table 'ON' expr join : [{'$1', {'$2', '$4'}}] ++ '$5'.
+
+cross_join -> 'CROSS'         'JOIN' 'LATERAL': cross_join_lateral.
+cross_join -> 'CROSS' 'JOIN' : cross_join.
+
+join_type -> 'LEFT'          'JOIN' 'LATERAL': left_join_lateral.
+join_type -> 'LEFT'  'OUTER' 'JOIN' 'LATERAL': left_join_lateral.
+join_type -> 'RIGHT'         'JOIN' 'LATERAL': right_join_lateral.
+join_type -> 'RIGHT' 'OUTER' 'JOIN' 'LATERAL': right_join_lateral.
 
 join_type -> 'JOIN' : inner_join.
 join_type -> 'INNER' 'JOIN' : inner_join.
-join_type -> 'CROSS' 'JOIN' : cross_join.
 join_type -> 'LEFT' 'JOIN' : left_join.
 join_type -> 'LEFT' 'OUTER' 'JOIN' : left_join.
 join_type -> 'RIGHT' 'JOIN' : right_join.

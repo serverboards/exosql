@@ -3,8 +3,8 @@ Definitions.
 INT    = [0-9]+
 COMMENT = --.*
 MINUS  = -
-RESERVEDL = (select|where|from|as|inner|cross|left|right|outer|join|on|group|by|order|asc|desc|true|false|not|distinct|limit|offset|all|null|case|if|elif|when|then|else|end|union|with)
-RESERVEDU = (SELECT|WHERE|FROM|AS|INNER|CROSS|LEFT|RIGHT|OUTER|JOIN|ON|GROUP|BY|ORDER|ASC|DESC|TRUE|FALSE|NOT|DISTINCT|LIMIT|OFFSET|ALL|NULL|CASE|IF|ELIF|WHEN|THEN|ELSE|END|UNION|WITH)
+RESERVEDL = (select|where|from|as|inner|cross|left|right|outer|join|on|group|by|order|asc|desc|true|false|not|distinct|limit|offset|all|null|case|if|elif|when|then|else|end|union|with|lateral)
+RESERVEDU = (SELECT|WHERE|FROM|AS|INNER|CROSS|LEFT|RIGHT|OUTER|JOIN|ON|GROUP|BY|ORDER|ASC|DESC|TRUE|FALSE|NOT|DISTINCT|LIMIT|OFFSET|ALL|NULL|CASE|IF|ELIF|WHEN|THEN|ELSE|END|UNION|WITH|LATERAL)
 ID     = [_a-zA-Z][_a-zA-Z0-9]*
 COMMA  = ,
 DOT    = \.

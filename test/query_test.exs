@@ -1191,4 +1191,16 @@ end
 
     flunk 1
   end
+
+  test "FROM LATERAL access to previous row data -> CROSS JOIN LATERAL" do
+    # Uses data from json field to do a lateral join
+    res2 = analyze_query!("SELECT id, email, name FROM json CROSS JOIN LATERAL unnest(json, 'email', 'name')")
+    assert Enum.count(res2.rows) == 4
+
+    res1 = analyze_query!("SELECT id, email, name FROM json, LATERAL unnest(json, 'email', 'name')")
+
+    assert res1 == res2
+
+    flunk 1
+  end
 end

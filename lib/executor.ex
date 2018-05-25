@@ -161,6 +161,29 @@ defmodule ExoSQL.Executor do
   def execute({:right_join, table1, table2, expr}, context) do
     execute_join(table2, table1, expr, context, :left)
   end
+  def execute({:cross_join_lateral, from, expr}, context) do
+    {:ok, data} = execute(from, context)
+
+    Logger.debug("Cross join lateral #{inspect expr}")
+    ncolumns = case expr do
+      {:fn, {"unnest", [_from | columns]}} ->
+        Enum.map(columns, fn {:lit, col} -> {:tmp, "unnest", col} end)
+      {:fn, {func, _args}} -> [{:tmp, func, func}]
+    end
+
+    context = Map.put(context, :columns, data.columns)
+    expr = ExoSQL.Expr.simplify(expr, context)
+    nrows = Enum.flat_map(data.rows, fn row ->
+      context = Map.put(context, :row, row)
+      ExoSQL.Expr.run_expr(expr, context)
+        |> Enum.map(&(&1 ++ row))
+    end)
+
+    {:ok, %ExoSQL.Result{
+      columns: ncolumns ++ data.columns,
+      rows: nrows
+    }}
+  end
 
   def execute({:group_by, from, groups}, context) do
     {:ok, data} = execute(from, context)

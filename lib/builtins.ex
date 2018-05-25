@@ -34,6 +34,7 @@ defmodule ExoSQL.Builtins do
     "urlparse" => {ExoSQL.Builtins, :urlparse},
     "jp" => {ExoSQL.Builtins, :jp},
     "json" => {ExoSQL.Builtins, :json},
+    "unnest" => {ExoSQL.Builtins, :unnest},
     "regex" => {ExoSQL.Builtins, :regex},
     "random" => {ExoSQL.Builtins, :random},
     "randint" => {ExoSQL.Builtins, :randint},
@@ -446,6 +447,76 @@ defmodule ExoSQL.Builtins do
   def json(str) when is_binary(str) do
     Poison.decode!(str)
   end
+  def json(js) when is_map(js), do: js
+  def json(arr) when is_list(arr), do: arr
+
+  @doc ~S"""
+  Extracts some keys from each value on an array and returns the array of
+  those values
+  """
+  def unnest(nil), do: nil
+  def unnest(array, col1) do
+    array = json(array)
+    Enum.map(array, fn row ->
+      [Map.get(row, col1)]
+    end)
+  end
+  def unnest(array, col1, col2) do
+    array = json(array)
+    Enum.map(array, fn row ->
+      [Map.get(row, col1),Map.get(row, col2)]
+    end)
+  end
+  def unnest(array, col1, col2, col3) do
+    array = json(array)
+    Enum.map(array, fn row ->
+      [
+        Map.get(row, col1), Map.get(row, col2),
+        Map.get(row, col3),
+      ]
+    end)
+  end
+  def unnest(array, col1, col2, col3, col4) do
+    array = json(array)
+    Enum.map(array, fn row ->
+      [
+        Map.get(row, col1), Map.get(row, col2),
+        Map.get(row, col3), Map.get(row, col4),
+      ]
+    end)
+  end
+  def unnest(array, col1, col2, col3, col4, col5) do
+    array = json(array)
+    Enum.map(array, fn row ->
+      [
+        Map.get(row, col1), Map.get(row, col2),
+        Map.get(row, col3), Map.get(row, col4),
+        Map.get(row, col5),
+      ]
+    end)
+  end
+  def unnest(array, col1, col2, col3, col4, col5, col6) do
+    array = json(array)
+    Enum.map(array, fn row ->
+      [
+        Map.get(row, col1), Map.get(row, col2),
+        Map.get(row, col3), Map.get(row, col4),
+        Map.get(row, col5), Map.get(row, col6),
+      ]
+    end)
+  end
+  def unnest(array, col1, col2, col3, col4, col5, col6, col7) do
+    array = json(array)
+    Enum.map(array, fn row ->
+      [
+        Map.get(array, col1), Map.get(array, col2),
+        Map.get(array, col3), Map.get(array, col4),
+        Map.get(array, col5), Map.get(array, col6),
+        Map.get(array, col7),
+      ]
+    end)
+  end
+
 
   @doc ~S"""
   Creates a range, which can later be used in:

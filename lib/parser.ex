@@ -52,25 +52,35 @@ defmodule ExoSQL.Parser do
     from = Enum.map(from, &resolve_table(&1, all_tables_at_context, context))
 
     all_tables = if join != [] do
-      from ++ Enum.map(join, fn {_type, {table, _expr}} -> resolve_table(table, all_tables_at_context, context) end)
+      from ++ Enum.map(join, fn
+        {_type, {:fn, {_name, _params}} = func} ->
+          func
+        {_type, {table, _expr}} ->
+          resolve_table(table, all_tables_at_context, context)
+      end)
     else
       from
     end
     # Logger.debug("All tables at all columns #{inspect all_tables}")
 
     all_columns = resolve_all_columns(all_tables, context)
-    # Logger.debug("Resolved columns at query: #{inspect all_columns}")
+    Logger.debug("Resolved columns at query: #{inspect all_columns}")
 
     groupby = if groupby do
       Enum.map(groupby, &resolve_column(&1, all_columns, context))
     else nil end
 
     # Logger.debug("All tables #{inspect all_tables}")
-    join = Enum.map(join, fn {type, {table, expr}} ->
-      {type, {
-        resolve_table(table, all_tables_at_context, context),
-        resolve_column(expr, all_columns, context)
-      }}
+    join = Enum.map(join, fn
+      {type, {:fn, {func, params}}} ->
+        Logger.debug("params #{inspect params}")
+        params = Enum.map(params, &resolve_column(&1, all_columns, context))
+        {type, {:fn, {func, params}}}
+      {type, {table, expr}} ->
+        {type, {
+          resolve_table(table, all_tables_at_context, context),
+          resolve_column(expr, all_columns, context)
+        }}
     end)
 
 
@@ -175,6 +185,8 @@ defmodule ExoSQL.Parser do
   """
   def resolve_all_columns(tables, context) do
     all_columns = Enum.flat_map(tables, fn
+      {:alias, {{:fn, {"unnest", [_expr, columns]}}, alias_}} ->
+        columns |> Enum.map(fn col -> {:tmp, alias_, col} end)
       {:alias, {{:fn, {_function, _params}}, alias_}} ->
         [{:tmp, alias_, alias_}]
       {:alias, {table, alias_}} ->
@@ -188,6 +200,9 @@ defmodule ExoSQL.Parser do
       {db, table} when is_binary(table)->
         {:ok, schema} = ExoSQL.schema(db, table, context)
         Enum.map(schema[:columns], &({db, table, &1}))
+      {:fn, {"unnest", [_expr | columns]}} ->
+        Logger.debug("Get columns from unnest #{inspect columns}")
+        columns |> Enum.map(fn {:lit, col} -> {:tmp, "unnest", col} end)
       {:fn, {function, _params}} ->
         [{:tmp, function, function}]
       other ->
