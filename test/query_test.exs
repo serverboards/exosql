@@ -1199,5 +1199,9 @@ end
 
     res1 = analyze_query!("SELECT id, email, name FROM json, LATERAL unnest(json, 'email', 'name')")
     assert res1 == res2
+
+    res1 = analyze_query!("SELECT id, jp(unnest, 'email'), jp(unnest, 'name') FROM json, LATERAL unnest(json)")
+    assert res1.rows == res2.rows
+
   end
 end

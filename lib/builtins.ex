@@ -454,7 +454,9 @@ defmodule ExoSQL.Builtins do
   Extracts some keys from each value on an array and returns the array of
   those values
   """
-  def unnest(nil), do: nil
+  def unnest(array) do
+    json(array) |> Enum.map(&([&1]))
+  end
   def unnest(array, col1) do
     array = json(array)
     Enum.map(array, fn row ->

@@ -62,13 +62,13 @@ defmodule ExoSQL.Parser do
     else
       from
     end
-    # Logger.debug("All tables at all columns #{inspect all_tables}")
 
+    # Logger.debug("All tables at all columns #{inspect all_tables}")
     all_columns = resolve_all_columns(all_tables, context)
+    # Logger.debug("Resolved columns at query: #{inspect all_columns}")
 
     # Now resolve references to tables, as in FROM xx, LATERAL nested(xx.json, "a")
     from = Enum.map(from, &resolve_column(&1, all_columns, context))
-    # Logger.debug("Resolved columns at query: #{inspect all_columns}")
 
     groupby = if groupby do
       Enum.map(groupby, &resolve_column(&1, all_columns, context))
@@ -77,7 +77,7 @@ defmodule ExoSQL.Parser do
     # Logger.debug("All tables #{inspect all_tables}")
     join = Enum.map(join, fn
       {type, {:fn, {func, params}}} ->
-        Logger.debug("params #{inspect params}")
+        # Logger.debug("params #{inspect params}")
         params = Enum.map(params, &resolve_column(&1, all_columns, context))
         {type, {:fn, {func, params}}}
       {type, {table, expr}} ->
@@ -188,8 +188,9 @@ defmodule ExoSQL.Parser do
   specially when aliases are taken into account
   """
   def resolve_all_columns(tables, context) do
+    # Logger.debug("Resolve all tables #{inspect tables}")
     all_columns = Enum.flat_map(tables, fn
-      {:alias, {{:fn, {"unnest", [_expr, columns]}}, alias_}} ->
+      {:alias, {{:fn, {"unnest", [_expr | columns]}}, alias_}} ->
         columns |> Enum.map(fn col -> {:tmp, alias_, col} end)
       {:alias, {{:fn, {_function, _params}}, alias_}} ->
         [{:tmp, alias_, alias_}]
@@ -204,11 +205,14 @@ defmodule ExoSQL.Parser do
       {db, table} when is_binary(table)->
         {:ok, schema} = ExoSQL.schema(db, table, context)
         Enum.map(schema[:columns], &({db, table, &1}))
+      {:fn, {"unnest", [ _expr ]}} -> # no column names given, just unnest
+        [{:tmp, "unnest", "unnest"}]
       {:fn, {"unnest", [_expr | columns]}} ->
-        # Logger.debug("Get columns from unnest #{inspect columns}")
         columns |> Enum.map(fn {:lit, col} -> {:tmp, "unnest", col} end)
       {:fn, {function, _params}} ->
         [{:tmp, function, function}]
+      {:lateral, something} ->
+        resolve_all_columns([something], context)
       other ->
         resolve_columns(other)
     end)

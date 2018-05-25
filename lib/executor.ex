@@ -166,6 +166,8 @@ defmodule ExoSQL.Executor do
 
     # Logger.debug("Cross join lateral #{inspect expr}")
     ncolumns = case expr do
+      {:fn, {"unnest", [_from ]}} ->
+        [{:tmp, "unnest", "unnest"}]
       {:fn, {"unnest", [_from | columns]}} ->
         Enum.map(columns, fn {:lit, col} -> {:tmp, "unnest", col} end)
       {:fn, {func, _args}} -> [{:tmp, func, func}]
