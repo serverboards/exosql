@@ -429,6 +429,9 @@ defmodule ExoSQL.Expr do
 
     {:case, list}
   end
+  def simplify({:alias, expr, _alias_}, context) do
+    simplify(expr, context)
+  end
   def simplify(other, _context) do
     other
   end

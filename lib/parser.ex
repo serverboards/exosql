@@ -56,6 +56,8 @@ defmodule ExoSQL.Parser do
       from ++ Enum.map(join, fn
         {_type, {:fn, {_name, _params}} = func} ->
           func
+        {_type, {:alias, {_what, _alias}} = alias_} ->
+          alias_
         {_type, {table, _expr}} ->
           resolve_table(table, all_tables_at_context, context)
       end)
@@ -80,6 +82,10 @@ defmodule ExoSQL.Parser do
         # Logger.debug("params #{inspect params}")
         params = Enum.map(params, &resolve_column(&1, all_columns, context))
         {type, {:fn, {func, params}}}
+      {type, {:alias, {{:fn, {func, params}}, alias_}}} ->
+        # Logger.debug("params #{inspect params}")
+        params = Enum.map(params, &resolve_column(&1, all_columns, context))
+        {type, {:alias, {{:fn, {func, params}}, alias_}}}
       {type, {table, expr}} ->
         {type, {
           resolve_table(table, all_tables_at_context, context),
@@ -192,12 +198,15 @@ defmodule ExoSQL.Parser do
     all_columns = Enum.flat_map(tables, fn
       {:alias, {{:fn, {"unnest", [_expr | columns]}}, alias_}} ->
         columns |> Enum.map(fn col -> {:tmp, alias_, col} end)
-      {:alias, {{:fn, {_function, _params}}, alias_}} ->
-        [{:tmp, alias_, alias_}]
       {:alias, {table, alias_}} ->
-        resolve_all_columns([table], context) |> Enum.map(fn
-          {_db, _table, column} -> {:tmp, alias_, column}
-        end)
+        case resolve_all_columns([table], context) do
+          [{_, a, a}] -> # only one answer, same name as "table", alias it
+            [{:tmp, alias_, alias_}]
+          other ->
+            Enum.map(other, fn
+              {_db, _table, column} -> {:tmp, alias_, column}
+            end)
+        end
       {:with, table} ->
         query = context[:with][table]
         get_query_columns(query)
@@ -285,7 +294,7 @@ defmodule ExoSQL.Parser do
   def resolve_table({:alias, {table, alias_}}, all_tables, context) do
     {:alias, {resolve_table(table, all_tables, context), alias_}}
   end
-  def resolve_table({:lateral, expr} = orig, _all_tables, _context), do: orig
+  def resolve_table({:lateral, _expr} = orig, _all_tables, _context), do: orig
 
   @doc ~S"""
   From the list of tables, and context, and an unknown column, return the

@@ -74,15 +74,17 @@ defmodule ExoSQL.Planner do
       Enum.map(query.join, fn {_join, {_from, expr}} -> expr end),
     ]
     # Logger.debug("All expressions: #{inspect all_expressions}")
-    # Logger.debug("From #{inspect query.from, pretty: true}")
     from = Enum.map(query.from, &plan_execute(&1, where, all_expressions))
 
+    # Logger.debug("From #{inspect from, pretty: true}")
     from_plan = if from == [] do
       %ExoSQL.Result{columns: ["?NONAME"], rows: [[1]]} # just one element
     else
       Enum.reduce((tl from), (hd from), fn
         {:execute, {:lateral, expr}, _, _}, acc ->
           {:cross_join_lateral, acc, expr}
+        {:alias, {:execute, {:lateral, expr}, _, _}, alias_}, acc ->
+          {:cross_join_lateral, acc, {:alias, expr, alias_}}
         fr, acc ->
           {:cross_join, fr, acc}
       end)
@@ -217,7 +219,13 @@ defmodule ExoSQL.Planner do
     {:ok, q} = plan(q)
     q
   end
-  defp plan_execute({:fn, _} = func, all_expressions), do: func
+
+  # this are with no _where
+  defp plan_execute({:alias, {{:fn, {function, params}}, alias_}}, _all_expressions) do
+    ex = {:fn, {function, params}}
+    {:alias, ex, alias_}
+  end
+  defp plan_execute({:fn, _} = func, _all_expressions), do: func
   defp plan_execute({db, table}, all_expressions) do
     columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
     {:execute, {db, table}, [], columns}

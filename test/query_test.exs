@@ -603,8 +603,8 @@ end
 
 
     try do
-      res = analyze_query!("SELECT date FROM generate_series('2018-05-17T22:00:00.000Z', '2018-05-16T21:59:59.000Z', 'T0H') AS date")
-      assert "Fix bug no duration, infinite loop"
+      analyze_query!("SELECT date FROM generate_series('2018-05-17T22:00:00.000Z', '2018-05-16T21:59:59.000Z', 'T0H') AS date")
+      # "Fix bug no duration, infinite loop"
     catch
       {:error, :invalid_duration} ->
         :ok
@@ -1206,5 +1206,10 @@ end
     res1 = analyze_query!("SELECT id, jp(json.json, 'email'), jp(json.json, 'name') FROM json AS orig, LATERAL json(orig.json)")
     assert res1.rows == res2.rows
 
+    res1 = analyze_query!("SELECT id, jp(js.js, 'email'), jp(js.js, 'name') FROM json AS orig CROSS JOIN LATERAL json(orig.json) AS js")
+    assert res1.rows == res2.rows
+
+    res1 = analyze_query!("SELECT id, jp(js.js, 'email'), jp(js.js, 'name') FROM json AS orig, LATERAL json(orig.json) AS js")
+    assert res1.rows == res2.rows
   end
 end

@@ -171,6 +171,8 @@ defmodule ExoSQL.Executor do
       {:fn, {"unnest", [_from | columns]}} ->
         Enum.map(columns, fn {:lit, col} -> {:tmp, "unnest", col} end)
       {:fn, {func, _args}} -> [{:tmp, func, func}]
+      {:alias, {:fn, {_func, _args}}, alias_} ->
+        [{:tmp, alias_, alias_}]
     end
 
     context = Map.put(context, :columns, data.columns)
