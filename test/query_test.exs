@@ -1191,4 +1191,13 @@ end
 
     flunk 1
   end
+
+  test "Random and Randint are not optimized" do
+    res = analyze_query!("SELECT RANDOM() FROM generate_series(2)")
+    assert Enum.at(res.rows,0) != Enum.at(res.rows,1)
+
+
+    res = analyze_query!("SELECT RANDINT(0, 1000) FROM generate_series(2)")
+    assert Enum.at(res.rows,0) != Enum.at(res.rows,1)
+  end
 end

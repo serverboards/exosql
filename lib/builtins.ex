@@ -626,6 +626,8 @@ defmodule ExoSQL.Builtins do
     # Logger.debug("JP #{inspect json}")
     simplify("jp", [json, {:lit, String.split(path, "/")}])
   end
+  def simplify("random", []), do: {:fn, {{ ExoSQL.Builtins, :random, "random"}, []}}
+  def simplify("randint", params), do: {:fn, {{ ExoSQL.Builtins, :randint, "randint"}, params}}
 
   # default: convert to {mod fun name} tuple
   def simplify(name, params) when is_binary(name) do
