@@ -49,8 +49,18 @@ defmodule ExoSQL.Parser do
     all_tables_at_context = resolve_all_tables(context)
     # Logger.debug("All tables #{inspect all_tables_at_context}")
 
-    # Logger.debug("Resolve tables #{inspect from}")
+    Logger.debug("Resolve tables #{inspect from, pretty: true}, #{inspect join, pretty: true} ")
     from = Enum.map(from, &resolve_table(&1, all_tables_at_context, context))
+
+    join = Enum.map(join, fn
+      {:cross_join_lateral, table} ->
+        Logger.debug("Resolve table, may need my columns")
+        resolved = resolve_table(table, all_tables_at_context, context)
+        {:cross_join_lateral, resolved}
+      {type, table} ->
+        resolved = resolve_table(table, all_tables_at_context, context)
+        {type, resolved}
+    end)
 
     all_tables = if join != [] do
       from ++ Enum.map(join, fn
@@ -65,9 +75,9 @@ defmodule ExoSQL.Parser do
       from
     end
 
-    # Logger.debug("All tables at all columns #{inspect all_tables}")
+    Logger.debug("All tables at all columns #{inspect all_tables}")
     all_columns = resolve_all_columns(all_tables, context)
-    # Logger.debug("Resolved columns at query: #{inspect all_columns}")
+    Logger.debug("Resolved columns at query: #{inspect all_columns}")
 
     # Now resolve references to tables, as in FROM xx, LATERAL nested(xx.json, "a")
     from = Enum.map(from, &resolve_column(&1, all_columns, context))
@@ -225,8 +235,9 @@ defmodule ExoSQL.Parser do
       other ->
         resolve_columns(other)
     end)
+    parent_columns = Map.get(context, "__parent__", [])
 
-    all_columns
+    all_columns ++ parent_columns
   end
 
   @doc ~S"""
@@ -286,7 +297,7 @@ defmodule ExoSQL.Parser do
     end
   end
   def resolve_table({:table, {_db, _name} = orig}, _all_tables, _context), do: orig
-  def resolve_table({:select, query}, _all_tables, context) do
+  def resolve_table({:select, query}, all_tables, context) do
     {:ok, parsed} = real_parse(query, context)
     parsed
   end
@@ -294,7 +305,10 @@ defmodule ExoSQL.Parser do
   def resolve_table({:alias, {table, alias_}}, all_tables, context) do
     {:alias, {resolve_table(table, all_tables, context), alias_}}
   end
-  def resolve_table({:lateral, _expr} = orig, _all_tables, _context), do: orig
+  def resolve_table({:lateral, table}, all_tables, context) do
+    resolved = resolve_table(table, all_tables, context)
+    {:lateral, resolved}
+  end
 
   @doc ~S"""
   From the list of tables, and context, and an unknown column, return the

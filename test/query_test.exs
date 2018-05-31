@@ -1212,4 +1212,17 @@ end
     res1 = analyze_query!("SELECT id, jp(js.js, 'email'), jp(js.js, 'name') FROM json AS orig, LATERAL json(orig.json) AS js")
     assert res1.rows == res2.rows
   end
+
+  test "FROM LATERAL query" do
+    # a bit complicated but takes several cross lateral options
+    analyze_query!("
+      SELECT * FROM products, LATERAL (
+        SELECT user_id, name FROM purchases CROSS JOIN LATERAL (
+          SELECT * FROM users WHERE id = purchases.user_id
+          ) WHERE purchases.product_id = products.id
+        )
+    ")
+
+    flunk 1
+  end
 end
