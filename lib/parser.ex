@@ -52,19 +52,19 @@ defmodule ExoSQL.Parser do
     all_tables_at_context = resolve_all_tables(context)
     # Logger.debug("All tables #{inspect all_tables_at_context}")
 
-    Logger.debug("Resolve tables #{inspect(from, pretty: true)}, #{inspect(join, pretty: true)} ")
+    # Logger.debug("Resolve tables #{inspect(from, pretty: true)},\n #{inspect(join, pretty: true)} ")
     from = Enum.map(from, &resolve_table(&1, all_tables_at_context, context))
 
     join =
       Enum.map(join, fn
         {:cross_join_lateral, table} ->
-          Logger.debug("Resolve table, may need my columns")
+          # Logger.debug("Resolve table, may need my columns")
           resolved = resolve_table(table, all_tables_at_context, context)
           {:cross_join_lateral, resolved}
 
-        {type, table} ->
+        {type, {table, ops}} ->
           resolved = resolve_table(table, all_tables_at_context, context)
-          {type, resolved}
+          {type, {resolved, ops}}
       end)
 
     all_tables =
@@ -78,15 +78,15 @@ defmodule ExoSQL.Parser do
               alias_
 
             {_type, {table, _expr}} ->
-              resolve_table(table, all_tables_at_context, context)
+              table
           end)
       else
         from
       end
 
-    Logger.debug("All tables at all columns #{inspect(all_tables)}")
+    # Logger.debug("All tables at all columns #{inspect(all_tables)}")
     all_columns = resolve_all_columns(all_tables, context)
-    Logger.debug("Resolved columns at query: #{inspect(all_columns)}")
+    # Logger.debug("Resolved columns at query: #{inspect(all_columns)}")
 
     # Now resolve references to tables, as in FROM xx, LATERAL nested(xx.json, "a")
     from = Enum.map(from, &resolve_column(&1, all_columns, context))
@@ -114,7 +114,7 @@ defmodule ExoSQL.Parser do
         {type, {table, expr}} ->
           {type,
            {
-             resolve_table(table, all_tables_at_context, context),
+             table,
              resolve_column(expr, all_columns, context)
            }}
       end)
@@ -346,6 +346,11 @@ defmodule ExoSQL.Parser do
     for {^db, ^table, column} <- all_columns, do: column
   end
 
+  @doc ~S"""
+  Given a table-like tuple, returns the real table names
+
+  The table-like can be a function, a lateral join, or a simple table
+  """
   def resolve_table({:table, {nil, name}}, all_tables, _context) when is_binary(name) do
     # Logger.debug("Resolve #{inspect name} at #{inspect all_tables}")
     options = for {db, ^name} <- all_tables, do: {db, name}
@@ -376,6 +381,10 @@ defmodule ExoSQL.Parser do
     {:lateral, resolved}
   end
 
+  def resolve_table(other, _all_tables, _context) do
+    Logger.error("Cant resolve table #{inspect other}")
+    raise "cant_resolve_table"
+  end
   @doc ~S"""
   From the list of tables, and context, and an unknown column, return the
   FQN of the column.
