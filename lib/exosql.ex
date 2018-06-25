@@ -37,26 +37,22 @@ defmodule ExoSQL do
   """
 
   defmodule Query do
-    defstruct [
-      select: [],
-      distinct: nil,
-      from: [],
-      where: nil,
-      groupby: nil,
-      join: nil,
-      orderby: [],
-      limit: nil,
-      offset: nil,
-      union: nil,
-      with: [],
-    ]
+    defstruct select: [],
+              distinct: nil,
+              from: [],
+              where: nil,
+              groupby: nil,
+              join: nil,
+              orderby: [],
+              limit: nil,
+              offset: nil,
+              union: nil,
+              with: []
   end
 
   defmodule Result do
-    defstruct [
-      columns: [],
-      rows: []
-    ]
+    defstruct columns: [],
+              rows: []
   end
 
   def parse(sql, context), do: ExoSQL.Parser.parse(sql, context)
@@ -68,29 +64,33 @@ defmodule ExoSQL do
     try do
       with {:ok, parsed} <- ExoSQL.Parser.parse(sql, context),
            {:ok, plan} <- ExoSQL.Planner.plan(parsed) do
-           ExoSQL.Executor.execute(plan, context)
+        ExoSQL.Executor.execute(plan, context)
       end
     catch
       any -> {:error, any}
     rescue
-      err in MatchError->
+      err in MatchError ->
         case err.term do
           {:error, error} ->
             {:error, error}
+
           other ->
             {:error, {:match, other}}
         end
-      any -> {:error, any}
+
+      any ->
+        {:error, any}
     end
+
     # Logger.debug("parsed #{inspect parsed, pretty: true}")
     # Logger.debug("planned #{inspect plan, pretty: true}")
   end
 
   def explain(sql, context) do
-    Logger.info("Explain #{inspect sql}")
+    Logger.info("Explain #{inspect(sql)}")
     {:ok, parsed} = ExoSQL.Parser.parse(sql, context)
     {:ok, plan} = ExoSQL.Planner.plan(parsed)
-    Logger.info(inspect plan, pretty: true)
+    Logger.info(inspect(plan, pretty: true))
   end
 
   def format_result(res), do: ExoSQL.Utils.format_result(res)
@@ -98,46 +98,62 @@ defmodule ExoSQL do
   def schema("self", _context) do
     {:ok, ["tables"]}
   end
+
   # Hack to allow internal non database varaibles at context
   def schema("__" <> _rest, _context), do: {:ok, []}
+
   def schema(db, context) do
     {db, opts} = context[db]
 
     apply(db, :schema, [opts])
   end
+
   def schema("self", "tables", _context) do
-    {:ok, %{
-      columns: ["db", "table", "column"]
-    }}
+    {:ok,
+     %{
+       columns: ["db", "table", "column"]
+     }}
   end
+
   def schema(db, table, context) do
     case context[db] do
       {db, opts} ->
         apply(db, :schema, [opts, table])
+
       nil ->
-        throw {:not_found, {{db, table}, :in, Map.keys(context)}}
+        throw({:not_found, {{db, table}, :in, Map.keys(context)}})
     end
   end
 
   @default_context %{
-        "A" => {ExoSQL.Csv, path: "test/data/csv/"},
-        "B" => {ExoSQL.HTTP, []}
-      }
+    "A" => {ExoSQL.Csv, path: "test/data/csv/"},
+    "B" => {ExoSQL.HTTP, []}
+  }
   def repl(context \\ @default_context) do
-    input = IO.gets("exosql> ") |> String.trim
+    input = IO.gets("exosql> ") |> String.trim()
+
     case input do
-      "\q" -> :eof
-      "exit" -> :eof
-      "quit" -> :eof
+      "\q" ->
+        :eof
+
+      "exit" ->
+        :eof
+
+      "quit" ->
+        :eof
+
       "" ->
         repl(context)
+
       _other ->
         case query(input, context) do
           {:ok, result} ->
             IO.puts(format_result(result))
+
           {:error, err} ->
-            Logger.error(inspect err)
+            Logger.error(inspect(err))
         end
+
         repl(context)
     end
   end

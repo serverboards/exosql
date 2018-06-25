@@ -24,7 +24,7 @@ defmodule ExoSQL.Builtins do
     "to_string" => {ExoSQL.Builtins, :to_string_},
     "to_datetime" => {ExoSQL.Builtins, :to_datetime},
     "to_timestamp" => {ExoSQL.Builtins, :to_timestamp},
-    "to_number" => {ExoSQL.Utils, :'to_number!'},
+    "to_number" => {ExoSQL.Utils, :to_number!},
     "substr" => {ExoSQL.Builtins, :substr},
     "now" => {ExoSQL.Builtins, :now},
     "strftime" => {ExoSQL.Builtins, :strftime},
@@ -51,7 +51,7 @@ defmodule ExoSQL.Builtins do
     "sum" => {ExoSQL.Builtins, :sum},
     "avg" => {ExoSQL.Builtins, :avg},
     "max" => {ExoSQL.Builtins, :max_},
-    "min" => {ExoSQL.Builtins, :min_},
+    "min" => {ExoSQL.Builtins, :min_}
   }
   def call_function({mod, fun, name}, params) do
     try do
@@ -59,21 +59,23 @@ defmodule ExoSQL.Builtins do
     rescue
       _excp ->
         # Logger.debug("Exception #{inspect _excp}: #{inspect {{mod, fun}, params}}")
-        throw {:function, {name, params}}
+        throw({:function, {name, params}})
     end
   end
+
   def call_function(name, params) do
     case @functions[name] do
       nil ->
-      raise {:unknown_function, name}
-    {mod, fun} ->
-      try do
-        apply(mod, fun, params)
-      rescue
-        _excp ->
-          Logger.debug("Exception #{inspect _excp}: #{inspect {{mod, fun}, params}}")
-          throw {:function, {name, params}}
-      end
+        raise {:unknown_function, name}
+
+      {mod, fun} ->
+        try do
+          apply(mod, fun, params)
+        rescue
+          _excp ->
+            Logger.debug("Exception #{inspect(_excp)}: #{inspect({{mod, fun}, params})}")
+            throw({:function, {name, params}})
+        end
     end
   end
 
@@ -82,26 +84,32 @@ defmodule ExoSQL.Builtins do
 
     Kernel.round(n)
   end
+
   def round(n, 0) do
     {:ok, n} = to_float(n)
 
     Kernel.round(n)
   end
+
   def round(n, "0") do
     {:ok, n} = to_float(n)
 
     Kernel.round(n)
   end
+
   def round(n, r) do
     {:ok, n} = to_float(n)
     {:ok, r} = to_number(r)
 
     Float.round(n, r)
   end
+
   def random(), do: :rand.uniform()
+
   def randint(max_) do
-    :rand.uniform(max_-1)
+    :rand.uniform(max_ - 1)
   end
+
   def randint(min_, max_) do
     :rand.uniform(max_ - min_ - 1) + min_ - 1
   end
@@ -132,30 +140,37 @@ defmodule ExoSQL.Builtins do
   def substr(nil, _skip, _len) do
     ""
   end
+
   def substr(str, skip, len) do
-    str = to_string_(str) # force string
+    # force string
+    str = to_string_(str)
 
     {:ok, skip} = to_number(skip)
     {:ok, len} = to_number(len)
+
     if len < 0 do
       String.slice(str, skip, max(0, String.length(str) + len - skip))
     else
       String.slice(str, skip, len)
     end
   end
+
   def substr(str, skip) do
-    substr(str, skip, 10_000) # A upper limit on what to return, should be enought
+    # A upper limit on what to return, should be enought
+    substr(str, skip, 10_000)
   end
+
   def join(str, sep \\ ",") do
     Enum.join(str, sep)
   end
+
   def split(str, sep) do
     String.split(str, sep)
   end
+
   def split(str) do
     String.split(str, [", ", ",", " "])
   end
-
 
   @doc ~S"""
   Convert datetime to string.
@@ -192,6 +207,7 @@ defmodule ExoSQL.Builtins do
   %.k - float with k, M sufix, uses float part
   """
   def format(str), do: ExoSQL.Format.format(str, [])
+
   def format(str, args) when is_list(args) do
     ExoSQL.Format.format(str, args)
   end
@@ -210,12 +226,18 @@ defmodule ExoSQL.Builtins do
   def format(str, arg1, arg2, arg3), do: format(str, [arg1, arg2, arg3])
   def format(str, arg1, arg2, arg3, arg4), do: format(str, [arg1, arg2, arg3, arg4])
   def format(str, arg1, arg2, arg3, arg4, arg5), do: format(str, [arg1, arg2, arg3, arg4, arg5])
-  def format(str, arg1, arg2, arg3, arg4, arg5, arg6), do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6])
-  def format(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7), do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6, arg7])
-  def format(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8), do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8])
-  def format(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9), do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9])
 
+  def format(str, arg1, arg2, arg3, arg4, arg5, arg6),
+    do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6])
 
+  def format(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7),
+    do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6, arg7])
+
+  def format(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8),
+    do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8])
+
+  def format(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9),
+    do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9])
 
   @doc ~S"""
   Returns to which bucket it belongs.
@@ -230,8 +252,8 @@ defmodule ExoSQL.Builtins do
     end_ = to_float!(end_)
     nbuckets = to_number!(nbuckets)
 
-    bucket = ((n - start_) * nbuckets / (end_- start_))
-    bucket = bucket |> Kernel.round
+    bucket = (n - start_) * nbuckets / (end_ - start_)
+    bucket = bucket |> Kernel.round()
 
     cond do
       bucket < 0 -> 0
@@ -239,7 +261,6 @@ defmodule ExoSQL.Builtins do
       true -> bucket
     end
   end
-
 
   @doc ~S"""
   Performs a regex match
@@ -252,9 +273,11 @@ defmodule ExoSQL.Builtins do
   Returns NULL if no match (which is falsy, so can be used for expressions)
   """
   def regex(str, regexs) when is_binary(regexs) do
-    regex = Regex.compile!(regexs) # slow. Should have been precompiled (simplify)
+    # slow. Should have been precompiled (simplify)
+    regex = Regex.compile!(regexs)
     regex(str, regex, String.contains?(regexs, "(?<"))
   end
+
   def regex(str, %Regex{} = regex, captures) do
     if captures do
       Regex.named_captures(regex, str)
@@ -262,6 +285,7 @@ defmodule ExoSQL.Builtins do
       Regex.run(regex, str)
     end
   end
+
   def regex(str, regexs, query) when is_binary(regexs) do
     jp(regex(str, regexs), query)
   end
@@ -270,49 +294,61 @@ defmodule ExoSQL.Builtins do
   Generates a table with the series of numbers as given. Use for histograms
   without holes.
   """
-  def generate_series(end_), do: generate_series(1,end_,1)
-  def generate_series(start_, end_), do: generate_series(start_,end_,1)
+  def generate_series(end_), do: generate_series(1, end_, 1)
+  def generate_series(start_, end_), do: generate_series(start_, end_, 1)
+
   def generate_series(%DateTime{} = start_, %DateTime{} = end_, days) when is_number(days) do
     generate_series(start_, end_, "#{days}D")
   end
 
   def generate_series(%DateTime{} = start_, %DateTime{} = end_, mod) when is_binary(mod) do
-    duration = case ExoSQL.DateTime.Duration.parse(mod) do
-      {:error, other} ->
-        throw {:error, other}
-      %ExoSQL.DateTime.Duration{ seconds: 0, days: 0, months: 0, years: 0} ->
-        throw {:error, :invalid_duration}
-      {:ok, other} -> other
-    end
+    duration =
+      case ExoSQL.DateTime.Duration.parse(mod) do
+        {:error, other} ->
+          throw({:error, other})
 
-    cmp = if ExoSQL.DateTime.Duration.is_negative(duration) do
-      :lt
-    else
-      :gt
-    end
+        %ExoSQL.DateTime.Duration{seconds: 0, days: 0, months: 0, years: 0} ->
+          throw({:error, :invalid_duration})
 
-    rows = ExoSQL.Utils.generate(start_, fn value ->
-      cmpr = DateTime.compare(value, end_)
-      if cmpr == cmp do
-        :halt
-      else
-        next = ExoSQL.DateTime.Duration.datetime_add(value, duration)
-        {[value], next}
+        {:ok, other} ->
+          other
       end
-    end)
+
+    cmp =
+      if ExoSQL.DateTime.Duration.is_negative(duration) do
+        :lt
+      else
+        :gt
+      end
+
+    rows =
+      ExoSQL.Utils.generate(start_, fn value ->
+        cmpr = DateTime.compare(value, end_)
+
+        if cmpr == cmp do
+          :halt
+        else
+          next = ExoSQL.DateTime.Duration.datetime_add(value, duration)
+          {[value], next}
+        end
+      end)
 
     %{
       columns: ["generate_series"],
       rows: rows
     }
   end
-  def generate_series(start_, end_, step) when is_number(start_) and is_number(end_) and is_number(step) do
+
+  def generate_series(start_, end_, step)
+      when is_number(start_) and is_number(end_) and is_number(step) do
     if step == 0 do
       raise ArgumentError, "Step invalid. Will never reach end."
     end
+
     if step < 0 and start_ < end_ do
       raise ArgumentError, "Start, end and step invalid. Will never reach end."
     end
+
     if step > 0 and start_ > end_ do
       raise ArgumentError, "Start, end and step invalid. Will never reach end."
     end
@@ -322,6 +358,7 @@ defmodule ExoSQL.Builtins do
       rows: generate_series_range(start_, end_, step)
     }
   end
+
   def generate_series(start_, end_, step) do
     import ExoSQL.Utils, only: [to_number!: 1, to_number: 1]
 
@@ -331,7 +368,9 @@ defmodule ExoSQL.Builtins do
     case to_number(start_) do
       {:ok, start_} ->
         generate_series(start_, to_number!(end_), to_number!(step))
-      {:error, _} -> # maybe a date
+
+      # maybe a date
+      {:error, _} ->
         generate_series(to_datetime(start_), to_datetime(end_), step)
     end
   end
@@ -340,13 +379,14 @@ defmodule ExoSQL.Builtins do
     cond do
       step > 0 and current > stop ->
         []
+
       step < 0 and current < stop ->
         []
+
       true ->
-        [ [current] | generate_series_range(current + step, stop, step)]
+        [[current] | generate_series_range(current + step, stop, step)]
     end
   end
-
 
   @doc ~S"""
   Parses an URL and return some part of it.
@@ -370,13 +410,15 @@ defmodule ExoSQL.Builtins do
   """
   def urlparse(url), do: urlparse(url, nil)
   def urlparse(nil, what), do: urlparse("", what)
+
   def urlparse(url, what) do
     parsed = URI.parse(url)
 
-    query = case parsed.query do
-      nil -> nil
-      q -> URI.decode_query(q)
-    end
+    query =
+      case parsed.query do
+        nil -> nil
+        q -> URI.decode_query(q)
+      end
 
     json = %{
       "host" => parsed.host,
@@ -405,22 +447,25 @@ defmodule ExoSQL.Builtins do
   name or then each disposed part.
   """
   def get_domain(nil), do: nil
+
   def get_domain(hostname) do
-    [_tld | rparts] = hostname |> String.split(".") |> Enum.reverse
+    [_tld | rparts] = hostname |> String.split(".") |> Enum.reverse()
 
     # always remove last part
     get_domainr(rparts, hostname)
   end
 
   # list of strings that are never domains.
-  defp get_domainr([ head | rest], candidate) do
+  defp get_domainr([head | rest], candidate) do
     nodomains = ~w(com org net www co)
+
     if head in nodomains do
       get_domainr(rest, candidate)
     else
       head
     end
   end
+
   defp get_domainr([], candidate), do: candidate
 
   @doc ~S"""
@@ -431,10 +476,12 @@ defmodule ExoSQL.Builtins do
   def jp(nil, _), do: nil
   def jp(json, idx) when is_list(json) and is_number(idx), do: Enum.at(json, idx)
   def jp(json, str) when is_binary(str), do: jp(json, String.split(str, "/"))
-  def jp(json, [ head | rest]) when is_list(json) do
+
+  def jp(json, [head | rest]) when is_list(json) do
     n = ExoSQL.Utils.to_number!(head)
     jp(Enum.at(json, n), rest)
   end
+
   def jp(json, ["" | rest]), do: jp(json, rest)
   def jp(json, [head | rest]), do: jp(Map.get(json, head, nil), rest)
   def jp(json, []), do: json
@@ -443,6 +490,7 @@ defmodule ExoSQL.Builtins do
   Convert from a string to a JSON object
   """
   def json(nil), do: nil
+
   def json(str) when is_binary(str) do
     Poison.decode!(str)
   end
@@ -453,13 +501,14 @@ defmodule ExoSQL.Builtins do
   * `IN` -- Subset / element contains
   * `*` -- Interesection -> nil if no intersection, the intersected range if any.
   """
-  def range(a, b), do: {:range, {a,b}}
+  def range(a, b), do: {:range, {a, b}}
 
   @doc ~S"""
   Get the greatest of arguments
   """
   def greatest(a, nil), do: a
   def greatest(nil, b), do: b
+
   def greatest(a, b) do
     if a > b do
       a
@@ -467,6 +516,7 @@ defmodule ExoSQL.Builtins do
       b
     end
   end
+
   def greatest(a, b, c), do: Enum.reduce([a, b, c], nil, &greatest/2)
   def greatest(a, b, c, d), do: Enum.reduce([a, b, c, d], nil, &greatest/2)
   def greatest(a, b, c, d, e), do: Enum.reduce([a, b, c, d, e], nil, &greatest/2)
@@ -478,6 +528,7 @@ defmodule ExoSQL.Builtins do
   """
   def least(a, nil), do: a
   def least(nil, b), do: b
+
   def least(a, b) do
     if a < b do
       a
@@ -485,6 +536,7 @@ defmodule ExoSQL.Builtins do
       b
     end
   end
+
   def least(a, b, c), do: Enum.reduce([a, b, c], nil, &least/2)
   def least(a, b, c, d), do: Enum.reduce([a, b, c, d], nil, &least/2)
   def least(a, b, c, d, e), do: Enum.reduce([a, b, c, d, e], nil, &least/2)
@@ -522,19 +574,24 @@ defmodule ExoSQL.Builtins do
   def count(data, {:lit, '*'}) do
     Enum.count(data.rows)
   end
+
   def count(data, {:distinct, expr}) do
-    expr = ExoSQL.Expr.simplify(expr, %{ columns: data.columns })
+    expr = ExoSQL.Expr.simplify(expr, %{columns: data.columns})
+
     Enum.reduce(data.rows, MapSet.new(), fn row, acc ->
-      case ExoSQL.Expr.run_expr(expr, %{ row: row }) do
+      case ExoSQL.Expr.run_expr(expr, %{row: row}) do
         nil -> acc
         val -> MapSet.put(acc, val)
       end
-    end) |> Enum.count
+    end)
+    |> Enum.count()
   end
+
   def count(data, expr) do
-    expr = ExoSQL.Expr.simplify(expr, %{ columns: data.columns})
+    expr = ExoSQL.Expr.simplify(expr, %{columns: data.columns})
+
     Enum.reduce(data.rows, 0, fn row, acc ->
-      case ExoSQL.Expr.run_expr(expr, %{ row: row }) do
+      case ExoSQL.Expr.run_expr(expr, %{row: row}) do
         nil -> acc
         _other -> 1 + acc
       end
@@ -542,7 +599,7 @@ defmodule ExoSQL.Builtins do
   end
 
   def avg(data, expr) do
-  # Logger.debug("Avg of #{inspect data} by #{inspect expr}")
+    # Logger.debug("Avg of #{inspect data} by #{inspect expr}")
     if data.columns == [] do
       nil
     else
@@ -551,24 +608,27 @@ defmodule ExoSQL.Builtins do
   end
 
   def sum(data, expr) do
-  # Logger.debug("Sum of #{inspect data} by #{inspect expr}")
-    expr = ExoSQL.Expr.simplify(expr, %{ columns: data.columns})
+    # Logger.debug("Sum of #{inspect data} by #{inspect expr}")
+    expr = ExoSQL.Expr.simplify(expr, %{columns: data.columns})
     # Logger.debug("Simplified expression #{inspect expr}")
     Enum.reduce(data.rows, 0, fn row, acc ->
-      n = ExoSQL.Expr.run_expr(expr, %{ row: row })
-      n = case ExoSQL.Utils.to_number(n) do
-        {:ok, n} -> n
-        {:error, nil} -> 0
-      end
+      n = ExoSQL.Expr.run_expr(expr, %{row: row})
+
+      n =
+        case ExoSQL.Utils.to_number(n) do
+          {:ok, n} -> n
+          {:error, nil} -> 0
+        end
+
       acc + n
     end)
   end
 
   def max_(data, expr) do
-    expr = ExoSQL.Expr.simplify(expr, %{ columns: data.columns})
-    Enum.reduce(data.rows, nil, fn row, acc ->
+    expr = ExoSQL.Expr.simplify(expr, %{columns: data.columns})
 
-      n = ExoSQL.Expr.run_expr(expr, %{ row: row })
+    Enum.reduce(data.rows, nil, fn row, acc ->
+      n = ExoSQL.Expr.run_expr(expr, %{row: row})
       {acc, n} = ExoSQL.Expr.match_types(acc, n)
 
       if ExoSQL.Expr.is_greater(acc, n) do
@@ -576,21 +636,22 @@ defmodule ExoSQL.Builtins do
       else
         n
       end
-
     end)
   end
-  def min_(data, expr) do
-    expr = ExoSQL.Expr.simplify(expr, %{ columns: data.columns})
-    Enum.reduce(data.rows, nil, fn row, acc ->
 
-      n = ExoSQL.Expr.run_expr(expr, %{ row: row })
+  def min_(data, expr) do
+    expr = ExoSQL.Expr.simplify(expr, %{columns: data.columns})
+
+    Enum.reduce(data.rows, nil, fn row, acc ->
+      n = ExoSQL.Expr.run_expr(expr, %{row: row})
       {acc, n} = ExoSQL.Expr.match_types(acc, n)
 
-      res = if acc != nil and ExoSQL.Expr.is_greater(n, acc) do
-        acc
-      else
-        n
-      end
+      res =
+        if acc != nil and ExoSQL.Expr.is_greater(n, acc) do
+          acc
+        else
+          n
+        end
 
       res
     end)
@@ -604,12 +665,14 @@ defmodule ExoSQL.Builtins do
     # Logger.debug("Simplify format: #{inspect compiled}")
     simplify("format", [{:lit, compiled} | rest])
   end
+
   def simplify("regex", [str, {:lit, regexs}]) when is_binary(regexs) do
     regex = Regex.compile!(regexs)
     captures = String.contains?(regexs, "(?<")
 
     simplify("regex", [str, {:lit, regex}, {:lit, captures}])
   end
+
   def simplify("regex", [str, {:lit, regexs}, {:lit, query}]) when is_binary(regexs) do
     regex = Regex.compile!(regexs)
     captures = String.contains?(regexs, "(?<")
@@ -622,17 +685,19 @@ defmodule ExoSQL.Builtins do
 
     simplify("jp", params)
   end
+
   def simplify("jp", [json, {:lit, path}]) when is_binary(path) do
     # Logger.debug("JP #{inspect json}")
     simplify("jp", [json, {:lit, String.split(path, "/")}])
   end
-  def simplify("random", []), do: {:fn, {{ ExoSQL.Builtins, :random, "random"}, []}}
-  def simplify("randint", params), do: {:fn, {{ ExoSQL.Builtins, :randint, "randint"}, params}}
+
+  def simplify("random", []), do: {:fn, {{ExoSQL.Builtins, :random, "random"}, []}}
+  def simplify("randint", params), do: {:fn, {{ExoSQL.Builtins, :randint, "randint"}, params}}
 
   # default: convert to {mod fun name} tuple
   def simplify(name, params) when is_binary(name) do
     # Logger.debug("Simplify #{inspect name} #{inspect params}")
-    if (not is_aggregate(name)) and Enum.all?(params, &is_lit(&1)) do
+    if not is_aggregate(name) and Enum.all?(params, &is_lit(&1)) do
       # Logger.debug("All is literal for #{inspect {name, params}}.. just do it once")
       params = Enum.map(params, fn {:lit, n} -> n end)
       ret = ExoSQL.Builtins.call_function(name, params)
@@ -640,16 +705,17 @@ defmodule ExoSQL.Builtins do
     else
       case @functions[name] do
         nil ->
-        throw {:unknown_function, name}
-      {mod, fun} ->
-        {:fn, {{mod, fun, name}, params}}
+          throw({:unknown_function, name})
+
+        {mod, fun} ->
+          {:fn, {{mod, fun, name}, params}}
       end
     end
   end
+
   def simplify(modfun, params), do: {:fn, {modfun, params}}
 
   def is_lit({:lit, '*'}), do: false
   def is_lit({:lit, _n}), do: true
   def is_lit(_), do: false
-
 end
