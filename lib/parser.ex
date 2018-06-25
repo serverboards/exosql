@@ -382,9 +382,10 @@ defmodule ExoSQL.Parser do
   end
 
   def resolve_table(other, _all_tables, _context) do
-    Logger.error("Cant resolve table #{inspect other}")
+    Logger.error("Cant resolve table #{inspect(other)}")
     raise "cant_resolve_table"
   end
+
   @doc ~S"""
   From the list of tables, and context, and an unknown column, return the
   FQN of the column.
@@ -408,13 +409,14 @@ defmodule ExoSQL.Parser do
             {:column, found} =
               resolve_column({:column, {nil, nil, column}}, parent_schema, context)
 
-            {:parent_column, found}
+            # Logger.debug("Found column from parent #{inspect found}")
+            {:column, found}
           else
             throw({:not_found, column, :in, all_columns})
           end
 
-        _many ->
-          throw({:ambiguous_column, column, :in, all_columns})
+        many ->
+          throw({:ambiguous_column, column, :in, many})
       end
 
     if found do
@@ -425,7 +427,7 @@ defmodule ExoSQL.Parser do
   end
 
   def resolve_column({:column, {nil, table, column}}, all_columns, context) do
-    # Logger.debug("Find #{inspect {nil, table, column}} at #{inspect all_columns}")
+    # Logger.debug("Find #{inspect {nil, table, column}} at #{inspect all_columns} + #{inspect Map.get(context, "__parent__", [])}")
     found =
       Enum.find(all_columns, fn
         {_db, ^table, ^column} -> true
@@ -435,11 +437,18 @@ defmodule ExoSQL.Parser do
     if found do
       {:column, found}
     else
-      parent_schema = Map.get(context, "__parent__", %{})
+      parent_schema = Map.get(context, "__parent__", [])
 
-      if parent_schema != %{} do
-        {:column, found} = resolve_column({:column, {nil, table, column}}, parent_schema, context)
-        {:parent_column, found}
+      if parent_schema != [] do
+        context = Map.drop(context, ["__parent__"])
+
+        case resolve_column({:column, {nil, table, column}}, parent_schema, context) do
+          {:column, found} ->
+            {:column, found}
+
+          _ ->
+            throw({:not_found, {table, column}, :in, all_columns})
+        end
       else
         throw({:not_found, {table, column}, :in, all_columns})
       end
@@ -478,6 +487,7 @@ defmodule ExoSQL.Parser do
   def resolve_column({:select, query}, all_columns, context) do
     context = Map.put(context, "__parent__", all_columns)
     {:ok, parsed} = real_parse(query, context)
+    # Logger.debug("Parsed query #{inspect query} -> #{inspect parsed, pretty: true}")
     {:select, parsed}
   end
 

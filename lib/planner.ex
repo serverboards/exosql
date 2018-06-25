@@ -277,11 +277,22 @@ defmodule ExoSQL.Planner do
     q
   end
 
-  # Gets all the vars referenced in an expression that refer to a given table
+  @doc ~S"""
+  Gets all the vars referenced in an expression that refer to a given table
+
+  Given a database and table, and an expression, return all columns from that
+  {db, table} that are required by those expressions.
+
+  This is used to know which columns to extract from the table.
+  """
+  defp get_table_columns_at_expr(_db, _table, []) do
+    []
+  end
+
   defp get_table_columns_at_expr(db, table, l) when is_list(l) do
-    # Logger.debug("Get columns at expr #{inspect table} #{inspect l}")
     res = Enum.flat_map(l, &get_table_columns_at_expr(db, table, &1))
-    # Logger.debug("res #{inspect res}")
+
+    # Logger.debug("Get columns at table #{inspect {db, table}} at expr #{inspect l}: #{inspect res}")
     res
   end
 
@@ -299,10 +310,12 @@ defmodule ExoSQL.Planner do
     get_table_columns_at_expr(db, table, expr)
   end
 
-  defp get_table_columns_at_expr(_db, _table, {:select, query}) do
+  defp get_table_columns_at_expr(db, table, {:select, query}) do
     {:ok, plan} = plan(query)
-    res = get_parent_columns(plan)
-    # Logger.debug("Get parents from #{inspect plan, pretty: true}: #{inspect res}")
+
+    res = get_table_columns_at_expr(db, table, [query.select, query.where, query.join])
+
+    # Logger.debug("Get parents #{inspect {db, table}} from #{inspect query, pretty: true}: #{inspect res}")
     res
   end
 
@@ -324,38 +337,17 @@ defmodule ExoSQL.Planner do
     get_table_columns_at_expr(db, table, expr)
   end
 
-  defp get_table_columns_at_expr(_db, _table, _other), do: []
-
-  defp get_table_columns_at_expr(_db, _table, _other), do: []
-
-  defp get_parent_columns({:parent_column, column}) do
-    [column]
-  end
-
-  defp get_parent_columns(list) when is_list(list) do
-    Enum.flat_map(list, &get_parent_columns(&1))
-  end
-
-  defp get_parent_columns({:filter, from, expr}) do
-    get_parent_columns(from) ++ get_parent_columns(expr)
-  end
-
-  defp get_parent_columns({:select, from, columns}) do
-    get_parent_columns(from) ++ get_parent_columns(columns)
-  end
-
-  defp get_parent_columns({:op, {_op, a, b}}) do
-    get_parent_columns(a) ++ get_parent_columns(b)
-  end
-
-  defp get_parent_columns(_other) do
+  defp get_table_columns_at_expr(_db, _table, _other) do
     []
   end
 
-  # If an aggregate function is found, rewrite it to be a real aggregate
-  # The way to do it is set as first argument the column with the aggregated table
-  # and the rest inside `{:pass, op}`, so its the real function that evaluates it
-  # over the first argument
+  @doc ~S"""
+  If an aggregate function is found, rewrite it to be a real aggregate
+
+  The way to do it is set as first argument the column with the aggregated table
+  and the rest inside `{:pass, op}`, so its the real function that evaluates it
+  over the first argument
+  """
   defp fix_aggregates_select({:op, {op, op1, op2}}, aggregate_column) do
     op1 = fix_aggregates_select(op1, aggregate_column)
     op2 = fix_aggregates_select(op2, aggregate_column)

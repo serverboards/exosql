@@ -3,6 +3,7 @@ require Logger
 defmodule QueryTest do
   use ExUnit.Case
   @moduletag :capture_log
+  @moduletag timeout: 5_000
 
   @context %{
     "A" => {ExoSQL.Csv, path: "test/data/csv/"}
@@ -920,7 +921,7 @@ defmodule QueryTest do
   test "Complex nested SELECT" do
     res =
       analyze_query!(
-        "SELECT id, (SELECT name FROM products WHERE id = product_id), amount FROM purchases"
+        "SELECT id, (SELECT name FROM products WHERE products.id = product_id), amount FROM purchases"
       )
 
     assert Enum.count(res.rows) == 6
@@ -928,7 +929,7 @@ defmodule QueryTest do
     assert hd(res.rows) == ["1", "sugus", "10"]
 
     analyze_query!(
-      "SELECT id, (SELECT name FROM products WHERE id = purchases.product_id), amount FROM purchases"
+      "SELECT id, (SELECT name FROM products WHERE products.id = purchases.product_id), amount FROM purchases"
     )
 
     assert Enum.count(res.rows) == 6

@@ -441,14 +441,28 @@ defmodule ExoSQL.Expr do
     {:alias, {simplify(expr, context), alias_}}
   end
 
-  def simplify({:column, cn}, %{columns: names}) do
+  def simplify({:column, cn}, %{columns: names} = context) do
     i = Enum.find_index(names, &(&1 == cn))
+
+    i =
+      if i == nil do
+        idx = Enum.find_index(context[:parent_columns], &(&1 == cn))
+
+        if idx != nil do
+          val = Enum.at(context[:parent_row], idx)
+          {:lit, val}
+        else
+          nil
+        end
+      else
+        {:column, i}
+      end
 
     if i == nil do
       throw({:error, {:not_found, cn, :in, names}})
     end
 
-    {:column, i}
+    i
   end
 
   def simplify({:var, cn}, %{"__vars__" => vars}) do
@@ -468,19 +482,6 @@ defmodule ExoSQL.Expr do
       params = Enum.map(params, &simplify(&1, context))
       ExoSQL.Builtins.simplify(f, params)
     end
-  end
-
-  def simplify({:parent_column, column}, %{parent_columns: parent_columns, parent_row: parent_row}) do
-    idx = Enum.find_index(parent_columns, &(&1 == column))
-    # Logger.debug("Get parent column #{inspect n} from #{inspect context}: #{inspect idx}")
-    val =
-      if idx do
-        parent_row |> Enum.at(idx)
-      else
-        throw({:unknown_column, {:parent_column, column}})
-      end
-
-    {:lit, val}
   end
 
   def simplify({:case, list}, context) do
