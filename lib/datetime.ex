@@ -46,6 +46,9 @@ defmodule ExoSQL.DateTime do
         24 ->
           {:ok, td, _} = DateTime.from_iso8601(n)
           td
+        25 ->
+          {:ok, td, _} = DateTime.from_iso8601(n)
+          td
       end
     else
       {:ok, unixtime} = ExoSQL.Utils.to_number(n)

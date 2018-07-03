@@ -24,6 +24,9 @@ defmodule ExoSQL.BuiltinsTest do
     assert dt == ExoSQL.DateTime.to_datetime("2018-02-22T00:00")
     assert dt == ExoSQL.DateTime.to_datetime("2018-02-22T00:00:00")
     assert dt == ExoSQL.DateTime.to_datetime("2018-02-22 00:00:00")
+
+    dt = ExoSQL.DateTime.to_datetime("2018-07-01T04:25:50Z")
+    assert dt == ExoSQL.DateTime.to_datetime("2018-07-01T06:25:50+02:00")
   end
 
   test "String substr" do
