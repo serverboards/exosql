@@ -58,7 +58,11 @@ defmodule ExoSQL.Parser do
     join =
       Enum.map(join, fn
         {:cross_join_lateral, table} ->
-          # Logger.debug("Resolve table, may need my columns")
+          context = Map.put(context, "__parent__",
+            resolve_all_columns(from, context) ++
+            Map.get(context, "__parent__", [])
+          )
+          # Logger.debug("Resolve table, may need my columns #{inspect table} #{inspect context}")
           resolved = resolve_table(table, all_tables_at_context, context)
           {:cross_join_lateral, resolved}
 
@@ -79,6 +83,8 @@ defmodule ExoSQL.Parser do
 
             {_type, {table, _expr}} ->
               table
+            {_type, %ExoSQL.Query{} = query} ->
+              query
           end)
       else
         from
@@ -117,6 +123,8 @@ defmodule ExoSQL.Parser do
              table,
              resolve_column(expr, all_columns, context)
            }}
+        {type, %ExoSQL.Query{} = query} ->
+          {type, query}
       end)
 
     # the resolve all expressions as we know which tables to use

@@ -1438,11 +1438,28 @@ defmodule QueryTest do
   end
 
   test "FROM LATERAL query" do
+    # Single cross lateral
+    analyze_query!("
+      SELECT me.id, me.name, me.parentA_id, parentA.name FROM family AS me CROSS JOIN LATERAL (
+          SELECT parentA.name FROM family AS parentA WHERE me.parentA_id = parentA.id
+        )
+    ")
+
+    analyze_query!("
+      SELECT me.id, me.name, me.parentA_id, parentA.name, me.parentB_id, parentA.name FROM family AS me
+        CROSS JOIN LATERAL (
+          SELECT parentA.name FROM family AS parentA WHERE me.parentA_id = parentA.id
+        )
+        CROSS JOIN LATERAL (
+          SELECT parentB.name FROM family AS parentB WHERE me.parentB_id = parentB.id
+        )
+    ")
+
     # a bit complicated but takes several cross lateral options
     analyze_query!("
       SELECT * FROM products, LATERAL (
         SELECT user_id, name FROM purchases CROSS JOIN LATERAL (
-          SELECT * FROM users WHERE id = purchases.user_id
+          SELECT * FROM users WHERE users.id = purchases.user_id
           ) WHERE purchases.product_id = products.id
         )
     ")

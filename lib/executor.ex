@@ -146,6 +146,8 @@ defmodule ExoSQL.Executor do
   def execute({:filter, from, expr}, context) do
     {:ok, %{columns: columns, rows: rows}} = execute(from, context)
 
+    Logger.debug("Expr #{inspect columns} #{inspect expr} // #{inspect context}")
+
     context = Map.put(context, :columns, columns)
     expr = ExoSQL.Expr.simplify(expr, context)
 
@@ -211,15 +213,26 @@ defmodule ExoSQL.Executor do
 
         {:alias, {:fn, {_func, _args}}, alias_} ->
           [{:tmp, alias_, alias_}]
+
+        _ ->
+          data.columns
       end
 
-    context = Map.put(context, :columns, data.columns)
+    context = Map.put(context, :parent_columns, data.columns)
     expr = ExoSQL.Expr.simplify(expr, context)
 
     nrows =
       Enum.flat_map(data.rows, fn row ->
-        context = Map.put(context, :row, row)
-        res = ExoSQL.Expr.run_expr(expr, context)
+        context = Map.put(context, :parent_row, row)
+        res = case expr do
+          {:select, _, _} = select ->
+            {:ok, data} = execute(select, context)
+            data.rows
+          expr ->
+            ExoSQL.Expr.run_expr(expr, context)
+        end
+
+        Logger.debug("Expression is #{inspect expr}: #{inspect res}")
 
         case res do
           res when is_list(res) ->

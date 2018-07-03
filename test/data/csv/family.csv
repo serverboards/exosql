@@ -1,0 +1,7 @@
+id,name,parentA_id,parentB_id
+0,LUCA,NULL,NULL
+1,Mom,0,0
+2,Dad,0,0
+3,Son,1,2
+4,Alice,0,0
+5,Grandson,3,4

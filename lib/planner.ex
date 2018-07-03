@@ -71,7 +71,10 @@ defmodule ExoSQL.Planner do
       query.from,
       query.join,
       Enum.map(query.orderby, fn {_type, expr} -> expr end),
-      Enum.map(query.join, fn {_join, {_from, expr}} -> expr end)
+      Enum.map(query.join, fn
+        {:cross_join_lateral, q} -> q
+        {_join, {_from, expr}} -> expr
+      end)
     ]
 
     # Logger.debug("All expressions: #{inspect all_expressions}")
