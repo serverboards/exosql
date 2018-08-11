@@ -1,0 +1,6 @@
+[package]
+name = "rexosql"
+version = "0.1.0"
+authors = ["David Moreno <dmoreno@coralbits.com>"]
+
+[dependencies]
