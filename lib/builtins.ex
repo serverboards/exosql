@@ -508,11 +508,13 @@ defmodule ExoSQL.Builtins do
   those values
   """
   def unnest(array) do
-    json(array) |> Enum.map(&[&1])
+    array = json(array) || []
+
+    array |> Enum.map(&[&1])
   end
 
   def unnest(array, col1) do
-    array = json(array)
+    array = json(array) || []
 
     Enum.map(array, fn row ->
       [Map.get(row, col1)]
@@ -520,7 +522,7 @@ defmodule ExoSQL.Builtins do
   end
 
   def unnest(array, col1, col2) do
-    array = json(array)
+    array = json(array) || []
 
     Enum.map(array, fn row ->
       [Map.get(row, col1), Map.get(row, col2)]
@@ -528,7 +530,7 @@ defmodule ExoSQL.Builtins do
   end
 
   def unnest(array, col1, col2, col3) do
-    array = json(array)
+    array = json(array) || []
 
     Enum.map(array, fn row ->
       [
@@ -540,7 +542,7 @@ defmodule ExoSQL.Builtins do
   end
 
   def unnest(array, col1, col2, col3, col4) do
-    array = json(array)
+    array = json(array) || []
 
     Enum.map(array, fn row ->
       [
@@ -553,7 +555,7 @@ defmodule ExoSQL.Builtins do
   end
 
   def unnest(array, col1, col2, col3, col4, col5) do
-    array = json(array)
+    array = json(array) || []
 
     Enum.map(array, fn row ->
       [
@@ -567,7 +569,7 @@ defmodule ExoSQL.Builtins do
   end
 
   def unnest(array, col1, col2, col3, col4, col5, col6) do
-    array = json(array)
+    array = json(array) || []
 
     Enum.map(array, fn row ->
       [
@@ -582,7 +584,7 @@ defmodule ExoSQL.Builtins do
   end
 
   def unnest(array, col1, col2, col3, col4, col5, col6, col7) do
-    array = json(array)
+    array = json(array) || []
 
     Enum.map(array, fn row ->
       [

@@ -201,7 +201,8 @@ defmodule ExoSQL.Executor do
   def execute({:cross_join_lateral, from, expr}, context) do
     {:ok, data} = execute(from, context)
 
-    # Logger.debug("Cross join lateral #{inspect expr}")
+    # Logger.debug("Cross join lateral #{inspect from, pretty: true}")
+    # Logger.debug("Cross join lateral #{inspect expr, pretty: true}")
     ncolumns =
       case expr do
         {:fn, {"unnest", [_from]}} ->
@@ -216,30 +217,31 @@ defmodule ExoSQL.Executor do
         {:alias, {:fn, {_func, _args}}, alias_} ->
           [{:tmp, alias_, alias_}]
 
+        {:select, _expr, cols} ->
+          resolve_column_names(cols, Map.get(context, :columns, []))
         _ ->
           data.columns
       end
 
     context = Map.put(context, :parent_columns, data.columns)
-    expr = ExoSQL.Expr.simplify(expr, context)
 
     nrows =
       Enum.flat_map(data.rows, fn row ->
         context = Map.put(context, :parent_row, row)
-        res = case expr do
+        sexpr = ExoSQL.Expr.simplify(expr, context)
+        res = case sexpr do
           {:select, _, _} = select ->
             {:ok, data} = execute(select, context)
             data.rows
-          expr ->
-            ExoSQL.Expr.run_expr(expr, context)
+          sexpr ->
+            ExoSQL.Expr.run_expr(sexpr, context)
         end
 
-        Logger.debug("Expression is #{inspect expr}: #{inspect res}")
+        # Logger.debug("Expression is #{inspect expr, pretty: true}:\n---\n#{inspect res, pretty: true}")
 
         case res do
           res when is_list(res) ->
-            res
-            |> Enum.map(fn
+            res |> Enum.map(fn
               nrow when is_list(nrow) ->
                 nrow ++ row
 
@@ -251,7 +253,7 @@ defmodule ExoSQL.Executor do
             [other] ++ row
         end
       end)
-
+    # Logger.debug("Got result #{inspect {ncolumns, data.columns}} | #{inspect nrows}")
     {:ok,
      %ExoSQL.Result{
        columns: ncolumns ++ data.columns,

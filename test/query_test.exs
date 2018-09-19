@@ -1417,7 +1417,7 @@ defmodule QueryTest do
     res = analyze_query!("SELECT RANDINT(0, 1000) FROM generate_series(2)")
     assert Enum.at(res.rows, 0) != Enum.at(res.rows, 1)
   end
-  
+
   test "FROM LATERAL access to previous row data -> CROSS JOIN LATERAL" do
     # Uses data from json field to do a lateral join
     res2 =
@@ -1469,8 +1469,8 @@ defmodule QueryTest do
         )
     ")
 
-    analyze_query!("
-      SELECT me.id, me.name, me.parentA_id, parentA.name, me.parentB_id, parentA.name FROM family AS me
+    res = analyze_query!("
+      SELECT me.id, me.name, me.parentA_id, parentA.name, me.parentB_id, parentB.name FROM family AS me
         CROSS JOIN LATERAL (
           SELECT parentA.name FROM family AS parentA WHERE me.parentA_id = parentA.id
         )
@@ -1478,6 +1478,13 @@ defmodule QueryTest do
           SELECT parentB.name FROM family AS parentB WHERE me.parentB_id = parentB.id
         )
     ")
+    assert res.rows == [
+       ["1", "Mom", "0", "LUCA", "0", "LUCA"],
+       ["2", "Dad", "0", "LUCA", "0", "LUCA"],
+       ["3", "Son", "1", "Mom", "2", "Dad"],
+       ["4", "Alice", "0", "LUCA", "0", "LUCA"],
+       ["5", "Grandson", "3", "Son", "4", "Alice"]
+    ]
 
     # a bit complicated but takes several cross lateral options
     analyze_query!("

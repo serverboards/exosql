@@ -438,11 +438,15 @@ defmodule ExoSQL.Expr do
 
     i =
       if i == nil do
-        idx = Enum.find_index(Map.get(context, :parent_columns,[]), &(&1 == cn))
+        idx = Enum.find_index(Map.get(context, :parent_columns, []), &(&1 == cn))
 
         if idx != nil do
-          val = Enum.at(Map.get(context, :parent_row,[]), idx)
-          {:lit, val}
+          val = Enum.at(Map.get(context, :parent_row, []), idx)
+          if val do
+            {:lit, val}
+          else
+            {:column, cn}
+          end
         else
           nil
         end
@@ -450,8 +454,11 @@ defmodule ExoSQL.Expr do
         {:column, i}
       end
 
+    # Logger.debug("Simplify #{inspect cn} -> #{inspect i} | #{inspect context}")
+
     case i do
       nil ->
+        # Logger.debug("Unknown column #{inspect cn} | #{inspect context}")
         {:column, cn}
       other ->
         i
