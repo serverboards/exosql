@@ -22,7 +22,7 @@ defmodule ExoSQL.Expr do
     r2 = run_expr(op2, context)
     r1 && r2
   end
-  
+
   def run_expr({:op, {"OR", op1, op2}}, context) do
     r1 = run_expr(op1, context)
     r2 = run_expr(op2, context)
@@ -365,9 +365,12 @@ defmodule ExoSQL.Expr do
   def simplify({:op, {op, op1, op2}}, context) do
     op1 = simplify(op1, context)
     op2 = simplify(op2, context)
-
-    case {op1, op2} do
-      {{:lit, op1}, {:lit, op2}} ->
+    case {op, op1, op2} do
+      {"AND", {:lit, false}, _} ->
+        {:lit, false}
+      {"AND", _, {:lit, false}} ->
+        {:lit, false}
+      {_, {:lit, op1}, {:lit, op2}} ->
         {:lit, run_expr({:op, {op, {:lit, op1}, {:lit, op2}}}, [])}
 
       _other ->
@@ -450,11 +453,15 @@ defmodule ExoSQL.Expr do
   end
 
   def simplify({:fn, {f, params}}, context) do
-    if ExoSQL.Builtins.is_aggregate(f) do
-      {:fn, {f, params}}
+    params = Enum.map(params, &simplify(&1, context))
+    all_literals = Enum.all?(params, fn
+      {:lit, _} -> true
+      _ -> false
+    end)
+    if all_literals and (not ExoSQL.Builtins.can_simplify(f)) do
+      {:lit, run_expr({:fn, {f, params}}, context)}
     else
-      params = Enum.map(params, &simplify(&1, context))
-      ExoSQL.Builtins.simplify(f, params)
+      {:fn, {f, params}}
     end
   end
 
