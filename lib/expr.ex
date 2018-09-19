@@ -17,22 +17,10 @@ defmodule ExoSQL.Expr do
 
   import ExoSQL.Utils, only: [to_number: 1]
 
-  def run_expr({:op, {"and", op1, op2}}, context) do
-    r1 = run_expr(op1, context)
-    r2 = run_expr(op2, context)
-    r1 && r2
-  end
-
   def run_expr({:op, {"AND", op1, op2}}, context) do
     r1 = run_expr(op1, context)
     r2 = run_expr(op2, context)
     r1 && r2
-  end
-
-  def run_expr({:op, {"or", op1, op2}}, context) do
-    r1 = run_expr(op1, context)
-    r2 = run_expr(op2, context)
-    r1 || r2
   end
 
   def run_expr({:op, {"OR", op1, op2}}, context) do
@@ -377,9 +365,12 @@ defmodule ExoSQL.Expr do
   def simplify({:op, {op, op1, op2}}, context) do
     op1 = simplify(op1, context)
     op2 = simplify(op2, context)
-
-    case {op1, op2} do
-      {{:lit, op1}, {:lit, op2}} ->
+    case {op, op1, op2} do
+      {"AND", {:lit, false}, _} ->
+        {:lit, false}
+      {"AND", _, {:lit, false}} ->
+        {:lit, false}
+      {_, {:lit, op1}, {:lit, op2}} ->
         {:lit, run_expr({:op, {op, {:lit, op1}, {:lit, op2}}}, [])}
 
       _other ->
@@ -441,15 +432,16 @@ defmodule ExoSQL.Expr do
     {:alias, {simplify(expr, context), alias_}}
   end
 
-  def simplify({:column, cn}, %{columns: names} = context) do
+  def simplify({:column, cn}, context) do
+    names = Map.get(context, :columns, [])
     i = Enum.find_index(names, &(&1 == cn))
 
     i =
       if i == nil do
-        idx = Enum.find_index(context[:parent_columns], &(&1 == cn))
+        idx = Enum.find_index(Map.get(context, :parent_columns,[]), &(&1 == cn))
 
         if idx != nil do
-          val = Enum.at(context[:parent_row], idx)
+          val = Enum.at(Map.get(context, :parent_row,[]), idx)
           {:lit, val}
         else
           nil
@@ -458,11 +450,12 @@ defmodule ExoSQL.Expr do
         {:column, i}
       end
 
-    if i == nil do
-      throw({:error, {:not_found, cn, :in, names}})
+    case i do
+      nil ->
+        {:column, cn}
+      other ->
+        i
     end
-
-    i
   end
 
   def simplify({:var, cn}, %{"__vars__" => vars}) do
@@ -476,11 +469,15 @@ defmodule ExoSQL.Expr do
   end
 
   def simplify({:fn, {f, params}}, context) do
-    if ExoSQL.Builtins.is_aggregate(f) do
-      {:fn, {f, params}}
+    params = Enum.map(params, &simplify(&1, context))
+    all_literals = Enum.all?(params, fn
+      {:lit, _} -> true
+      _ -> false
+    end)
+    if all_literals and (not ExoSQL.Builtins.can_simplify(f)) do
+      {:lit, run_expr({:fn, {f, params}}, context)}
     else
-      params = Enum.map(params, &simplify(&1, context))
-      ExoSQL.Builtins.simplify(f, params)
+      {:fn, {f, params}}
     end
   end
 

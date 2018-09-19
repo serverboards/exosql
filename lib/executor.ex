@@ -10,17 +10,20 @@ defmodule ExoSQL.Executor do
     {:ok, %{columns: rcolumns, rows: rows}} = execute(from, context)
     # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}. Context: #{inspect context}")
 
-    context = Map.put(context, :columns, rcolumns)
-    exprs = Enum.map(columns, &ExoSQL.Expr.simplify(&1, context))
+    {rows, columns} = case Enum.count(rows) do
+      0 ->
+        {rows, columns}
+      _ ->
+        context = Map.put(context, :columns, rcolumns)
+        exprs = Enum.map(columns, &ExoSQL.Expr.simplify(&1, context))
+        # Logger.debug("From #{inspect rcolumns}\n get #{inspect exprs, pretty: true} /\n #{inspect columns, pretty: true}")
+        rows = Enum.map(rows, fn row ->
+          Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, Map.put(context, :row, row)))
+        end)
+        columns = resolve_column_names(columns, rcolumns)
+        {rows, columns}
+    end
 
-    # Logger.debug("From #{inspect rcolumns}\n get #{inspect exprs, pretty: true} /\n #{inspect columns, pretty: true}")
-
-    rows =
-      Enum.map(rows, fn row ->
-        Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, Map.put(context, :row, row)))
-      end)
-
-    columns = resolve_column_names(columns, rcolumns)
 
     {:ok, %ExoSQL.Result{rows: rows, columns: columns}}
   end
@@ -144,20 +147,19 @@ defmodule ExoSQL.Executor do
   end
 
   def execute({:filter, from, expr}, context) do
-    {:ok, %{columns: columns, rows: rows}} = execute(from, context)
-
-    Logger.debug("Expr #{inspect columns} #{inspect expr} // #{inspect context}")
-
-    context = Map.put(context, :columns, columns)
-    expr = ExoSQL.Expr.simplify(expr, context)
-
-    rows =
-      Enum.filter(rows, fn row ->
+    case expr do
+      {:lit, false} ->
+        {:ok, %ExoSQL.Result{ columns: [], rows: []}}
+      _ ->
+        {:ok, %{ columns: columns, rows: rows }} = execute(from, context)
         context = Map.put(context, :columns, columns)
-        ExoSQL.Expr.run_expr(expr, Map.put(context, :row, row))
-      end)
-
-    {:ok, %ExoSQL.Result{columns: columns, rows: rows}}
+        expr = ExoSQL.Expr.simplify(expr, context)
+        rows = Enum.filter(rows, fn row ->
+          context = Map.put(context, :columns, columns)
+          ExoSQL.Expr.run_expr(expr, Map.put(context, :row, row))
+        end)
+        {:ok, %ExoSQL.Result{ columns: columns, rows: rows}}
+    end
   end
 
   def execute({:cross_join, table1, table2}, context) do

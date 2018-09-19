@@ -80,6 +80,10 @@ defmodule ExoSQL.Builtins do
     end
   end
 
+  def can_simplify(f) do
+    is_aggregate(f) or f in ["random", "randint"]
+  end
+
   def round(n) do
     {:ok, n} = to_float(n)
 

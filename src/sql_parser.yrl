@@ -110,10 +110,10 @@ offset -> 'OFFSET' litn: unwrap_raw('$2').
 expr_list -> expr : ['$1'].
 expr_list -> expr comma expr_list: ['$1'] ++ '$3'.
 
-expr -> expr_l2 op1 expr: {op, {unwrap('$2'), '$1', '$3'}}.
+expr -> expr_l2 op1 expr: {op, {unwrap_u('$2'), '$1', '$3'}}.
 expr -> expr_l2: '$1'.
 
-expr_l2 -> expr_l3 op2 expr_l2: {op, {unwrap('$2'), '$1', '$3'}}.
+expr_l2 -> expr_l3 op2 expr_l2: {op, {unwrap_u('$2'), '$1', '$3'}}.
 expr_l2 -> expr_l3: '$1'.
 
 expr_l3 -> expr_l4 op3 expr_l3: {op, {unwrap('$2'), '$1', '$3'}}.

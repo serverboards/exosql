@@ -1,12 +1,30 @@
 require Logger
 
+defmodule QueryTest.WillFail do
+  def schema(_db) do
+    {:ok, ["willfail"]}
+  end
+
+  def schema(_db, "willfail"), do: {:ok, %{ columns: ["fail"]}}
+
+  def execute(_db, "willfail", quals, _columns) do
+    fail = Enum.find_value(quals, [], fn
+      {"fail", "=", fail} -> fail
+      _other -> "failure"
+    end)
+
+    raise fail
+  end
+end
+
 defmodule QueryTest do
   use ExUnit.Case
   @moduletag :capture_log
   @moduletag timeout: 5_000
 
   @context %{
-    "A" => {ExoSQL.Csv, path: "test/data/csv/"}
+    "A" => {ExoSQL.Csv, path: "test/data/csv/"},
+    "B" => {QueryTest.WillFail, []},
   }
 
   def analyze_query!(query, context \\ @context) do
@@ -156,6 +174,11 @@ defmodule QueryTest do
 
     res = analyze_query!("SELECT floor(1.2), floor(1), floor('1.6')")
     assert res.rows == [[1, 1, 1]]
+  end
+
+  test "Test format BUG +-1" do
+    res = analyze_query!("SELECT format('%+d', 1 - 100)")
+    assert res.rows == [["-99"]]
   end
 
   test "Select * from" do
@@ -718,6 +741,7 @@ defmodule QueryTest do
         )
 
       assert "Fix bug no duration, infinite loop"
+      res
     catch
       {:error, :invalid_duration} ->
         :ok
@@ -1393,7 +1417,7 @@ defmodule QueryTest do
     res = analyze_query!("SELECT RANDINT(0, 1000) FROM generate_series(2)")
     assert Enum.at(res.rows, 0) != Enum.at(res.rows, 1)
   end
-
+  
   test "FROM LATERAL access to previous row data -> CROSS JOIN LATERAL" do
     # Uses data from json field to do a lateral join
     res2 =
@@ -1465,5 +1489,23 @@ defmodule QueryTest do
     ")
 
     flunk(1)
+  end
+
+  test "Early termination on WHERE false" do
+    try do
+      analyze_query!("
+      SELECT * FROM willfail WHERE fail = 'bad-url://bad.bad'
+      ")
+      flunk "Should have failed"
+    rescue
+      _ -> :ok
+    end
+
+    analyze_query!("
+      SELECT * FROM willfail WHERE fail = 'bad-url://bad.bad' and to_string(1) != 1
+    ")
+    analyze_query!("
+      SELECT * FROM willfail WHERE fail = 'bad-url://bad.bad' AND to_string(1) != 1
+    ")
   end
 end
