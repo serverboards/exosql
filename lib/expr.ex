@@ -436,10 +436,11 @@ defmodule ExoSQL.Expr do
     i = Enum.find_index(names, &(&1 == cn))
 
     if i == nil do
-      throw({:error, {:not_found, cn, :in, names}})
+      {:column, cn}
+      # throw {:error, {:not_found, cn, :in, names}}
+    else
+      {:column, i}
     end
-
-    {:column, i}
   end
 
   def simplify({:var, cn}, %{"__vars__" => vars}) do
