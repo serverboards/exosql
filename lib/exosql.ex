@@ -121,6 +121,7 @@ defmodule ExoSQL do
         apply(db, :schema, [opts, table])
 
       nil ->
+        :here = :schema_not_found
         throw({:not_found, {{db, table}, :in, Map.keys(context)}})
     end
   end

@@ -35,7 +35,7 @@ defmodule ExoSQL.Parser do
 
     {select, select_options} = select
 
-    Logger.debug("Real parse #{inspect parsed, pretty: true} #{inspect context}")
+    # Logger.debug("Real parse #{inspect parsed, pretty: true} #{inspect context}")
 
     context =
       if with_ != [] do
@@ -54,50 +54,104 @@ defmodule ExoSQL.Parser do
     all_tables_at_context = resolve_all_tables(context)
     # Logger.debug("All tables #{inspect all_tables_at_context}")
 
-    # Logger.debug("Resolve tables #{inspect(from, pretty: true)},\n #{inspect(join, pretty: true)} ")
-    from = Enum.map(from, &resolve_table(&1, all_tables_at_context, context))
+    Logger.debug("Resolve tables #{inspect(from, pretty: true)}")
+    {from, cross_joins} = case from do
+      [] -> {nil, []}
+      [from | cross_joins] ->
+        resolved = resolve_table(from, all_tables_at_context, context)
+        Logger.debug("Resolved #{inspect resolved}")
+        from = case resolved do
+          {:alias, {{:fn, _}, _}} = orig ->
+            orig
+          {:alias, {%ExoSQL.Query{}, _}} = orig ->
+            orig
+          {:alias, {from, alias_}} ->
+            {:alias, {{:table, from}, alias_}}
+          {:fn, f} ->
+            {:fn, f}
+          %ExoSQL.Query{} = q ->
+            q
+          other ->
+            {:table, resolved}
+        end
+        cross_joins = Enum.map(cross_joins, fn
+          {:table, t} -> {:cross_join, {:table, t}}
+          {:alias, {{:cross_join_lateral, cc}, alias_}} -> {:cross_join_lateral, {:alias, {cc, alias_}}}
+          {:select, select} -> {:cross_join, {:select, select}}
+          other -> other
+          # {:cross_join_lateral, t} -> {:cross_join_lateral, t}
+        end)
+        {from, cross_joins}
+    end
+    Logger.debug("from #{inspect {cross_joins, join}, pretty: true}")
 
     join =
-      Enum.map(join, fn
+      Enum.map(cross_joins ++ join, fn
         {:cross_join_lateral, table} ->
           context = Map.put(context, "__parent__",
-            resolve_all_columns(from, context) ++
+            resolve_all_columns([from], context) ++
             Map.get(context, "__parent__", [])
           )
           # Logger.debug("Resolve table, may need my columns #{inspect table} #{inspect context}")
           resolved = resolve_table(table, all_tables_at_context, context)
           {:cross_join_lateral, resolved}
-
-        {type, {table, ops}} ->
-          resolved = resolve_table(table, all_tables_at_context, context)
-          {type, {resolved, ops}}
+        {type, {:select, query}} ->
+          {:ok, parsed} = real_parse(query, context)
+          Logger.debug("Resolved #{inspect parsed}")
+          {type, parsed}
+        {type, {{:select, query}, ops}} ->
+          {:ok, parsed} = real_parse(query, context)
+          Logger.debug("Resolved #{inspect parsed}")
+          {type, {parsed, ops}}
+        {type, {:table, table}} ->
+          resolved = resolve_table({:table, table}, all_tables_at_context, context)
+          {type, {:table, resolved}}
+        {type, {{:table, table}, ops}} ->
+          resolved = resolve_table({:table, table}, all_tables_at_context, context)
+          {type, {{:table, resolved}, ops}}
+        {type, {{:alias, {{:fn, _}, _}}, _}} = orig ->
+          Logger.debug("F is #{inspect orig}")
+          orig
+        {type, {{:alias, {orig, alias_}}, ops}} ->
+          Logger.debug("Table is #{inspect orig}")
+          resolved = resolve_table(orig, all_tables_at_context, context)
+          {type, {{:alias, {{:table, resolved}, alias_}}, ops}}
       end)
 
+    Logger.debug("Prepare join tables #{inspect(join, pretty: true)}")
     all_tables =
       if join != [] do
-        from ++
+        [from] ++
           Enum.map(join, fn
             {_type, {:fn, {_name, _params}} = func} ->
               func
-
             {_type, {:alias, {_what, _alias}} = alias_} ->
               alias_
-
-            {_type, {table, _expr}} ->
-              table
+            {_type, {:table, table}} ->
+              {:table, table}
+            {_type, {{:table, table}, _op}} ->
+              {:table, table}
+            {_type, {{:alias, _} = alias_, _expr}} ->
+              alias_
             {_type, %ExoSQL.Query{} = query} ->
+              query
+            {_type, {%ExoSQL.Query{} = query, _ops}} ->
               query
           end)
       else
-        from
+        if from == nil do
+          []
+        else
+          [from]
+        end
       end
 
-    # Logger.debug("All tables at all columns #{inspect(all_tables)}")
+    Logger.debug("All tables at all columns #{inspect(all_tables)}")
     all_columns = resolve_all_columns(all_tables, context)
-    # Logger.debug("Resolved columns at query: #{inspect(all_columns)}")
+    Logger.debug("Resolved columns at query: #{inspect(all_columns)}")
 
     # Now resolve references to tables, as in FROM xx, LATERAL nested(xx.json, "a")
-    from = Enum.map(from, &resolve_column(&1, all_columns, context))
+    from = resolve_column(from, all_columns, context)
 
     groupby =
       if groupby do
@@ -119,12 +173,19 @@ defmodule ExoSQL.Parser do
           params = Enum.map(params, &resolve_column(&1, all_columns, context))
           {type, {:alias, {{:fn, {func, params}}, alias_}}}
 
-        {type, {table, expr}} ->
+        {type, {{:table, table}, expr}} ->
           {type,
            {
-             table,
+             {:table, table},
              resolve_column(expr, all_columns, context)
-           }}
+           }
+          }
+        {type, {any, expr}} ->
+          {type,
+            {
+              any,
+              resolve_column(expr, all_columns, context)
+            }}
         {type, %ExoSQL.Query{} = query} ->
           {type, query}
       end)
@@ -155,7 +216,7 @@ defmodule ExoSQL.Parser do
               columns = get_table_columns({:tmp, alias_}, all_columns)
               Enum.map(columns, &{:column, {:tmp, alias_, &1}})
 
-            {db, table} ->
+            {:table, {db, table}} ->
               columns = get_table_columns({db, table}, all_columns)
               Enum.map(columns, &{:column, {db, table, &1}})
           end)
@@ -252,7 +313,7 @@ defmodule ExoSQL.Parser do
   specially when aliases are taken into account
   """
   def resolve_all_columns(tables, context) do
-    # Logger.debug("Resolve all tables #{inspect tables}")
+    Logger.debug("Resolve all tables #{inspect tables}")
     all_columns =
       Enum.flat_map(tables, fn
         {:alias, {{:fn, {"unnest", [_expr | columns]}}, alias_}} ->
@@ -268,13 +329,16 @@ defmodule ExoSQL.Parser do
               Enum.map(other, fn {_db, _table, column} -> {:tmp, alias_, column} end)
           end
 
-        {:with, table} ->
+        {:table, {:with, table}} ->
+          Logger.debug("Get :with columns: #{inspect table} #{inspect context, pretty: true}")
           query = context[:with][table]
 
           get_query_columns(query)
           |> Enum.map(fn {_db, _table, column} -> {:with, table, column} end)
-
-        {db, table} when is_binary(table) ->
+        {:table, nil} ->
+          []
+        {:table, {db, table}} ->
+          Logger.debug("table #{inspect {db, table}}")
           {:ok, schema} = ExoSQL.schema(db, table, context)
           Enum.map(schema[:columns], &{db, table, &1})
 
@@ -391,9 +455,9 @@ defmodule ExoSQL.Parser do
     {:lateral, resolved}
   end
 
-  def resolve_table(other, _all_tables, _context) do
+  def resolve_table(other, all_tables, _context) do
     Logger.error("Cant resolve table #{inspect(other)}")
-    raise "cant_resolve_table"
+    raise "cant_resolve_table" # maybe it do not have the type. Typical fail here.
   end
 
   @doc ~S"""
@@ -460,8 +524,7 @@ defmodule ExoSQL.Parser do
             throw({:not_found, {table, column}, :in, all_columns})
         end
       else
-        :ok = :nok
-        throw({:not_found3, {table, column}, :in, all_columns})
+        throw({:not_found, {table, column}, :in, all_columns})
       end
     end
   end

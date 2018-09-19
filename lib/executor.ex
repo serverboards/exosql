@@ -61,7 +61,7 @@ defmodule ExoSQL.Executor do
      }}
   end
 
-  def execute({:execute, {"self", "tables"}, _quals, _columns}, context) do
+  def execute({:execute, {:table, {"self", "tables"}}, _quals, _columns}, context) do
     rows =
       Enum.flat_map(context, fn {db, _conf} ->
         {:ok, tables} = ExoSQL.schema(db, context)
@@ -88,7 +88,7 @@ defmodule ExoSQL.Executor do
      }}
   end
 
-  def execute({:execute, {:fn, {function, params}}, _quals, []}, context) do
+  def execute({:fn, {function, params}}, context) do
     params =
       params
       |> Enum.map(&ExoSQL.Expr.simplify(&1, context))
@@ -119,13 +119,13 @@ defmodule ExoSQL.Executor do
      }}
   end
 
-  def execute({:execute, {:with, table}, _quals, columns}, context) do
+  def execute({:execute, {:table, {:with, table}}, _quals, columns}, context) do
     data = context[:with][table]
     column_reselect(data, columns, :with, table, context)
   end
 
-  def execute({:execute, {db, table}, quals, columns}, context) do
-    # Logger.debug("#{inspect {db, table, columns, context}}")
+  def execute({:execute, {:table, {db, table}}, quals, columns}, context) do
+    Logger.debug("Execute table #{inspect {db, table}}")
     {dbmod, ctx} = context[db]
 
     quals = quals_with_vars(quals, Map.get(context, "__vars__", %{}))

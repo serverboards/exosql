@@ -1493,10 +1493,12 @@ defmodule QueryTest do
        ["4", "Alice", "0", "LUCA", "0", "LUCA"],
        ["5", "Grandson", "3", "Son", "4", "Alice"]
     ]
+  end
 
+  test "Mixed LATERALs" do
     # a bit complicated but takes several cross lateral options
     analyze_query!("
-      SELECT * FROM products CROSS JOIN LATERAL (
+      SELECT * FROM products, LATERAL (
         SELECT user_id, users.name FROM purchases CROSS JOIN LATERAL (
           SELECT * FROM users WHERE users.id = purchases.user_id
           ) WHERE purchases.product_id = products.id
