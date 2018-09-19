@@ -717,6 +717,7 @@ defmodule QueryTest do
         )
 
       assert "Fix bug no duration, infinite loop"
+      res
     catch
       {:error, :invalid_duration} ->
         :ok

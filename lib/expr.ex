@@ -17,24 +17,12 @@ defmodule ExoSQL.Expr do
 
   import ExoSQL.Utils, only: [to_number: 1]
 
-  def run_expr({:op, {"and", op1, op2}}, context) do
-    r1 = run_expr(op1, context)
-    r2 = run_expr(op2, context)
-    r1 && r2
-  end
-
   def run_expr({:op, {"AND", op1, op2}}, context) do
     r1 = run_expr(op1, context)
     r2 = run_expr(op2, context)
     r1 && r2
   end
-
-  def run_expr({:op, {"or", op1, op2}}, context) do
-    r1 = run_expr(op1, context)
-    r2 = run_expr(op2, context)
-    r1 || r2
-  end
-
+  
   def run_expr({:op, {"OR", op1, op2}}, context) do
     r1 = run_expr(op1, context)
     r2 = run_expr(op2, context)
