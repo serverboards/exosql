@@ -223,11 +223,14 @@ defmodule ExoSQL.Executor do
           data.columns
       end
 
-    context = Map.put(context, :parent_columns, data.columns)
+    #  It accumulative to allow nested cross
+    parent_columns = Map.get(context, :parent_columns, []) ++ data.columns
+    context = Map.put(context, :parent_columns, parent_columns)
 
     nrows =
       Enum.flat_map(data.rows, fn row ->
-        context = Map.put(context, :parent_row, row)
+        parent_row = Map.get(context, :parent_row, []) ++ row
+        context = Map.put(context, :parent_row, parent_row)
         sexpr = ExoSQL.Expr.simplify(expr, context)
         res = case sexpr do
           {:select, _, _} = select ->

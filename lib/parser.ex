@@ -35,6 +35,8 @@ defmodule ExoSQL.Parser do
 
     {select, select_options} = select
 
+    Logger.debug("Real parse #{inspect parsed, pretty: true} #{inspect context}")
+
     context =
       if with_ != [] do
         # Logger.debug("Parsed #{inspect parsed, pretty: true}")
@@ -458,7 +460,8 @@ defmodule ExoSQL.Parser do
             throw({:not_found, {table, column}, :in, all_columns})
         end
       else
-        throw({:not_found, {table, column}, :in, all_columns})
+        :ok = :nok
+        throw({:not_found3, {table, column}, :in, all_columns})
       end
     end
   end
@@ -493,6 +496,7 @@ defmodule ExoSQL.Parser do
   end
 
   def resolve_column({:select, query}, all_columns, context) do
+    all_columns = all_columns ++ Map.get(context, "__parent__", [])
     context = Map.put(context, "__parent__", all_columns)
     {:ok, parsed} = real_parse(query, context)
     # Logger.debug("Parsed query #{inspect query} -> #{inspect parsed, pretty: true}")
