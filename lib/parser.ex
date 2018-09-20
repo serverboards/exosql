@@ -368,12 +368,6 @@ defmodule ExoSQL.Parser do
   def resolve_columns(%ExoSQL.Query{} = q, _context) do
     get_query_columns(q)
   end
-  def resolve_columns({:lateral, expr}, context) do
-    resolve_columns(expr, context)
-  end
-  def resolve_columns({:fn, {"unnest", [_expr | columns]}}, _context) do
-    Enum.map(columns, fn {:lit, col} -> {:tmp, "unnest", col} end)
-  end
 
 
   def get_table_columns({db, table}, all_columns) do

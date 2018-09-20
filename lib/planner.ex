@@ -79,7 +79,7 @@ defmodule ExoSQL.Planner do
       Enum.map(query.join, fn
         {:cross_join_lateral, q} -> q
         {_join, {_from, expr}} -> expr
-        other -> []
+        _other -> []
       end)
     ]
 
@@ -286,7 +286,7 @@ defmodule ExoSQL.Planner do
 
 
 
-  @doc ~S"""
+  ~S"""
   Gets all the vars referenced in an expression that refer to a given table
 
   Given a database and table, and an expression, return all columns from that
@@ -320,10 +320,7 @@ defmodule ExoSQL.Planner do
   end
 
   defp get_table_columns_at_expr(db, table, {:select, query}) do
-    {:ok, plan} = plan(query)
-
     res = get_table_columns_at_expr(db, table, [query.select, query.where, query.join])
-
     # Logger.debug("Get parents #{inspect {db, table}} from #{inspect query, pretty: true}: #{inspect res}")
     res
   end
@@ -350,7 +347,7 @@ defmodule ExoSQL.Planner do
     []
   end
 
-  @doc ~S"""
+  ~S"""
   If an aggregate function is found, rewrite it to be a real aggregate
 
   The way to do it is set as first argument the column with the aggregated table

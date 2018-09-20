@@ -460,7 +460,7 @@ defmodule ExoSQL.Expr do
       nil ->
         # Logger.debug("Unknown column #{inspect cn} | #{inspect context}")
         {:column, cn}
-      other ->
+      _other ->
         i
     end
   end

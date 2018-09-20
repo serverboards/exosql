@@ -63,12 +63,12 @@ defmodule ExoSQL.DateTime do
     raise ArgumentError, message: "cant convert #{inspect(other)} to date"
   end
 
-  def to_datetime(dt, "-" <> mod = orig) do
+  def to_datetime(dt, "-" <> _mod = orig) do
     dt = to_datetime(dt)
     ExoSQL.DateTime.Duration.datetime_add(dt, orig)
   end
 
-  def to_datetime(dt, "+" <> mod = orig) do
+  def to_datetime(dt, "+" <> _mod = orig) do
     dt = to_datetime(dt)
     ExoSQL.DateTime.Duration.datetime_add(dt, orig)
   end
@@ -282,7 +282,7 @@ defmodule ExoSQL.DateTime.Duration do
           date
 
         years ->
-          date = Timex.shift(date, years: years)
+          Timex.shift(date, years: years)
       end
 
     date

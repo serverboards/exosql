@@ -74,7 +74,7 @@ defmodule ExoSQL.Builtins do
           apply(mod, fun, params)
         rescue
           _excp ->
-            Logger.debug("Exception #{inspect(_excp)}: #{inspect({{mod, fun}, params})}")
+            # Logger.debug("Exception #{inspect(_excp)}: #{inspect({{mod, fun}, params})}")
             throw({:function, {name, params}})
         end
     end
@@ -588,13 +588,13 @@ defmodule ExoSQL.Builtins do
 
     Enum.map(array, fn row ->
       [
-        Map.get(array, col1),
-        Map.get(array, col2),
-        Map.get(array, col3),
-        Map.get(array, col4),
-        Map.get(array, col5),
-        Map.get(array, col6),
-        Map.get(array, col7)
+        Map.get(row, col1),
+        Map.get(row, col2),
+        Map.get(row, col3),
+        Map.get(row, col4),
+        Map.get(row, col5),
+        Map.get(row, col6),
+        Map.get(row, col7)
       ]
     end)
   end
