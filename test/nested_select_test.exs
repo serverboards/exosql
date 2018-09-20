@@ -11,7 +11,15 @@ defmodule NestedSelectTest do
   }
 
   def analyze_query!(query, context \\ @context) do
-    QueryTest.analyze_query!(query, context)
+    Logger.debug("Query is:\n\n#{query}")
+    {:ok, parsed} = ExoSQL.parse(query, context)
+    Logger.debug("Parsed is #{inspect(parsed, pretty: true)}")
+    {:ok, plan} = ExoSQL.Planner.plan(parsed)
+    Logger.debug("Plan is #{inspect(plan, pretty: true)}")
+    {:ok, result} = ExoSQL.Executor.execute(plan, context)
+    Logger.debug(inspect(result, pretty: true))
+    Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
+    result
   end
 
   test "Nested SELECT" do

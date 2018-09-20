@@ -16,7 +16,7 @@ defmodule ExoSQL.Planner do
     iex> plan(query)
     {:ok,
       {:select,
-        {:execute, {"A", "products"}, [], [{"A", "products", "name"}, {"A", "products", "price"}]}, [
+        {:execute, {:table, {"A", "products"}}, [], [{"A", "products", "name"}, {"A", "products", "price"}]}, [
           column: {"A", "products", "name"},
           column: {"A", "products", "price"}]
         }
@@ -31,14 +31,19 @@ defmodule ExoSQL.Planner do
       {:select,
         {:filter,
           {:cross_join,
-            {:execute, {"A", "products"}, [], [{"A", "products", "id"}, {"A", "products", "name"}]},
             {:cross_join,
-              {:execute, {"A", "purchases"}, [], [
-                  {"A", "purchases", "user_id"},
-                  {"A", "purchases", "product_id"}
-                ]},
-              {:execute, {"A", "users"}, [], [{"A", "users", "id"}, {"A", "users", "name"}]}
-            }
+              {:execute, {:table, {"A", "users"}}, [], [
+                {"A", "users", "id"},
+                {"A", "users", "name"}
+              ]},
+              {:execute, {:table, {"A", "purchases"}}, [], [
+                {"A", "purchases", "user_id"},
+                {"A", "purchases", "product_id"}
+              ]}},
+            {:execute, {:table, {"A", "products"}}, [], [
+              {"A", "products", "id"},
+              {"A", "products", "name"}
+            ]}
           },
           {:op, {"AND",
            {:op, {"=",
@@ -95,9 +100,9 @@ defmodule ExoSQL.Planner do
     join_plan =
       Enum.reduce(query.join, from_plan, fn
         {:cross_join, toplan}, acc ->
-          Logger.debug("b All expressions: #{inspect toplan} | #{inspect all_expressions}")
+          # Logger.debug("b All expressions: #{inspect toplan} | #{inspect all_expressions}")
           from = plan_execute(toplan, all_expressions)
-          Logger.debug("b Plan #{inspect from, pretty: true}")
+          # Logger.debug("b Plan #{inspect from, pretty: true}")
           {:cross_join, acc, from}
 
         {:cross_join_lateral, toplan}, acc ->

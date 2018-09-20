@@ -19,7 +19,7 @@ defmodule PlannerTest do
       {:select,
         {:filter,
           {:execute,
-            {"A", "products"},
+            {:table, {"A", "products"}},
             [["price", ">", 0], ["stock", ">=", 1]],
             [
               {"A", "products", "price"},

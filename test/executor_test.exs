@@ -9,7 +9,7 @@ defmodule ExecutorTest do
 
   test "Execute a simple manual plan" do
     plan =
-      {:execute, {"A", "products"}, [], [{"A", "products", "name"}, {"A", "products", "price"}]}
+      {:execute, {:table, {"A", "products"}}, [], [{"A", "products", "name"}, {"A", "products", "price"}]}
 
     {:ok, result} = ExoSQL.Executor.execute(plan, @context)
 
@@ -28,7 +28,7 @@ defmodule ExecutorTest do
     plan = {
       :select,
       {:filter,
-       {:execute, {"A", "products"}, [], [{"A", "products", "name"}, {"A", "products", "price"}]},
+       {:execute, {:table, {"A", "products"}}, [], [{"A", "products", "name"}, {"A", "products", "price"}]},
        {:op, {">", {:column, {"A", "products", "price"}}, {:lit, "10"}}}},
       [{:column, {"A", "products", "name"}}, {:column, {"A", "products", "price"}}]
     }
@@ -48,9 +48,9 @@ defmodule ExecutorTest do
   test "Execute a cross join" do
     plan = {
       :cross_join,
-      {:execute, {"A", "purchases"}, [],
+      {:execute, {:table, {"A", "purchases"}}, [],
        [{"A", "purchases", "user_id"}, {"A", "purchases", "product_id"}]},
-      {:execute, {"A", "products"}, [], [{"A", "products", "id"}, {"A", "products", "name"}]}
+      {:execute, {:table, {"A", "products"}}, [], [{"A", "products", "id"}, {"A", "products", "name"}]}
     }
 
     {:ok, result} = ExoSQL.Executor.execute(plan, @context)
@@ -96,10 +96,10 @@ defmodule ExecutorTest do
       {:select,
         {:filter,
           {:cross_join,
-            {:execute, {"A","users"}, [], [{"A", "users", "id"}, {"A", "users", "name"}]},
+            {:execute, {:table, {"A","users"}}, [], [{"A", "users", "id"}, {"A", "users", "name"}]},
             {:cross_join,
-              {:execute, {"A","purchases"}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}]},
-              {:execute, {"A","products"}, [], [{"A","products","id"},{"A","products","name"}]}
+              {:execute, {:table, {"A","purchases"}}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}]},
+              {:execute, {:table, {"A","products"}}, [], [{"A","products","id"},{"A","products","name"}]}
             },
           },
           {:op, {"AND",
@@ -132,7 +132,7 @@ defmodule ExecutorTest do
     plan =
       {:select,
        {:group_by,
-        {:execute, {"A", "products"}, [], [{"A", "products", "id"}, {"A", "products", "name"}]},
+        {:execute, {:table, {"A", "products"}}, [], [{"A", "products", "id"}, {"A", "products", "name"}]},
         [{:lit, true}]}, [{:fn, {"count", [{:column, 1}, {:pass, {:lit, "*"}}]}}]}
 
     {:ok, result} = ExoSQL.Executor.execute(plan, @context)
@@ -142,7 +142,7 @@ defmodule ExecutorTest do
   test "Execute complex aggregation" do
     plan =
       {:select,
-       {:group_by, {:execute, {"A", "purchases"}, [], [{"A", "purchases", "product_id"}]},
+       {:group_by, {:execute, {:table, {"A", "purchases"}}, [], [{"A", "purchases", "product_id"}]},
         [{:column, {"A", "purchases", "product_id"}}]},
        [
          {:column, {"A", "purchases", "product_id"}},
@@ -166,10 +166,10 @@ defmodule ExecutorTest do
           { :group_by,
             { :filter,
               {:cross_join,
-                {:execute, {"A","users"}, [], [{"A", "users", "id"}, {"A", "users", "name"}]} ,
+                {:execute, {:table, {"A","users"}}, [], [{"A", "users", "id"}, {"A", "users", "name"}]} ,
                   {:cross_join,
-                    {:execute, {"A","purchases"}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}, {"A","purchases","amount"}]},
-                    {:execute, {"A","products"}, [], [{"A","products","id"},{"A","products","name"}, {"A","products","price"}]}
+                    {:execute, {:table, {"A","purchases"}}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}, {"A","purchases","amount"}]},
+                    {:execute, {:table, {"A","products"}}, [], [{"A","products","id"},{"A","products","name"}, {"A","products","price"}]}
                 },
               },
               {:op, {"AND",
