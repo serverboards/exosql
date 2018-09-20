@@ -42,7 +42,7 @@ PostgreSQL.
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ex_doc, ">= 0.0.0"},
+      {:ex_doc, "~> 0.19.1"},
       {:timex, "~> 3.0"},
       {:csv, "~> 2.1"},
       {:httpoison, "~> 1.0"},
