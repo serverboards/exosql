@@ -5,13 +5,14 @@ defmodule QueryTest.WillFail do
     {:ok, ["willfail"]}
   end
 
-  def schema(_db, "willfail"), do: {:ok, %{ columns: ["fail"]}}
+  def schema(_db, "willfail"), do: {:ok, %{columns: ["fail"]}}
 
   def execute(_db, "willfail", quals, _columns) do
-    fail = Enum.find_value(quals, [], fn
-      {"fail", "=", fail} -> fail
-      _other -> "failure"
-    end)
+    fail =
+      Enum.find_value(quals, [], fn
+        {"fail", "=", fail} -> fail
+        _other -> "failure"
+      end)
 
     raise fail
   end
@@ -24,7 +25,7 @@ defmodule QueryTest do
 
   @context %{
     "A" => {ExoSQL.Csv, path: "test/data/csv/"},
-    "B" => {QueryTest.WillFail, []},
+    "B" => {QueryTest.WillFail, []}
   }
 
   def analyze_query!(query, context \\ @context) do
@@ -1486,13 +1487,14 @@ defmodule QueryTest do
           SELECT parentB.name FROM family AS parentB WHERE me.parentB_id = parentB.id
         )
     ")
+
     assert res.rows == [
-       ["1", "Mom", "0", "LUCA", "0", "LUCA"],
-       ["2", "Dad", "0", "LUCA", "0", "LUCA"],
-       ["3", "Son", "1", "Mom", "2", "Dad"],
-       ["4", "Alice", "0", "LUCA", "0", "LUCA"],
-       ["5", "Grandson", "3", "Son", "4", "Alice"]
-    ]
+             ["1", "Mom", "0", "LUCA", "0", "LUCA"],
+             ["2", "Dad", "0", "LUCA", "0", "LUCA"],
+             ["3", "Son", "1", "Mom", "2", "Dad"],
+             ["4", "Alice", "0", "LUCA", "0", "LUCA"],
+             ["5", "Grandson", "3", "Son", "4", "Alice"]
+           ]
   end
 
   test "Mixed LATERALs" do
@@ -1511,7 +1513,7 @@ defmodule QueryTest do
       analyze_query!("
       SELECT * FROM willfail WHERE fail = 'bad-url://bad.bad'
       ")
-      flunk "Should have failed"
+      flunk("Should have failed")
     rescue
       _ -> :ok
     end

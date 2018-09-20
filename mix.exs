@@ -6,7 +6,7 @@ defmodule ExoSQL.Mixfile do
       app: :exosql,
       version: "0.2.64",
       elixir: "~> 1.5",
-      start_permanent: Mix.env == :prod,
+      start_permanent: Mix.env() == :prod,
       deps: deps(),
       source_url: "https://github.com/serverboards/exosql/",
       homepage_url: "https://serverboards.io",
@@ -15,7 +15,10 @@ defmodule ExoSQL.Mixfile do
         name: "exosql",
         licenses: ["Apache 2.0"],
         maintainers: ["David Moreno <dmoreno@serverboards.io>"],
-        links: %{ "Serverboards" => "https://serverboards.io", "GitHub" => "https://github.com/serverboards/exosql/" },
+        links: %{
+          "Serverboards" => "https://serverboards.io",
+          "GitHub" => "https://github.com/serverboards/exosql/"
+        }
       ]
     ]
   end
@@ -28,7 +31,7 @@ defmodule ExoSQL.Mixfile do
   end
 
   defp description do
-"Universal SQL engine for Elixir.
+    "Universal SQL engine for Elixir.
 
 This library implements the SQL logic to perform queries on user provided
 databases using a simple interface based on Foreign Data Wrappers from
@@ -43,7 +46,7 @@ PostgreSQL.
       {:timex, "~> 3.0"},
       {:csv, "~> 2.1"},
       {:httpoison, "~> 1.0"},
-      {:poison,  "~> 3.1"},
+      {:poison, "~> 3.1"}
     ]
   end
 end

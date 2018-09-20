@@ -255,13 +255,16 @@ defmodule ExoSQL.Planner do
     quals = get_quals(db, table, where)
     {:execute, {:table, {db, table}}, quals, columns}
   end
+
   defp plan_execute(nil, _where, _all_expressions) do
     nil
   end
+
   defp plan_execute(%ExoSQL.Query{} = q, _where, _all_expressions) do
     {:ok, q} = plan(q)
     q
   end
+
   defp plan_execute({:fn, f}, _where, _all_expressions) do
     {:fn, f}
   end
@@ -284,8 +287,6 @@ defmodule ExoSQL.Planner do
     q
   end
 
-
-
   ~S"""
   Gets all the vars referenced in an expression that refer to a given table
 
@@ -294,6 +295,7 @@ defmodule ExoSQL.Planner do
 
   This is used to know which columns to extract from the table.
   """
+
   defp get_table_columns_at_expr(_db, _table, []) do
     []
   end
@@ -321,6 +323,7 @@ defmodule ExoSQL.Planner do
 
   defp get_table_columns_at_expr(db, table, {:select, query}) do
     res = get_table_columns_at_expr(db, table, [query.select, query.where, query.join])
+
     # Logger.debug("Get parents #{inspect {db, table}} from #{inspect query, pretty: true}: #{inspect res}")
     res
   end
@@ -354,6 +357,7 @@ defmodule ExoSQL.Planner do
   and the rest inside `{:pass, op}`, so its the real function that evaluates it
   over the first argument
   """
+
   defp fix_aggregates_select({:op, {op, op1, op2}}, aggregate_column) do
     op1 = fix_aggregates_select(op1, aggregate_column)
     op2 = fix_aggregates_select(op2, aggregate_column)

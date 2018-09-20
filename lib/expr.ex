@@ -365,11 +365,14 @@ defmodule ExoSQL.Expr do
   def simplify({:op, {op, op1, op2}}, context) do
     op1 = simplify(op1, context)
     op2 = simplify(op2, context)
+
     case {op, op1, op2} do
       {"AND", {:lit, false}, _} ->
         {:lit, false}
+
       {"AND", _, {:lit, false}} ->
         {:lit, false}
+
       {_, {:lit, op1}, {:lit, op2}} ->
         {:lit, run_expr({:op, {op, {:lit, op1}, {:lit, op2}}}, [])}
 
@@ -442,6 +445,7 @@ defmodule ExoSQL.Expr do
 
         if idx != nil do
           val = Enum.at(Map.get(context, :parent_row, []), idx)
+
           if val do
             {:lit, val}
           else
@@ -460,6 +464,7 @@ defmodule ExoSQL.Expr do
       nil ->
         # Logger.debug("Unknown column #{inspect cn} | #{inspect context}")
         {:column, cn}
+
       _other ->
         i
     end
@@ -477,11 +482,14 @@ defmodule ExoSQL.Expr do
 
   def simplify({:fn, {f, params}}, context) do
     params = Enum.map(params, &simplify(&1, context))
-    all_literals = Enum.all?(params, fn
-      {:lit, _} -> true
-      _ -> false
-    end)
-    if all_literals and (not ExoSQL.Builtins.can_simplify(f)) do
+
+    all_literals =
+      Enum.all?(params, fn
+        {:lit, _} -> true
+        _ -> false
+      end)
+
+    if all_literals and not ExoSQL.Builtins.can_simplify(f) do
       {:lit, run_expr({:fn, {f, params}}, context)}
     else
       {:fn, {f, params}}

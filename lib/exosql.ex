@@ -119,8 +119,9 @@ defmodule ExoSQL do
     case context[db] do
       {db, opts} ->
         apply(db, :schema, [opts, table])
+
       nil ->
-        raise "#{inspect {db, table}} not found at extractors #{inspect Map.keys(context)}"
+        raise "#{inspect({db, table})} not found at extractors #{inspect(Map.keys(context))}"
     end
   end
 
