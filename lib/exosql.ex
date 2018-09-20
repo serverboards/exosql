@@ -66,8 +66,6 @@ defmodule ExoSQL do
            {:ok, plan} <- ExoSQL.Planner.plan(parsed) do
         ExoSQL.Executor.execute(plan, context)
       end
-    catch
-      any -> {:error, any}
     rescue
       err in MatchError ->
         case err.term do
@@ -80,6 +78,8 @@ defmodule ExoSQL do
 
       any ->
         {:error, any}
+    catch
+      any -> {:error, any}
     end
 
     # Logger.debug("parsed #{inspect parsed, pretty: true}")
@@ -119,10 +119,8 @@ defmodule ExoSQL do
     case context[db] do
       {db, opts} ->
         apply(db, :schema, [opts, table])
-
       nil ->
-        :here = :schema_not_found
-        throw({:not_found, {{db, table}, :in, Map.keys(context)}})
+        raise "#{inspect {db, table}} not found at extractors #{inspect Map.keys(context)}"
     end
   end
 
