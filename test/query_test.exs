@@ -776,11 +776,11 @@ defmodule QueryTest do
     ")
     assert res.columns == [{:tmp, :tmp, "t"}]
     assert Enum.count(res.rows) == 10
-    #
-    # res = analyze_query!("
-    #   SELECT n, generate_series(n) t FROM generate_series(3) n
-    # ")
-    # assert Enum.count(res.rows) == 10
+
+    res = analyze_query!("
+      SELECT n, generate_series(n) t FROM generate_series(3) n
+    ")
+    assert Enum.count(res.rows) == (1 + 2 + 3)
   end
 
   test "Fail get non existant column" do
