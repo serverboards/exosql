@@ -164,6 +164,16 @@ defmodule ExoSQL.Planner do
           {:select, order_plan, select}
       end
 
+    select_plan = if Enum.any?(select, fn
+        {:fn, {name, _args}} -> ExoSQL.Builtins.is_projectable(name)
+        {:lit, %{ columns: _, rows: _}} -> true
+        other -> false
+      end) do
+      {:project, select_plan}
+    else
+      select_plan
+    end
+
     distinct_plan =
       case query.distinct do
         nil ->

@@ -749,6 +749,24 @@ defmodule QueryTest do
     end
   end
 
+  test "Generate series as single call" do
+    res = analyze_query!("
+      SELECT generate_series(10)
+    ")
+    assert Enum.count(res.rows) == 10
+
+    # res = analyze_query!("
+    #   SELECT generate_series(10) as t
+    # ")
+    # assert res.columns == [{:tmp, "t", "t"}]
+    # assert Enum.count(res.rows) == 10
+    #
+    # res = analyze_query!("
+    #   SELECT n, generate_series(n) t FROM generate_series(3) n
+    # ")
+    # assert Enum.count(res.rows) == 10
+  end
+
   test "Fail get non existant column" do
     try do
       analyze_query!("SELECT nope FROM (SELECT 1)")

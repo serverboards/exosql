@@ -84,6 +84,10 @@ defmodule ExoSQL.Builtins do
     is_aggregate(f) or f in ["random", "randint"]
   end
 
+  def is_projectable(f) do
+    f in ["unnest", "generate_series"]
+  end
+
   def round(n) do
     {:ok, n} = to_float(n)
 

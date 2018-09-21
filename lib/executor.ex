@@ -150,6 +150,74 @@ defmodule ExoSQL.Executor do
     end
   end
 
+  def execute({:project, from}, context) do
+    {:ok, from} = execute(from, context)
+
+    if Enum.count(from.rows) == 0 do
+      {:ok, from} # warning, the projection fails and the number of columns is undefined.
+    else
+      # Logger.debug("Orig #{inspect from}")
+      columns = project_columns(from.columns, hd from.rows)
+      rows = Enum.flat_map(from.rows, &project_row(&1))
+      # Logger.debug("Final #{inspect {columns, rows}}")
+      {:ok, %ExoSQL.Result{
+        columns: columns,
+        rows: rows
+      }}
+    end
+  end
+
+  def project_row([ head ]) do
+    cond do
+      is_list(head) ->
+        [head]
+      %{columns: _columns, rows: rows} = head ->
+        rows
+      true ->
+        [head]
+    end
+  end
+  def project_row([ head | rest]) do
+    rest_rows = project_row(rest)
+
+    cond do
+      is_list(head) ->
+        Enum.flat_map(head, fn h -> Enum.map(rest_rows,fn r -> [h | r] end) end)
+      %{columns: _columns, rows: rows} = head ->
+        Enum.flat_map(rows, fn h -> Enum.map(rest_rows,fn r -> [h | r] end) end)
+      true ->
+        for r <- rest_rows do
+          [head | r]
+        end
+    end
+  end
+
+  def project_columns([chead], [rhead]) do
+    cond do
+      is_list(rhead) ->
+        [chead]
+      %{columns: columns, rows: _rows} = rhead ->
+        columns
+      true ->
+        [chead]
+    end
+  end
+
+  def project_columns([chead | crest], [rhead | rrest]) do
+    rest_columns = project_columns(crest, rrest)
+
+    me_column = cond do
+      is_list(chead) ->
+        [chead]
+      %{columns: columns, rows: _rows} = rhead ->
+        columns
+      true ->
+        [chead]
+    end
+
+    me_column ++ rest_columns
+  end
+
   def execute({:filter, from, expr}, context) do
     case expr do
       {:lit, false} ->
