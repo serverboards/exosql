@@ -162,46 +162,53 @@ defmodule ExecutorTest do
   end
 
   test "Execute complex aggregation 2" do
-      # SELECT users.name, SUM(price*amount) FROM users, purchases, products
-      # WHERE users.id = purchases.user_id AND products.id = purchases.product_id
-      # GROUP BY product.id
-      plan =
-        {:select,
-          { :group_by,
-            { :filter,
-              {:cross_join,
-                {:execute, {:table, {"A","users"}}, [], [{"A", "users", "id"}, {"A", "users", "name"}]} ,
-                  {:cross_join,
-                    {:execute, {:table, {"A","purchases"}}, [], [{"A","purchases","user_id"},{"A","purchases", "product_id"}, {"A","purchases","amount"}]},
-                    {:execute, {:table, {"A","products"}}, [], [{"A","products","id"},{"A","products","name"}, {"A","products","price"}]}
-                },
-              },
-              {:op, {"AND",
-                {:op, {"=", {:column, {"A","users","id"}}, {:column, {"A","purchases","user_id"}}}},
-                {:op, {"=", {:column, {"A","purchases","product_id"}}, {:column, {"A","products","id"}}}},
-              }}
-            },
-          [ {:column, {"A","users","name"}} ]
-          },
-          [
-            {:column, {"A", "users", "name"}},
-            {:fn, {"sum", [
-              {:column, 1},
-              {:pass, {:op, {"*",
-                {:column, {"A","products","price"}},
-                {:column, {"A","purchases","amount"}}
-              } } }
-            ] } }
-          ]
-        }
+    # SELECT users.name, SUM(price*amount) FROM users, purchases, products
+    # WHERE users.id = purchases.user_id AND products.id = purchases.product_id
+    # GROUP BY product.id
+    plan =
+      {:select,
+       {:group_by,
+        {:filter,
+         {:cross_join,
+          {:execute, {:table, {"A", "users"}}, [],
+           [{"A", "users", "id"}, {"A", "users", "name"}]},
+          {:cross_join,
+           {:execute, {:table, {"A", "purchases"}}, [],
+            [
+              {"A", "purchases", "user_id"},
+              {"A", "purchases", "product_id"},
+              {"A", "purchases", "amount"}
+            ]},
+           {:execute, {:table, {"A", "products"}}, [],
+            [{"A", "products", "id"}, {"A", "products", "name"}, {"A", "products", "price"}]}}},
+         {:op,
+          {"AND",
+           {:op,
+            {"=", {:column, {"A", "users", "id"}}, {:column, {"A", "purchases", "user_id"}}}},
+           {:op,
+            {"=", {:column, {"A", "purchases", "product_id"}}, {:column, {"A", "products", "id"}}}}}}},
+        [{:column, {"A", "users", "name"}}]},
+       [
+         {:column, {"A", "users", "name"}},
+         {:fn,
+          {"sum",
+           [
+             {:column, 1},
+             {:pass,
+              {:op,
+               {"*", {:column, {"A", "products", "price"}},
+                {:column, {"A", "purchases", "amount"}}}}}
+           ]}}
+       ]}
 
+    {:ok, result} = ExoSQL.Executor.execute(plan, @context)
 
-      {:ok, result} = ExoSQL.Executor.execute(plan, @context)
-      assert result == %ExoSQL.Result{
-        columns: [{"A", "users", "name"}, {:tmp, :tmp, "col_2"}],
-        rows: [["David", 550], ["Javier", 1300], ["Patricio", 30]]
-      }
-      Logger.info ExoSQL.format_result(result)
+    assert result == %ExoSQL.Result{
+             columns: [{"A", "users", "name"}, {:tmp, :tmp, "col_2"}],
+             rows: [["David", 550], ["Javier", 1300], ["Patricio", 30]]
+           }
+
+    Logger.info(ExoSQL.format_result(result))
   end
 
   test "extra quals on = and ==" do

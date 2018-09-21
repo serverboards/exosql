@@ -1513,7 +1513,7 @@ defmodule QueryTest do
       analyze_query!("
       SELECT * FROM willfail WHERE fail = 'bad-url://bad.bad'
       ")
-      flunk "Should have failed"
+      flunk("Should have failed")
     rescue
       _ -> :ok
     end

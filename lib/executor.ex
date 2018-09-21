@@ -10,19 +10,24 @@ defmodule ExoSQL.Executor do
     {:ok, %{columns: rcolumns, rows: rows}} = execute(from, context)
     # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}. Context: #{inspect context}")
 
-    {rows, columns} = case Enum.count(rows) do
-      0 ->
-        {rows, columns}
-      _ ->
-        context = Map.put(context, :columns, rcolumns)
-        exprs = Enum.map(columns, &ExoSQL.Expr.simplify(&1, context))
-        # Logger.debug("From #{inspect rcolumns}\n get #{inspect exprs, pretty: true} /\n #{inspect columns, pretty: true}")
-        rows = Enum.map(rows, fn row ->
-          Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, Map.put(context, :row, row)))
-        end)
-        columns = resolve_column_names(columns, rcolumns)
-        {rows, columns}
-    end
+    {rows, columns} =
+      case Enum.count(rows) do
+        0 ->
+          {rows, columns}
+
+        _ ->
+          context = Map.put(context, :columns, rcolumns)
+          exprs = Enum.map(columns, &ExoSQL.Expr.simplify(&1, context))
+
+          # Logger.debug("From #{inspect rcolumns}\n get #{inspect exprs, pretty: true} /\n #{inspect columns, pretty: true}")
+          rows =
+            Enum.map(rows, fn row ->
+              Enum.map(exprs, &ExoSQL.Expr.run_expr(&1, Map.put(context, :row, row)))
+            end)
+
+          columns = resolve_column_names(columns, rcolumns)
+          {rows, columns}
+      end
 
     {:ok, %ExoSQL.Result{rows: rows, columns: columns}}
   end
