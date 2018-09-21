@@ -167,6 +167,7 @@ defmodule ExoSQL.Planner do
     select_plan = if Enum.any?(select, fn
         {:fn, {name, _args}} -> ExoSQL.Builtins.is_projectable(name)
         {:lit, %{ columns: _, rows: _}} -> true
+        {:alias, {{:lit, %{ columns: _, rows: _}}, _}} -> true
         other -> false
       end) do
       {:project, select_plan}

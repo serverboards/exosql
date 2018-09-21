@@ -156,10 +156,10 @@ defmodule ExoSQL.Executor do
     if Enum.count(from.rows) == 0 do
       {:ok, from} # warning, the projection fails and the number of columns is undefined.
     else
-      Logger.debug("Orig #{inspect from}")
+      # Logger.debug("Orig #{inspect from}")
       columns = project_columns(from.columns, hd from.rows)
       rows = Enum.flat_map(from.rows, &project_row(&1))
-      Logger.debug("Final #{inspect {columns, rows}}")
+      # Logger.debug("Final #{inspect {columns, rows}}")
       {:ok, %ExoSQL.Result{
         columns: columns,
         rows: rows
@@ -180,7 +180,6 @@ defmodule ExoSQL.Executor do
   end
   def project_row([ head | rest]) do
     rest_rows = project_row(rest)
-    Logger.debug("Rest rows #{inspect {head, rest_rows}}")
 
     cond do
       is_list(head) ->
@@ -201,7 +200,12 @@ defmodule ExoSQL.Executor do
         [chead]
       is_map(rhead) ->
         %{columns: columns, rows: _rows} = rhead
-        columns
+        # special case, I inherit the column name from alias or 1. If more columns at inner table, sorry
+        if Enum.count(columns) == 1 do
+          [chead]
+        else
+          columns
+        end
       true ->
         [chead]
     end
