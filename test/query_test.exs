@@ -755,6 +755,22 @@ defmodule QueryTest do
     ")
     assert Enum.count(res.rows) == 10
 
+    res = analyze_query!("
+      SELECT 1, generate_series(10)
+    ")
+    assert Enum.count(res.rows) == 10
+
+    res = analyze_query!("
+      SELECT generate_series(10), 1
+    ")
+    assert Enum.count(res.rows) == 10
+
+    res = analyze_query!("
+      SELECT 1, generate_series(10), 1
+    ")
+    assert Enum.count(res.rows) == 10
+    assert res.columns == [{:tmp, :tmp, "col_1"}, {:tmp, :tmp, "generate_series"}, {:tmp, :tmp, "col_3"}]
+
     # res = analyze_query!("
     #   SELECT generate_series(10) as t
     # ")

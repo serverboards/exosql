@@ -156,10 +156,10 @@ defmodule ExoSQL.Executor do
     if Enum.count(from.rows) == 0 do
       {:ok, from} # warning, the projection fails and the number of columns is undefined.
     else
-      # Logger.debug("Orig #{inspect from}")
+      Logger.debug("Orig #{inspect from}")
       columns = project_columns(from.columns, hd from.rows)
       rows = Enum.flat_map(from.rows, &project_row(&1))
-      # Logger.debug("Final #{inspect {columns, rows}}")
+      Logger.debug("Final #{inspect {columns, rows}}")
       {:ok, %ExoSQL.Result{
         columns: columns,
         rows: rows
@@ -171,7 +171,8 @@ defmodule ExoSQL.Executor do
     cond do
       is_list(head) ->
         [head]
-      %{columns: _columns, rows: rows} = head ->
+      is_map(head) ->
+        %{columns: _columns, rows: rows} = head
         rows
       true ->
         [head]
@@ -179,12 +180,14 @@ defmodule ExoSQL.Executor do
   end
   def project_row([ head | rest]) do
     rest_rows = project_row(rest)
+    Logger.debug("Rest rows #{inspect {head, rest_rows}}")
 
     cond do
       is_list(head) ->
-        Enum.flat_map(head, fn h -> Enum.map(rest_rows,fn r -> [h | r] end) end)
-      %{columns: _columns, rows: rows} = head ->
-        Enum.flat_map(rows, fn h -> Enum.map(rest_rows,fn r -> [h | r] end) end)
+        Enum.flat_map(head, fn h -> Enum.map(rest_rows,fn r -> h ++ [r] end) end)
+      is_map(head) ->
+        %{columns: _columns, rows: rows} = head
+        Enum.flat_map(rows, fn h -> Enum.map(rest_rows,fn r -> h ++ [r] end) end)
       true ->
         for r <- rest_rows do
           [head | r]
@@ -196,7 +199,8 @@ defmodule ExoSQL.Executor do
     cond do
       is_list(rhead) ->
         [chead]
-      %{columns: columns, rows: _rows} = rhead ->
+      is_map(rhead) ->
+        %{columns: columns, rows: _rows} = rhead
         columns
       true ->
         [chead]
@@ -209,7 +213,8 @@ defmodule ExoSQL.Executor do
     me_column = cond do
       is_list(chead) ->
         [chead]
-      %{columns: columns, rows: _rows} = rhead ->
+      is_map(rhead) ->
+        %{columns: columns, rows: _rows} = rhead
         columns
       true ->
         [chead]

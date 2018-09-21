@@ -342,8 +342,8 @@ defmodule ExoSQL.Builtins do
         end
       end)
 
-    %{
-      columns: ["generate_series"],
+    %ExoSQL.Result{
+      columns: [{:tmp, :tmp, "generate_series"}],
       rows: rows
     }
   end
@@ -362,8 +362,8 @@ defmodule ExoSQL.Builtins do
       raise ArgumentError, "Start, end and step invalid. Will never reach end."
     end
 
-    %{
-      columns: ["generate_series"],
+    %ExoSQL.Result{
+      columns: [{:tmp, :tmp, "generate_series"}],
       rows: generate_series_range(start_, end_, step)
     }
   end
