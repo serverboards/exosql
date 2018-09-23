@@ -508,17 +508,17 @@ defmodule ExoSQL.Parser do
             # Logger.debug("Found column from parent #{inspect found}")
             {:column, found}
           else
-            throw({:not_found, column, :in, all_columns})
+            raise "Not found #{inspect column} in #{inspect all_columns}"
           end
 
         many ->
-          throw({:ambiguous_column, column, :in, many})
+          raise "Ambiguous column #{inspect column} in #{inspect all_columns}"
       end
 
     if found do
       found
     else
-      throw({:not_found, column, :in, all_columns})
+      raise "Not found #{inspect column} in #{inspect all_columns}"
     end
   end
 
@@ -604,6 +604,10 @@ defmodule ExoSQL.Parser do
 
   defp get_column_names_or_alias([{:alias, {_column, alias_}} | rest], count) do
     [{:tmp, :tmp, alias_} | get_column_names_or_alias(rest, count + 1)]
+  end
+
+  defp get_column_names_or_alias([{:fn, {"unnest", [_from | columns]}} | rest], count) do
+    Enum.map(columns, fn {:lit, name} -> {:tmp, :tmp, name} end) ++ get_column_names_or_alias(rest, count + 1)
   end
 
   defp get_column_names_or_alias([_head | rest], count) do

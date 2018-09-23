@@ -1599,4 +1599,16 @@ defmodule QueryTest do
     assert res.columns == [{:tmp, :tmp, "name"}]
     assert Enum.count(res.rows) == 2
   end
+
+  test "CTE with with access to prev data" do
+    res = analyze_query!("""
+      WITH
+         a AS (SELECT unnest(json, "name", "email") FROM json),
+         b AS (SELECT name || " <" || email || ">" FROM a)
+      SELECT
+        *
+      FROM b
+    """)
+    assert Enum.count(res.rows) == 4
+  end
 end
