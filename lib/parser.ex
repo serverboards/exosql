@@ -73,6 +73,12 @@ defmodule ExoSQL.Parser do
               {:alias, {{:cross_join_lateral, cjl}, alias_}} ->
                 {:cross_join_lateral, {:alias, {cjl, alias_}}}
 
+              # functions are always lateral
+              {:fn, f} ->
+                {:cross_join_lateral, {:fn, f}}
+              {:alias, {{:fn, f}, al}} ->
+                {:cross_join_lateral, {:alias, {{:fn, f}, al}}}
+
               # Was using , operator -> cross joins
               other ->
                 {:cross_join, other}
@@ -329,7 +335,7 @@ defmodule ExoSQL.Parser do
   end
 
   def resolve_columns({:alias, {{:fn, {"unnest", [_expr | columns]}}, alias_}}, _context) do
-    columns |> Enum.map(fn col -> {:tmp, alias_, col} end)
+    columns |> Enum.map(fn {:lit, col} -> {:tmp, alias_, col} end)
   end
 
   def resolve_columns({:alias, {any, alias_}}, context) do

@@ -1504,6 +1504,19 @@ defmodule QueryTest do
     assert res1.rows == res2.rows
   end
 
+  test "CROSS JOIN function is always LATERAL" do
+    res = analyze_query!("SELECT email, name FROM json, unnest(json, 'email', 'name')")
+
+    assert Enum.count(res.rows) == 4
+    assert Enum.count(res.columns) == 2
+
+    res = analyze_query!("SELECT email, name FROM json, unnest(json, 'email', 'name') as data")
+
+    assert Enum.count(res.rows) == 4
+    assert Enum.count(res.columns) == 2
+
+  end
+
   test "FROM LATERAL query" do
     # Single cross lateral
     analyze_query!("

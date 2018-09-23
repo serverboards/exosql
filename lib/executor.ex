@@ -299,8 +299,12 @@ defmodule ExoSQL.Executor do
         {:fn, {func, _args}} ->
           [{:tmp, func, func}]
 
+        {:alias, {:fn, {"unnest", [_from | columns]}}, alias_} ->
+          Enum.map(columns, fn {:lit, col} -> {:tmp, alias_, col} end)
+
         {:alias, {:fn, {_func, _args}}, alias_} ->
           [{:tmp, alias_, alias_}]
+
 
         {:select, _expr, cols} ->
           resolve_column_names(cols, Map.get(context, :columns, []))
@@ -347,12 +351,12 @@ defmodule ExoSQL.Executor do
         end
       end)
 
-    # Logger.debug("Got result #{inspect {ncolumns, data.columns}} | #{inspect nrows}")
-    {:ok,
-     %ExoSQL.Result{
-       columns: ncolumns ++ data.columns,
-       rows: nrows
-     }}
+    result = %ExoSQL.Result{
+      columns: ncolumns ++ data.columns,
+      rows: nrows
+    }
+    # Logger.debug("Got result #{inspect result, pretty: true}")
+    {:ok, result}
   end
 
   def execute({:group_by, from, groups}, context) do
