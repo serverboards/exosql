@@ -9,6 +9,7 @@ defmodule ExoSQL.Executor do
   def execute({:select, from, columns}, context) do
     {:ok, %{columns: rcolumns, rows: rows}} = execute(from, context)
     # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}. Context: #{inspect context}")
+    # Logger.debug("Rows: #{inspect {rcolumns, rows}, pretty: true}")
 
     {rows, columns} =
       case Enum.count(rows) do
@@ -195,13 +196,16 @@ defmodule ExoSQL.Executor do
   end
 
   def project_columns([chead], [rhead]) do
+    # Logger.debug("Project columns #{inspect {chead, rhead}}")
     cond do
       is_list(rhead) ->
         [chead]
       is_map(rhead) ->
         %{columns: columns, rows: _rows} = rhead
         # special case, I inherit the column name from alias or 1. If more columns at inner table, sorry
-        if Enum.count(columns) == 1 do
+        column_change? = columns in [[{:tmp, :tmp, "generate_series"}], [{:tmp, :tmp, "unnest"}]]
+        # Logger.debug("Change column names #{inspect chead} #{inspect columns} #{inspect column_change?}")
+        if column_change? do
           [chead]
         else
           columns
@@ -345,7 +349,8 @@ defmodule ExoSQL.Executor do
               other ->
                 [other] ++ row
             end)
-
+          %{ columns: rcolumns, rows: rrows } ->
+            rrows |> Enum.map(&(&1 ++ row))
           other ->
             [other] ++ row
         end

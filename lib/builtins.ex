@@ -514,94 +514,35 @@ defmodule ExoSQL.Builtins do
   def unnest(array) do
     array = json(array) || []
 
-    array |> Enum.map(&[&1])
+    %ExoSQL.Result{
+      columns: [{:tmp, :tmp, "unnest"}],
+      rows: Enum.map(array, &[&1])
+    }
   end
 
-  def unnest(array, col1) do
+  def unnest(array, cols) when is_list(cols) do
     array = json(array) || []
 
-    Enum.map(array, fn row ->
-      [Map.get(row, col1)]
+    rows = Enum.map(array, fn row ->
+      Enum.map(cols, &Map.get(row, &1))
     end)
+    columns = Enum.map(cols, &{:tmp, :tmp, &1})
+
+    %ExoSQL.Result{
+      columns: columns,
+      rows: rows
+    }
   end
 
-  def unnest(array, col1, col2) do
-    array = json(array) || []
-
-    Enum.map(array, fn row ->
-      [Map.get(row, col1), Map.get(row, col2)]
-    end)
-  end
-
-  def unnest(array, col1, col2, col3) do
-    array = json(array) || []
-
-    Enum.map(array, fn row ->
-      [
-        Map.get(row, col1),
-        Map.get(row, col2),
-        Map.get(row, col3)
-      ]
-    end)
-  end
-
-  def unnest(array, col1, col2, col3, col4) do
-    array = json(array) || []
-
-    Enum.map(array, fn row ->
-      [
-        Map.get(row, col1),
-        Map.get(row, col2),
-        Map.get(row, col3),
-        Map.get(row, col4)
-      ]
-    end)
-  end
-
-  def unnest(array, col1, col2, col3, col4, col5) do
-    array = json(array) || []
-
-    Enum.map(array, fn row ->
-      [
-        Map.get(row, col1),
-        Map.get(row, col2),
-        Map.get(row, col3),
-        Map.get(row, col4),
-        Map.get(row, col5)
-      ]
-    end)
-  end
-
-  def unnest(array, col1, col2, col3, col4, col5, col6) do
-    array = json(array) || []
-
-    Enum.map(array, fn row ->
-      [
-        Map.get(row, col1),
-        Map.get(row, col2),
-        Map.get(row, col3),
-        Map.get(row, col4),
-        Map.get(row, col5),
-        Map.get(row, col6)
-      ]
-    end)
-  end
-
-  def unnest(array, col1, col2, col3, col4, col5, col6, col7) do
-    array = json(array) || []
-
-    Enum.map(array, fn row ->
-      [
-        Map.get(row, col1),
-        Map.get(row, col2),
-        Map.get(row, col3),
-        Map.get(row, col4),
-        Map.get(row, col5),
-        Map.get(row, col6),
-        Map.get(row, col7)
-      ]
-    end)
-  end
+  def unnest(array, col1), do: unnest(array, [col1])
+  def unnest(array, col1, col2), do: unnest(array, [col1, col2])
+  def unnest(array, col1, col2, col3), do: unnest(array, [col1, col2, col3])
+  def unnest(array, col1, col2, col3, col4), do: unnest(array, [col1, col2, col3, col4])
+  def unnest(array, col1, col2, col3, col4, col5), do: unnest(array, [col1, col2, col3, col4, col5])
+  def unnest(array, col1, col2, col3, col4, col5, col5), do: unnest(array, [col1, col2, col3, col4, col5, col5])
+  def unnest(array, col1, col2, col3, col4, col5, col5, col6), do: unnest(array, [col1, col2, col3, col4, col5, col5, col6])
+  def unnest(array, col1, col2, col3, col4, col5, col5, col6, col7), do: unnest(array, [col1, col2, col3, col4, col5, col5, col6, col7])
+  def unnest(array, col1, col2, col3, col4, col5, col5, col6, col7, col8), do: unnest(array, [col1, col2, col3, col4, col5, col5, col6, col7, col8])
 
   @doc ~S"""
   Creates a range, which can later be used in:

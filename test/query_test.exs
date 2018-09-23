@@ -770,7 +770,9 @@ defmodule QueryTest do
     ")
     assert Enum.count(res.rows) == 10
     assert res.columns == [{:tmp, :tmp, "col_1"}, {:tmp, :tmp, "generate_series"}, {:tmp, :tmp, "col_3"}]
+  end
 
+  test "generate series as call and alias" do
     res = analyze_query!("
       SELECT generate_series(10) as t
     ")
@@ -1571,5 +1573,30 @@ defmodule QueryTest do
     analyze_query!("
       SELECT * FROM willfail WHERE fail = 'bad-url://bad.bad' AND to_string(1) != 1
     ")
+  end
+
+  test "Project JSON " do
+    res = analyze_query!("""
+      SELECT unnest(json, 'name', 'empty') FROM json
+    """)
+
+    assert Enum.count(res.columns) == 2
+    assert Enum.count(res.rows) == 4
+  end
+
+  test "Project JSON literal" do
+    res = analyze_query!("""
+      SELECT unnest('[{"name": "test"}, {"name": "dos"}]', 'name', 'empty')
+    """)
+
+    assert Enum.count(res.columns) == 2
+    assert Enum.count(res.rows) == 2
+
+    res = analyze_query!("""
+      SELECT unnest('[{"name": "test"}, {"name": "dos"}]', 'name')
+    """)
+
+    assert res.columns == [{:tmp, :tmp, "name"}]
+    assert Enum.count(res.rows) == 2
   end
 end
