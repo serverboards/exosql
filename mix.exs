@@ -11,6 +11,8 @@ defmodule ExoSQL.Mixfile do
       source_url: "https://github.com/serverboards/exosql/",
       homepage_url: "https://serverboards.io",
       description: description(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [coveralls: :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test],
       package: [
         name: "exosql",
         licenses: ["Apache 2.0"],
@@ -46,7 +48,8 @@ PostgreSQL.
       {:timex, "~> 3.0"},
       {:csv, "~> 2.1"},
       {:httpoison, "~> 1.0"},
-      {:poison, "~> 3.1"}
+      {:poison, "~> 3.1"},
+      {:excoveralls, "~> 0.10", only: :test},
     ]
   end
 end
