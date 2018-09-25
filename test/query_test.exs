@@ -790,7 +790,7 @@ defmodule QueryTest do
       analyze_query!("SELECT nope FROM (SELECT 1)")
       flunk("Should fail bad query")
     rescue
-      MatchError ->
+      RuntimeError ->
         nil
     end
 
@@ -798,7 +798,7 @@ defmodule QueryTest do
       analyze_query!("SELECT nope FROM generate_series(1,12,2)")
       flunk("Should fail bad query, generate_series has one column generate_series")
     rescue
-      MatchError ->
+      RuntimeError ->
         nil
     end
   end
@@ -928,7 +928,7 @@ defmodule QueryTest do
         "Should fail because of ambigous column. Actually should not if someday the parser is smarter about to use only group columns on select"
       )
     rescue
-      MatchError -> :ok
+      RuntimeError -> :ok
     end
   end
 
