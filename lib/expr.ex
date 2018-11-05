@@ -173,19 +173,44 @@ defmodule ExoSQL.Expr do
   end
 
   def run_expr({:case, list}, context) do
-    Enum.find_value(list, fn {condition, expr} ->
-      case run_expr(condition, context) do
-        "" ->
-          nil
-
-        val ->
-          if val do
-            run_expr(expr, context)
-          else
+    res = Enum.find_value(list, fn
+      {condition, expr} ->
+        case run_expr(condition, context) do
+          "" ->
             nil
-          end
-      end
+
+          val ->
+            if val do
+              {:ok, run_expr(expr, context)}
+            else
+              nil
+            end
+        end
+      {expr} ->
+        {:ok, run_expr(expr, context)}
     end)
+    case res do
+      {:ok, res} -> res
+      nil -> nil
+    end
+  end
+
+  def run_expr({:case, expr, list}, context) do
+    val = run_expr(expr, context)
+    res = Enum.find_value(list, fn
+      {condition, expr} ->
+        if run_expr(condition, context) == val do
+          {:ok, run_expr(expr, context)}
+        else
+          nil
+        end
+      {expr} ->
+        {:ok, run_expr(expr, context)}
+    end)
+    case res do
+      {:ok, res} -> res
+      nil -> nil
+    end
   end
 
   def run_expr({:fn, {fun, exprs}}, context) do
@@ -518,6 +543,18 @@ defmodule ExoSQL.Expr do
       end)
 
     {:case, list}
+  end
+  def simplify({:case, expr, list}, context) do
+    expr = simplify(expr, context)
+    list =
+      Enum.map(list, fn
+        {e, v} ->
+          {simplify(e, context), simplify(v, context)}
+        {v} ->
+          {simplify(v, context)}
+      end)
+
+    {:case, expr, list}
   end
 
   def simplify({:alias, expr, _alias_}, context) do

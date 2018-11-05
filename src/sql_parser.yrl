@@ -147,11 +147,12 @@ expr_atom -> 'JOIN' open_par expr_list close_par : {fn, {'Elixir.List':to_string
 expr_atom -> id open_par op5 close_par: tag('$3', "*"), {fn, {unwrap_d('$1'), [{lit, "*"}]}}.
 expr_atom -> id open_par 'DISTINCT' expr close_par: {fn, {unwrap_d('$1'), [{distinct, '$4'}]}}.
 expr_atom -> open_sqb expr_list close_sqb: {list, '$2'}.
+expr_atom -> 'CASE' expr case_expr_list: {'case', '$2', '$3'}.
 expr_atom -> 'CASE' case_expr_list: {'case', '$2'}.
 expr_atom -> 'IF' expr 'THEN' expr if_expr_list: {'case', [ {'$2', '$4'} | '$5' ]}.
 
 case_expr_list -> case_expr case_expr_list: ['$1' | '$2'].
-case_expr_list -> 'ELSE' expr 'END': [{{lit, true}, '$2'}].
+case_expr_list -> 'ELSE' expr 'END': [{'$2'}].
 case_expr_list -> 'END': [].
 
 case_expr -> 'WHEN' expr 'THEN' expr: {'$2', '$4'}.

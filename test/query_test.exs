@@ -1176,6 +1176,26 @@ defmodule QueryTest do
            ]
   end
 
+  test "CASE x WHEN" do
+    res =
+      analyze_query!("""
+      SELECT
+        CASE urlparse(url, "domain")
+          WHEN "serverboards" THEN "BI"
+          WHEN "facebook"     THEN "FB"
+        END,
+        CASE urlparse(url, "scheme")
+          WHEN "https" THEN true
+          ELSE false
+        END secure
+      FROM
+        urls
+      ORDER BY
+        url
+      """)
+    assert res.rows == [["FB", false], ["BI", false], ["BI", true], ["BI", true]]
+  end
+
   test "IF THEN" do
     res =
       analyze_query!("""
