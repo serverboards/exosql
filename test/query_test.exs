@@ -742,7 +742,7 @@ defmodule QueryTest do
           "SELECT date FROM generate_series('2018-05-17T22:00:00.000Z', '2018-05-16T21:59:59.000Z', 'T0H') AS date"
         )
 
-      assert "Fix bug no duration, infinite loop"
+      Logger.debug "Fixed bug no duration, infinite loop"
       res
     catch
       {:error, :invalid_duration} ->

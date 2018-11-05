@@ -511,7 +511,7 @@ defmodule ExoSQL.Parser do
             raise "Not found #{inspect column} in #{inspect all_columns}"
           end
 
-        many ->
+        _many ->
           raise "Ambiguous column #{inspect column} in #{inspect all_columns}"
       end
 
