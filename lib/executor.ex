@@ -349,7 +349,7 @@ defmodule ExoSQL.Executor do
               other ->
                 [other] ++ row
             end)
-          %{ columns: rcolumns, rows: rrows } ->
+          %{ columns: _rcolumns, rows: rrows } ->
             rrows |> Enum.map(&(&1 ++ row))
           other ->
             [other] ++ row

@@ -480,6 +480,21 @@ defmodule ExoSQL.Expr do
     {:op, {op, op1, op2}}
   end
 
+  def simplify({:op, {op, op1}}, context) do
+    op1 = simplify(op1, context)
+    {:op, {op, op1}}
+  end
+
+  def simplify({:not, op1}, context) do
+    op1 = simplify(op1, context)
+    case op1 do
+      {:lit, true} -> {:lit, false}
+      {:lit, false} -> {:lit, true}
+      _other ->
+        {:not, op1}
+    end
+  end
+
   def simplify({:fn, {f, params}}, context) do
     params = Enum.map(params, &simplify(&1, context))
 

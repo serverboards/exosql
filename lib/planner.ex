@@ -151,14 +151,14 @@ defmodule ExoSQL.Planner do
       cond do
         # if grouping, special care on aggregate builtins
         query.groupby ->
-          select = Enum.map(select, &fix_aggregates_select(&1, Enum.count(query.groupby)))
-          {:select, order_plan, select}
+          selectg = Enum.map(select, &fix_aggregates_select(&1, Enum.count(query.groupby)))
+          {:select, order_plan, selectg}
 
         # groups full table, do a table to row conversion, and then the ops
         has_aggregates(select) ->
           table_in_a_row = {:table_to_row, order_plan}
-          select = Enum.map(select, &fix_aggregates_select(&1, 0))
-          {:select, table_in_a_row, select}
+          selecta = Enum.map(select, &fix_aggregates_select(&1, 0))
+          {:select, table_in_a_row, selecta}
 
         true ->
           {:select, order_plan, select}
