@@ -262,4 +262,31 @@ defmodule ExoSQL.BuiltinsTest do
     assert 9 == ndate.minute
     assert 40 == ndate.second
   end
+
+  test "Math test" do
+    epsilon = 0.000005
+    e = 2.71828
+
+    assert -1 == ExoSQL.Builtins.sign(-32)
+    assert -1 == ExoSQL.Builtins.sign("-32")
+    assert 1 == ExoSQL.Builtins.sign("32")
+    assert 1 == ExoSQL.Builtins.sign(32)
+
+    assert 4 == ExoSQL.Builtins.power(-2, 2)
+    assert 4 == ExoSQL.Builtins.power(2, "2")
+    assert 4 == ExoSQL.Builtins.power("2", "2")
+    assert abs( 2 - ExoSQL.Builtins.power(4, 0.5) ) < epsilon
+
+    assert 2 == ExoSQL.Builtins.sqrt(4)
+    assert 4 == ExoSQL.Builtins.sqrt(16)
+
+    assert 1 == ExoSQL.Builtins.log(10)
+    assert 2 == ExoSQL.Builtins.log(100)
+
+    assert abs(1 - ExoSQL.Builtins.ln(e)) < epsilon
+
+    assert 0 == ExoSQL.Builtins.mod(10, 2)
+    assert 0 == ExoSQL.Builtins.mod(10, 2.5)
+    assert 1 == ExoSQL.Builtins.mod(10, 3)
+  end
 end

@@ -320,6 +320,61 @@ Returns the minimum value of the given expression for the group.
 For each of the grouped rows, calculates the expression and returns the sum. If
 there are no rows, returns 0.
 
+### Math functions
+
+#### `abs(number)`
+
+Returns the absolute value a number
+
+#### `ceil(number)`
+
+Rounds up a number
+
+#### `floor(number)`
+
+Rounds down a number
+
+#### `ln(number)`
+
+Returns the natural logarithm of the given number.
+
+#### `log(number)`
+
+Returns the base 10 logarithm of the given number.
+
+#### `power(number, number)`
+
+Returns the power of the first number to the second.
+
+For example `power(2,2)` return `4`.
+
+#### `random()`
+
+Return a random float between 0 and 1.
+
+#### `randint(max)` / `RANDINT(min, max)`
+
+Returns a random integer between `min` and `max`.
+
+#### `round(number, precision=0)`
+
+Returns the number rounded to the given precision. May be convert to integer if
+precision is 0.
+
+#### `sign(number)`
+
+Returns `-1`, `0` or `1` depending if the number is `<0`, `=0` or `>0`
+
+#### `sqrt(number)`
+
+Returns the square root of the given number. See the `power` function for more
+advanced roots.
+
+#### `trunc(number, precision=0)`
+
+Returns the number rounded to the given precision. May be convert to integer if
+precision is 0. It is an alias to round.
+
 ### Miscellaneous functions
 
 #### `coalesce(a, b, ...)`
@@ -383,14 +438,6 @@ This is used for example to set a default value:
 SELECT coalesce(nullif(name, ''), 'John Doe') FROM users
 ```
 
-#### `random()`
-
-Return a random float between 0 and 1.
-
-#### `randint(max)` / `RANDINT(min, max)`
-
-Returns a random integer between `min` and `max`.
-
 ### `range(start, end)`
 
 Returns a halt open interval `[start, end)` that later can be used to get
@@ -424,10 +471,6 @@ with the result. It can optionally use directly JSON pointer queries. See
 
 If matches the result will be "trueish" (or "falsy" if doesn't) so can be used
 as a boolean.
-
-#### `round(number, precision=0)`
-
-Returns the number rounded to the given precission. May be convert to integer if precission is 0.
 
 #### `unnest(json, col1...)`
 

@@ -1,4 +1,5 @@
 require Logger
+require Integer
 
 defmodule ExoSQL.Builtins do
   @moduledoc """
@@ -15,7 +16,6 @@ defmodule ExoSQL.Builtins do
   import ExoSQL.Utils, only: [to_number: 1, to_float: 1]
 
   @functions %{
-    "round" => {ExoSQL.Builtins, :round},
     "bool" => {ExoSQL.Builtins, :bool},
     "lower" => {ExoSQL.Builtins, :lower},
     "upper" => {ExoSQL.Builtins, :upper},
@@ -43,9 +43,20 @@ defmodule ExoSQL.Builtins do
     "lowest" => {ExoSQL.Builtins, :lowest},
     "coalesce" => {ExoSQL.Builtins, :coalesce},
     "nullif" => {ExoSQL.Builtins, :nullif},
+    "datediff" => {ExoSQL.DateTime, :datediff},
+
+    ## Math
+    "round" => {ExoSQL.Builtins, :round},
+    "trunc" => {ExoSQL.Builtins, :trunc},
     "floor" => {ExoSQL.Builtins, :floor},
     "ceil" => {ExoSQL.Builtins, :ceil},
-    "datediff" => {ExoSQL.DateTime, :datediff},
+    "power" => {ExoSQL.Builtins, :power},
+    "sqrt" => {ExoSQL.Builtins, :sqrt},
+    "log" => {ExoSQL.Builtins, :log},
+    "ln" => {ExoSQL.Builtins, :ln},
+    "abs" => {ExoSQL.Builtins, :abs},
+    "mod" => {ExoSQL.Builtins, :mod},
+    "sign" => {ExoSQL.Builtins, :sign},
 
     ## Aggregates
     "count" => {ExoSQL.Builtins, :count},
@@ -111,6 +122,64 @@ defmodule ExoSQL.Builtins do
     {:ok, r} = to_number(r)
 
     Float.round(n, r)
+  end
+
+  def power(nil, _), do: nil
+  def power(_, nil), do: nil
+  def power(_, 0), do: 1
+  # To allow big power. From https://stackoverflow.com/questions/32024156/how-do-i-raise-a-number-to-a-power-in-elixir#32024157
+  def power(x, n) when Integer.is_odd(n) do
+    {:ok, x} = to_number(x)
+    {:ok, n} = to_number(n)
+    x * :math.pow(x, n - 1)
+  end
+  def power(x, n) do
+    {:ok, x} = to_number(x)
+    {:ok, n} = to_number(n)
+    result = :math.pow(x, n / 2)
+    result * result
+  end
+
+  def sqrt(nil), do: nil
+  def sqrt(n) do
+    {:ok, n} = to_number(n)
+    :math.sqrt(n)
+  end
+
+  def log(nil), do: nil
+  def log(n) do
+    {:ok, n} = to_number(n)
+    :math.log10(n)
+  end
+
+  def ln(nil), do: nil
+  def ln(n) do
+    {:ok, n} = to_number(n)
+    :math.log(n)
+  end
+
+  def abs(nil), do: nil
+  def abs(n) do
+    {:ok, n} = to_number(n)
+    :kernel.abs(n)
+  end
+
+  def mod(nil, _), do: nil
+  def mod(_, nil), do: nil
+  def mod(n, m) do
+    {:ok, n} = to_number(n)
+    {:ok, m} = to_number(m)
+    :math.fmod(n, m)
+  end
+
+  def sign(nil), do: nil
+  def sign(n) do
+    {:ok, n} = to_number(n)
+    cond do
+      n < 0 -> -1
+      n == 0 -> 0
+      true -> 1
+    end
   end
 
   def random(), do: :rand.uniform()
