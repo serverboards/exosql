@@ -254,7 +254,7 @@ defmodule ExoSQL.BuiltinsTest do
     assert date.minute == ndate.minute
     assert date.second == ndate.second
 
-    ndate = ExoSQL.DateTime.Duration.datetime_add(date, "-30DT2360M20S")
+    ndate = ExoSQL.DateTime.Duration.datetime_add(date, "-31DT2360M20S")
     assert 2015 == ndate.year
     assert 12 == ndate.month
     assert 31 == ndate.day
