@@ -568,9 +568,13 @@ defmodule ExoSQL.Parser do
   end
 
   def resolve_column({:case, list}, all_columns, context) do
+    # Logger.debug("Resolve case #{inspect list, pretty: true}")
     list =
-      Enum.map(list, fn {c, e} ->
-        {resolve_column(c, all_columns, context), resolve_column(e, all_columns, context)}
+      Enum.map(list, fn
+        {c, e} ->
+          {resolve_column(c, all_columns, context), resolve_column(e, all_columns, context)}
+        {e} ->
+          {resolve_column(e, all_columns, context)}
       end)
 
     {:case, list}

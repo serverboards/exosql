@@ -538,8 +538,11 @@ defmodule ExoSQL.Expr do
 
   def simplify({:case, list}, context) do
     list =
-      Enum.map(list, fn {e, v} ->
-        {simplify(e, context), simplify(v, context)}
+      Enum.map(list, fn
+        {e, v} ->
+          {simplify(e, context), simplify(v, context)}
+        {v} ->
+          {simplify(v, context)}
       end)
 
     {:case, list}

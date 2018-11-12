@@ -341,8 +341,11 @@ defmodule ExoSQL.Planner do
   end
 
   defp get_table_columns_at_expr(db, table, {:case, list}) do
-    Enum.flat_map(list, fn {e, v} ->
-      Enum.flat_map([e, v], &get_table_columns_at_expr(db, table, &1))
+    Enum.flat_map(list, fn
+      {e, v} ->
+        Enum.flat_map([e, v], &get_table_columns_at_expr(db, table, &1))
+      {v} ->
+        get_table_columns_at_expr(db, table, v)
     end)
   end
 
