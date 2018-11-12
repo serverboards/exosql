@@ -161,7 +161,7 @@ defmodule ExoSQL.Builtins do
   def abs(nil), do: nil
   def abs(n) do
     {:ok, n} = to_number(n)
-    :kernel.abs(n)
+    :erlang.abs(n)
   end
 
   def mod(nil, _), do: nil
