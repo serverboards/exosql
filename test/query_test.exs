@@ -1667,8 +1667,49 @@ defmodule QueryTest do
       GROUP BY users.name, products.name
       ORDER BY users.name DESC
     """)
-
     assert Enum.count(res.columns) == 5
     assert Enum.count(res.rows) == 3
+
+    res = analyze_query!("""
+      SELECT CROSSTAB ON (sugus, donut) users.name, products.name, sum(price * amount)
+      FROM users
+      INNER JOIN purchases ON users.id = purchases.user_id
+      INNER JOIN products ON products.id = purchases.product_id
+      GROUP BY users.name, products.name
+      ORDER BY users.name DESC
+    """)
+    assert Enum.count(res.columns) == 3
+    assert Enum.count(res.rows) == 3
+
+    # Cross tab in nested expression
+    # This returns rows with some data
+    res = analyze_query!("""
+      SELECT * FROM (
+        SELECT CROSSTAB ON (sugus, donut) users.name, products.name, sum(price * amount)
+        FROM users
+        INNER JOIN purchases ON users.id = purchases.user_id
+        INNER JOIN products ON products.id = purchases.product_id
+        GROUP BY users.name, products.name
+        ORDER BY users.name DESC
+      ) WHERE coalesce(sugus, donut) != NULL
+    """)
+    assert Enum.count(res.columns) == 3
+    assert Enum.count(res.rows) == 2
+
+    # Cross tab in nested expression. It allows only first column name.
+    res = analyze_query!("""
+      SELECT * FROM (
+        SELECT CROSSTAB users.name, products.name, sum(price * amount)
+        FROM users
+        INNER JOIN purchases ON users.id = purchases.user_id
+        INNER JOIN products ON products.id = purchases.product_id
+        GROUP BY users.name, products.name
+        ORDER BY users.name DESC
+      ) ORDER BY name DESC
+    """)
+    assert Enum.count(res.columns) == 3
+    assert Enum.count(res.rows) == 3
+
+    flunk 1
   end
 end

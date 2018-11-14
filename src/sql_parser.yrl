@@ -9,7 +9,7 @@ Nonterminals
   orderby order_expr_list order_expr asc_desc
   limit offset
   expr expr_l2 expr_l3 expr_l4 expr_l5 expr_l6 expr_l7 expr_atom
-  case_expr_list case_expr if_expr_list
+  case_expr_list case_expr if_expr_list id_list
   .
 
 Terminals
@@ -50,8 +50,12 @@ with -> id 'AS' open_par complex_query close_par: {unwrap('$1'), '$4'}.
 
 select -> 'SELECT' 'DISTINCT' 'ON' open_par expr close_par select_expr_list : {'$7', [{distinct, '$5'}]}.
 select -> 'SELECT' 'DISTINCT' select_expr_list : {'$3', [{distinct, all_columns}]}.
-select -> 'SELECT' 'CROSSTAB' select_expr_list : {'$3', [{crosstab, true}]}.
+select -> 'SELECT' 'CROSSTAB' 'ON' open_par id_list close_par select_expr_list : {'$7', [{crosstab, '$5'}]}.
+select -> 'SELECT' 'CROSSTAB' select_expr_list : {'$3', [{crosstab, all_columns}]}.
 select -> 'SELECT' select_expr_list : {'$2', []}.
+
+id_list -> id : [unwrap('$1')].
+id_list -> id comma id_list : [unwrap('$1')] ++ '$3'.
 
 select_expr_list -> select_expr : ['$1'].
 select_expr_list -> select_expr comma select_expr_list: ['$1'] ++ '$3'.

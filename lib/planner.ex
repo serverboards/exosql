@@ -187,7 +187,7 @@ defmodule ExoSQL.Planner do
 
     crosstab_plan =
       if query.crosstab do
-        {:crosstab, distinct_plan}
+        {:crosstab, query.crosstab, distinct_plan}
       else
         distinct_plan
       end

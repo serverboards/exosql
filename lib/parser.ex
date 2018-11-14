@@ -159,9 +159,9 @@ defmodule ExoSQL.Parser do
         end
       end
 
-    # Logger.debug("All tables at all columns #{inspect(all_tables)}")
+    Logger.debug("All tables at all columns #{inspect(all_tables)}")
     all_columns = resolve_all_columns(all_tables, context)
-    # Logger.debug("Resolved columns at query: #{inspect(all_columns)}")
+    Logger.debug("Resolved columns at query: #{inspect(all_columns)}")
 
     # Now resolve references to tables, as in FROM xx, LATERAL nested(xx.json, "a")
     from = resolve_column(from, all_columns, context)
@@ -616,7 +616,17 @@ defmodule ExoSQL.Parser do
     other
   end
 
-  defp get_query_columns(%ExoSQL.Query{select: select}), do: get_column_names_or_alias(select, 1)
+  defp get_query_columns(%ExoSQL.Query{select: select, crosstab: false}) do
+    get_column_names_or_alias(select, 1)
+  end
+  defp get_query_columns(%ExoSQL.Query{select: select, crosstab: :all_columns}) do
+    [hd get_column_names_or_alias(select, 1)] # only the first is sure.. the rest too dynamic to know
+  end
+  defp get_query_columns(%ExoSQL.Query{select: select, crosstab: crosstab}) when crosstab != nil do
+    first = hd get_column_names_or_alias(select, 1)
+    more = crosstab |> Enum.map(&{:tmp, :tmp, &1})
+    [first | more]
+  end
 
   defp get_column_names_or_alias([{:column, column} | rest], count) do
     [column | get_column_names_or_alias(rest, count + 1)]
