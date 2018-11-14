@@ -1632,4 +1632,30 @@ defmodule QueryTest do
     """)
     assert Enum.count(res.rows) == 4
   end
+
+  test "WHERE False does nothing" do
+    try do
+      analyze_query!("""
+        SELECT x FROM generate_series(0,10,-1) x
+      """)
+      flunk "Should have failed. This is the basis of the next test."
+    catch
+        {:function, _} ->
+          Logger.info("Function fail. All OK.")
+          :ok
+    end
+
+    # This does not fail as the select is not even performed as where is
+    # always false
+    analyze_query!("""
+      SELECT
+        x
+      FROM
+        generate_series(0, 10, -1) x
+      WHERE
+        $test = "test"
+      """, %{"__vars__" => %{
+        "test" => "not test"
+    } })
+  end
 end

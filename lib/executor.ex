@@ -232,7 +232,13 @@ defmodule ExoSQL.Executor do
   end
 
   def execute({:filter, from, expr}, context) do
-    case expr do
+
+    # Can not use the same simplification as an inner query may require a
+    # change from a column to a literal (See "Complex nested SELECT" example)
+    # So first one simplification to check if the expr is false, and then the
+    # real simplification.
+    expr_ = ExoSQL.Expr.simplify(expr, context)
+    case expr_ do
       {:lit, false} ->
         {:ok, %ExoSQL.Result{columns: [], rows: []}}
 
