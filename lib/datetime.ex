@@ -92,8 +92,8 @@ defmodule ExoSQL.DateTime do
   def datediff(start, end_), do: datediff(start, end_, "days")
 
   def datediff(%DateTime{} = start, %DateTime{} = end_, "years") do
-    if start > end_ do
-      -datediff(end_, start, :years)
+    if DateTime.compare(start, end_) == :gt do
+      -datediff(end_, start, "years")
     else
       years = end_.year - start.year
 
@@ -106,19 +106,26 @@ defmodule ExoSQL.DateTime do
   end
 
   def datediff(%DateTime{} = start, %DateTime{} = end_, "months") do
-    if start > end_ do
-      -datediff(end_, start, :months)
+    if DateTime.compare(start, end_) == :gt do
+      -datediff(end_, start, "months")
     else
       years = datediff(start, end_, "years")
 
       months =
-        if start.month < end_.month do
+        if start.month <= end_.month do
           end_.month - start.month
         else
           end_.month + 12 - start.month
         end
 
-      years * 12 + months
+      months = years * 12 + months
+
+      # If start day is > end day means that it counted one month more.
+      if start.day > end_.day do
+        months - 1
+      else
+        months
+      end
     end
   end
 
@@ -127,7 +134,12 @@ defmodule ExoSQL.DateTime do
   end
 
   def datediff(%DateTime{} = start, %DateTime{} = end_, unit) do
-    div(DateTime.diff(end_, start, :second), Map.get(@units, unit))
+    case Map.get(@units, unit) do
+      nil ->
+        raise "Unknown unit #{inspect unit} for datediff #{inspect @units}"
+      divider ->
+        div(DateTime.diff(end_, start, :second), divider)
+    end
   end
 
   def datediff(start, end_, unit) do

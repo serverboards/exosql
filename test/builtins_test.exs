@@ -141,7 +141,7 @@ defmodule ExoSQL.BuiltinsTest do
     assert ExoSQL.DateTime.datediff("2017-01-01", "2018-02-01", "years") == 1
 
     assert ExoSQL.DateTime.datediff("2018-01-01", "2017-02-01", "months") == -11
-    assert ExoSQL.DateTime.datediff("2018-01-01", "2017-02-01", "years") == -1
+    assert ExoSQL.DateTime.datediff("2018-01-01", "2017-02-01", "years") == 0
 
     assert ExoSQL.DateTime.datediff("2018-03-01", "2018-02-01", "seconds") == -2_419_200
 
@@ -156,6 +156,14 @@ defmodule ExoSQL.BuiltinsTest do
 
     assert ExoSQL.DateTime.datediff(ExoSQL.Builtins.range("2018-01-01", "2018-01-08"), "seconds") ==
              7 * 24 * 60 * 60
+
+    assert ExoSQL.DateTime.datediff("2017-01-01T00:00:00+01:00", "2018-12-31T23:59:59+01:00", "months") == 24
+    assert ExoSQL.DateTime.datediff("2017-01-01T00:00:00+01:00", "2017-12-31T23:59:59+01:00", "months") == 12
+    assert ExoSQL.DateTime.datediff("2017-01-01T00:00:00+01:00", "2018-01-01T00:00:00+01:00", "months") == 12
+    assert ExoSQL.DateTime.datediff("2017-01-01T00:00:00+01:00", "2017-01-31T23:59:59+01:00", "months") == 1
+    assert ExoSQL.DateTime.datediff("2017-02-01T00:00:00+01:00", "2017-02-01T23:59:59+01:00", "months") == 0
+    assert ExoSQL.DateTime.datediff("2017-02-01T00:00:00+01:00", "2017-02-28T23:59:59+01:00", "months") == 0
+    assert ExoSQL.DateTime.datediff("2017-02-01T00:00:00+01:00", "2017-03-01T23:59:59+01:00", "months") == 1
   end
 
   test "format string" do
