@@ -78,6 +78,7 @@ end
 * `RANGE`
 * `WITH` common table expressions
 * `CROSS JOIN LATERAL`
+* `CROSSTAB` / `CROSSTAB ON`
 * table and column alias with `AS`
 * nested `SELECT`: At `FROM`, `SELECT`, `WHERE`...
 * `generate_series` function tables
@@ -138,6 +139,71 @@ SELECT id, email, name FROM json CROSS JOIN LATERAL unnest(json, 'email', 'name'
 
 Currently only support for expressions is ready, nested queries is not funcional
 yet.
+
+## CROSSTAB
+
+Crosstab is a custom extension, not existing on the SQL standard, and other
+implementations may use other syntax:
+
+* [crosstab](https://www.postgresql.org/message-id/20031102232246.6a3c6088.veramente%40libero.it) extension at PostgreSQL
+* [concat](https://stackoverflow.com/questions/12382771/mysql-pivot-crosstab-query) at MySQL
+* [pivot](https://www.mssqltips.com/sqlservertip/1019/crosstab-queries-using-pivot-in-sql-server/) as MsSQL
+
+Serverboards tries another option:
+
+```sql
+SELECT CROSSTAB ON (sugus, lollipop)
+  user, product, sum(amount)
+FROM
+  productsales
+```
+
+It will result in a table with this form:
+
+| user  | sugus | lollipop|
+|-------|-------|---------|
+| David | 10    | 20      |
+| Anna  | NULL  | 15      |
+| ...   | ...   | ...     |
+
+
+It follows the syntax of `DISTINCT`.
+
+If `ON` is provided only extracts those columns, which in some cases may be
+completely empty. If it is not present it returns all possible columns, in
+alphabetical order.
+
+Crosstabs have the following caveats:
+
+* Column names may not be known at plan time, so if you need any specific column
+  for subqueries, you need to use the "ON" version. The first column name is
+  always known.
+* Crosstab is performed just after the select. If you need to order
+  the rows it has to be by column number. See [`ORDER BY`](#order_by) for
+  the full rationale. As a workaround you can use a nested select.
+
+## ORDER BY
+
+Sort can be used, per SQL standard, by column name or result column number.
+
+Due to the way ExoSQL works the ORDER operation is done in two steps:
+
+1. Before select, orders by the column name.
+2. After select, orders by the resulting column number.
+
+This is like this as after the select we do not have access to all the column
+names, only the resulting ones. And before there is no access to the column
+number results.
+
+This have two important implications:
+
+1. There is a bug when you mix `ORDER BY` name and column name. The second
+   order by number will be always more important than by name.
+2. At `CROSSTAB` the `ORDER BY` name just dont work. When data gets into
+   the crosstab algorithm the order is not specified for rows, and is
+   alphabetical for columns. It is possible to order by number, as it happens
+   after the crosstab.
+
 
 ## Builtins
 

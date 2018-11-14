@@ -540,7 +540,7 @@ defmodule ExoSQL.Executor do
       :all_columns ->
         Enum.reduce(data.rows, MapSet.new(), fn [_, name, _], acc ->
           MapSet.put(acc, name)
-        end) |> MapSet.to_list
+        end) |> MapSet.to_list |> Enum.sort
       other -> other
     end
 

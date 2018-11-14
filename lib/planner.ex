@@ -128,6 +128,7 @@ defmodule ExoSQL.Planner do
         where_plan
       end
 
+    # Order can be applied pre select or post select. This is the pre select.
     order_plan =
       Enum.reduce(query.orderby, group_plan, fn
         {_type, {:lit, _n}}, acc ->
@@ -192,6 +193,7 @@ defmodule ExoSQL.Planner do
         distinct_plan
       end
 
+    # Order can be applied pre select or post select. This is the post select.
     order_plan =
       Enum.reduce(query.orderby, crosstab_plan, fn
         {type, {:lit, n}}, acc ->
