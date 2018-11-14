@@ -14,7 +14,8 @@ defmodule ExoSQL.Executor do
     {rows, columns} =
       case Enum.count(rows) do
         0 ->
-          {rows, rcolumns}
+          columns = resolve_column_names(columns, rcolumns)
+          {rows, columns}
 
         _ ->
           context = Map.put(context, :columns, rcolumns)
