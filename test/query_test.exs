@@ -35,6 +35,7 @@ defmodule QueryTest do
     {:ok, plan} = ExoSQL.Planner.plan(parsed)
     Logger.debug("Plan is #{inspect(plan, pretty: true)}")
     {:ok, result} = ExoSQL.Executor.execute(plan, context)
+    # Logger.debug("Raw result is #{inspect(result, pretty: true)}")
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
     result
   end
@@ -1720,5 +1721,16 @@ defmodule QueryTest do
     """)
     assert Enum.count(res.columns) == 3
     assert Enum.count(res.rows) == 3
+  end
+
+  test "Empty result with proper columns" do
+    res = analyze_query!("""
+      SELECT * FROM users WHERE name = 'john'
+      """)
+
+    Enum.map(res.columns, fn
+      {_, _, name} when is_binary(name) -> true
+      c -> raise "Invalid column name format #{inspect c}"
+    end)
   end
 end

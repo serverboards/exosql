@@ -14,7 +14,7 @@ defmodule ExoSQL.Executor do
     {rows, columns} =
       case Enum.count(rows) do
         0 ->
-          {rows, columns}
+          {rows, rcolumns}
 
         _ ->
           context = Map.put(context, :columns, rcolumns)
