@@ -35,7 +35,6 @@ defmodule QueryTest do
     {:ok, plan} = ExoSQL.Planner.plan(parsed)
     Logger.debug("Plan is #{inspect(plan, pretty: true)}")
     {:ok, result} = ExoSQL.Executor.execute(plan, context)
-    Logger.debug(inspect(result, pretty: true))
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
     result
   end
@@ -1657,5 +1656,19 @@ defmodule QueryTest do
       """, %{"__vars__" => %{
         "test" => "not test"
     } })
+  end
+
+  test "CROSSTAB extension" do
+    res = analyze_query!("""
+      SELECT CROSSTAB users.name, products.name, sum(price * amount)
+      FROM users
+      INNER JOIN purchases ON users.id = purchases.user_id
+      INNER JOIN products ON products.id = purchases.product_id
+      GROUP BY users.name, products.name
+      ORDER BY users.name DESC
+    """)
+
+    assert Enum.count(res.columns) == 5
+    assert Enum.count(res.rows) == 3
   end
 end

@@ -531,6 +531,37 @@ defmodule ExoSQL.Executor do
   def execute(%{rows: rows, columns: columns}, _context),
     do: {:ok, %ExoSQL.Result{rows: rows, columns: columns}}
 
+  def execute({:crosstab, query}, context) do
+    {:ok, data} = execute(query, context)
+
+    first_column = hd(data.columns)
+
+    columns = Enum.reduce(data.rows, MapSet.new(), fn [_, name, _], acc ->
+      MapSet.put(acc, name)
+    end) |> MapSet.to_list
+    columns_ri = Enum.with_index(columns) |> Map.new
+
+    empty_row = Enum.map(columns, fn _ -> nil end)
+
+    rows = Enum.reduce(data.rows, %{}, fn [row, column, value], acc ->
+      current = Map.get(acc, row, empty_row)
+      case Map.get(columns_ri, column, nil) do
+        nil -> acc
+        coln ->
+          current = List.replace_at(current, coln, value)
+          Map.put(acc, row, current)
+      end
+    end)
+
+    columns = [first_column | (columns |> Enum.map(&({:tmp, :tmp, &1})))]
+    rows = rows |> Enum.map( fn {k, v} -> [k | v] end)
+
+    {:ok, %{
+      columns: columns,
+      rows: rows,
+    }}
+  end
+
   def execute_join(table1, table2, expr, context, no_match_strategy) do
     {:ok, res1} = execute(table1, context)
 

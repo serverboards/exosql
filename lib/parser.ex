@@ -246,6 +246,8 @@ defmodule ExoSQL.Parser do
         other -> resolve_column(other, all_columns, context)
       end
 
+    crosstab = Keyword.get(select_options, :crosstab)
+
     where =
       if where do
         resolve_column(where, all_columns, context)
@@ -273,6 +275,7 @@ defmodule ExoSQL.Parser do
      %ExoSQL.Query{
        select: select,
        distinct: distinct,
+       crosstab: crosstab,
        # all the tables it gets data from, but use only the frist and the joins.
        from: from,
        where: where,

@@ -39,6 +39,7 @@ defmodule ExoSQL do
   defmodule Query do
     defstruct select: [],
               distinct: nil,
+              crosstab: false,
               from: [],
               where: nil,
               groupby: nil,

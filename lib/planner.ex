@@ -185,8 +185,15 @@ defmodule ExoSQL.Planner do
           {:distinct, other, select_plan}
       end
 
+    crosstab_plan =
+      if query.crosstab do
+        {:crosstab, distinct_plan}
+      else
+        distinct_plan
+      end
+
     order_plan =
-      Enum.reduce(query.orderby, distinct_plan, fn
+      Enum.reduce(query.orderby, crosstab_plan, fn
         {type, {:lit, n}}, acc ->
           {:order_by, type, {:column, n - 1}, acc}
 

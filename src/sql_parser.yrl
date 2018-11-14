@@ -20,7 +20,7 @@ op1 op2 op3 op4 op5 op6
 'OUTER' 'LEFT' 'RIGHT' 'INNER' 'CROSS' 'JOIN' 'ON' 'LATERAL'
 'WHERE' 'GROUP' 'BY' 'ORDER' 'ASC' 'DESC'
 'TRUE' 'FALSE' 'NOT' 'NULL'
-'DISTINCT' 'LIMIT' 'ALL' 'OFFSET'
+'DISTINCT' 'CROSSTAB' 'LIMIT' 'ALL' 'OFFSET'
 'CASE' 'WHEN' 'THEN' 'ELSE' 'END'
 'IF' 'ELIF'
 'UNION'
@@ -50,6 +50,7 @@ with -> id 'AS' open_par complex_query close_par: {unwrap('$1'), '$4'}.
 
 select -> 'SELECT' 'DISTINCT' 'ON' open_par expr close_par select_expr_list : {'$7', [{distinct, '$5'}]}.
 select -> 'SELECT' 'DISTINCT' select_expr_list : {'$3', [{distinct, all_columns}]}.
+select -> 'SELECT' 'CROSSTAB' select_expr_list : {'$3', [{crosstab, true}]}.
 select -> 'SELECT' select_expr_list : {'$2', []}.
 
 select_expr_list -> select_expr : ['$1'].
