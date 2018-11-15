@@ -287,6 +287,20 @@ defmodule QueryTest do
                ["Serverboards", "https://serverboards.io/e404"]
              ]
            }
+
+    # Order by expression
+    res = analyze_query!("
+      SELECT name, url
+        FROM urls
+        ORDER BY urlparse(url, 'scheme'), name DESC
+    ")
+    assert res.rows == [
+      ["Serverboards", "http://www.serverboards.io"],
+      ["Facebook", "http://www.facebook.com"],
+      ["Serverboards", "https://serverboards.io"],
+      ["Serverboards", "https://serverboards.io/e404"]
+    ]
+
   end
 
   test "Partially defined data" do

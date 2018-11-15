@@ -412,11 +412,10 @@ defmodule ExoSQL.Executor do
 
     expr =
       case expr do
-        {:column, _} ->
-          ExoSQL.Expr.simplify(expr, context)
-
         {:lit, n} ->
           {:column, n}
+        _other ->
+          ExoSQL.Expr.simplify(expr, context)
       end
 
     rows =

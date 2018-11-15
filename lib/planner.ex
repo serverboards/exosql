@@ -130,7 +130,7 @@ defmodule ExoSQL.Planner do
 
     # Order can be applied pre select or post select. This is the pre select.
     order_plan =
-      Enum.reduce(query.orderby, group_plan, fn
+      query.orderby |> Enum.reverse |> Enum.reduce(group_plan, fn
         {_type, {:lit, _n}}, acc ->
           acc
 
@@ -195,7 +195,7 @@ defmodule ExoSQL.Planner do
 
     # Order can be applied pre select or post select. This is the post select.
     order_plan =
-      Enum.reduce(query.orderby, crosstab_plan, fn
+      query.orderby |> Enum.reverse |> Enum.reduce(crosstab_plan, fn
         {type, {:lit, n}}, acc ->
           {:order_by, type, {:column, n - 1}, acc}
 

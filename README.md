@@ -188,7 +188,7 @@ Sort can be used, per SQL standard, by column name or result column number.
 
 Due to the way ExoSQL works the ORDER operation is done in two steps:
 
-1. Before select, orders by the column name.
+1. Before select, orders by expressions.
 2. After select, orders by the resulting column number.
 
 This is like this as after the select we do not have access to all the column
@@ -197,9 +197,9 @@ number results.
 
 This have two important implications:
 
-1. There is a bug when you mix `ORDER BY` name and column name. The second
-   order by number will be always more important than by name.
-2. At `CROSSTAB` the `ORDER BY` name just dont work. When data gets into
+1. There is a bug when you mix `ORDER BY` expression and column number. The
+   second order by number will be always more important than by expression.
+2. At `CROSSTAB` the `ORDER BY` name just don't work. When data gets into
    the crosstab algorithm the order is not specified for rows, and is
    alphabetical for columns. It is possible to order by number, as it happens
    after the crosstab.

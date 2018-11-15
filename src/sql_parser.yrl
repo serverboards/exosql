@@ -99,8 +99,7 @@ orderby -> '$empty' : [].
 orderby -> 'ORDER' 'BY' order_expr_list : '$3'.
 order_expr_list -> order_expr: ['$1'].
 order_expr_list -> order_expr comma order_expr_list: ['$1'] ++ '$3'.
-order_expr -> column asc_desc: {'$2', {column, '$1'}}.
-order_expr -> litn asc_desc: {'$2', {lit, unwrap_raw('$1')}}.
+order_expr -> expr asc_desc: {'$2', '$1'}.
 asc_desc -> '$empty' : asc.
 asc_desc -> 'ASC' : asc.
 asc_desc -> 'DESC' : desc.

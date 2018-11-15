@@ -207,6 +207,10 @@ defmodule ExoSQL.Builtins do
   def upper(s), do: String.upcase(s)
 
   def to_string_(%DateTime{} = d), do: DateTime.to_iso8601(d)
+  def to_string_(%{} = d) do
+    {:ok, e} = Poison.encode(d)
+    e
+  end
   def to_string_(s), do: to_string(s)
 
   def now(), do: Timex.local()
