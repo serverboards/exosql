@@ -1541,6 +1541,19 @@ defmodule QueryTest do
     assert res1.rows == res2.rows
   end
 
+  test "unnest with alias" do
+    # No alias works check
+    res = analyze_query!("SELECT * FROM unnest(split('1,2,3,4'))")
+
+    assert res.rows == [["1"], ["2"], ["3"], ["4"]]
+    assert res.columns == [{:tmp, "unnest", "unnest"}]
+
+    # with alias
+    res = analyze_query!("SELECT * FROM unnest(split('1,2,3,4')) a")
+    assert res.rows == [["1"], ["2"], ["3"], ["4"]]
+    assert res.columns == [{:tmp, "a", "a"}]
+  end
+
   test "CROSS JOIN function is always LATERAL" do
     res = analyze_query!("SELECT email, name FROM json, unnest(json, 'email', 'name')")
 
@@ -1585,7 +1598,7 @@ defmodule QueryTest do
     # a bit complicated but takes several cross lateral options
     analyze_query!("
       SELECT * FROM products, LATERAL (
-        SELECT user_id, users.name FROM purchases CROSS JOIN LATERAL (
+        SELECT purchases.user_id, users.name FROM purchases CROSS JOIN LATERAL (
           SELECT * FROM users WHERE users.id = purchases.user_id
           ) WHERE purchases.product_id = products.id
         )
@@ -1722,7 +1735,7 @@ defmodule QueryTest do
     assert Enum.count(res.columns) == 3
     assert Enum.count(res.rows) == 2
 
-    # Cross tab in nested expression. It allows only first column name.
+    # Cross tab in nested expression. It allows only first column name, so * only returns it.
     res = analyze_query!("""
       SELECT * FROM (
         SELECT CROSSTAB users.name, products.name, sum(price * amount)
@@ -1733,7 +1746,7 @@ defmodule QueryTest do
         ORDER BY users.name DESC
       ) ORDER BY name DESC
     """)
-    assert Enum.count(res.columns) == 3
+    assert Enum.count(res.columns) == 1
     assert Enum.count(res.rows) == 3
   end
 

@@ -160,7 +160,8 @@ defmodule ExoSQL.Parser do
       end
 
     # Logger.debug("All tables at all columns #{inspect(all_tables)}")
-    all_columns = resolve_all_columns(all_tables, context)
+    select_columns = resolve_all_columns(all_tables, context)
+    all_columns = Map.get(context, "__parent__", []) ++ select_columns
     # Logger.debug("Resolved columns at query: #{inspect(all_columns)}")
 
     # Now resolve references to tables, as in FROM xx, LATERAL nested(xx.json, "a")
@@ -209,32 +210,8 @@ defmodule ExoSQL.Parser do
     select =
       case select do
         [{:all_columns}] ->
-          Enum.flat_map(all_tables, fn
-            %ExoSQL.Query{select: select} ->
-              Enum.with_index(select) |> Enum.map(fn {_, col} -> {:column, col} end)
-
-            {:fn, {table, _args}} ->
-              [{:column, {:tmp, table, table}}]
-
-            {:alias, {%ExoSQL.Query{select: select}, _}} ->
-              Enum.with_index(select)
-              |> Enum.map(fn
-                {{:alias, {_orig, col_alias}}, col} ->
-                  {:alias, {{:column, col}, col_alias}}
-
-                {_orig, col} ->
-                  {:column, col}
-              end)
-
-            {:alias, {{_db, _table}, alias_}} ->
-              columns = get_table_columns({:tmp, alias_}, all_columns)
-              Enum.map(columns, &{:column, {:tmp, alias_, &1}})
-
-            {:table, {db, table}} ->
-              columns = get_table_columns({db, table}, all_columns)
-              Enum.map(columns, &{:column, {db, table, &1}})
-          end)
-
+          # SELECT * do not include parent columns.
+          select_columns |> Enum.map(&{:column, &1})
         _other ->
           Enum.map(select, &resolve_column(&1, all_columns, context))
       end
@@ -331,14 +308,7 @@ defmodule ExoSQL.Parser do
   """
   def resolve_all_columns(tables, context) do
     # Logger.debug("Resolve all tables #{inspect tables}")
-    all_columns = Enum.flat_map(tables, &resolve_columns(&1, context))
-    parent_columns = Map.get(context, "__parent__", [])
-
-    all_columns ++ parent_columns
-  end
-
-  def resolve_columns({:alias, {{:fn, {"unnest", [_expr | columns]}}, alias_}}, _context) do
-    columns |> Enum.map(fn {:lit, col} -> {:tmp, alias_, col} end)
+    Enum.flat_map(tables, &resolve_columns(&1, context))
   end
 
   def resolve_columns({:alias, {any, alias_}}, context) do
