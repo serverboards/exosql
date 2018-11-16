@@ -455,7 +455,7 @@ defmodule ExoSQL.Parser do
     case options do
       [table] -> {:table, table}
       l when l == [] -> raise "Cant find table #{inspect(name)}"
-      _other -> raise "Ambigous table name #{inspect(name)}"
+      _other -> raise "Ambiguous table name #{inspect(name)}"
     end
   end
 
@@ -514,8 +514,8 @@ defmodule ExoSQL.Parser do
             raise "Not found #{inspect column} in #{inspect all_columns}"
           end
 
-        _many ->
-          raise "Ambiguous column #{inspect column} in #{inspect all_columns}"
+        many ->
+          raise "Ambiguous column #{inspect column} in #{inspect many}"
       end
 
     if found do
