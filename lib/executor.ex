@@ -169,69 +169,6 @@ defmodule ExoSQL.Executor do
     end
   end
 
-  def project_row([ head ]) do
-    cond do
-      is_list(head) ->
-        [head]
-      is_map(head) ->
-        %{columns: _columns, rows: rows} = head
-        rows
-      true ->
-        [head]
-    end
-  end
-  def project_row([ head | rest]) do
-    rest_rows = project_row(rest)
-
-    cond do
-      is_list(head) ->
-        Enum.flat_map(head, fn h -> Enum.map(rest_rows,fn r -> h ++ [r] end) end)
-      is_map(head) ->
-        %{columns: _columns, rows: rows} = head
-        Enum.flat_map(rows, fn h -> Enum.map(rest_rows,fn r -> h ++ [r] end) end)
-      true ->
-        for r <- rest_rows do
-          [head | r]
-        end
-    end
-  end
-
-  def project_columns([chead], [rhead]) do
-    # Logger.debug("Project columns #{inspect {chead, rhead}}")
-    cond do
-      is_list(rhead) ->
-        [chead]
-      is_map(rhead) ->
-        %{columns: columns, rows: _rows} = rhead
-        # special case, I inherit the column name from alias or 1. If more columns at inner table, sorry
-        column_change? = columns in [[{:tmp, :tmp, "generate_series"}], [{:tmp, :tmp, "unnest"}]]
-        # Logger.debug("Change column names #{inspect chead} #{inspect columns} #{inspect column_change?}")
-        if column_change? do
-          [chead]
-        else
-          columns
-        end
-      true ->
-        [chead]
-    end
-  end
-
-  def project_columns([chead | crest], [rhead | rrest]) do
-    rest_columns = project_columns(crest, rrest)
-
-    me_column = cond do
-      is_list(chead) ->
-        [chead]
-      is_map(rhead) ->
-        %{columns: columns, rows: _rows} = rhead
-        columns
-      true ->
-        [chead]
-    end
-
-    me_column ++ rest_columns
-  end
-
   def execute({:filter, from, expr}, context) do
 
     # Can not use the same simplification as an inner query may require a
@@ -566,6 +503,69 @@ defmodule ExoSQL.Executor do
       columns: columns,
       rows: rows,
     }}
+  end
+
+  def project_row([ head ]) do
+    cond do
+      is_list(head) ->
+        [head]
+      is_map(head) ->
+        %{columns: _columns, rows: rows} = head
+        rows
+      true ->
+        [head]
+    end
+  end
+  def project_row([ head | rest]) do
+    rest_rows = project_row(rest)
+
+    cond do
+      is_list(head) ->
+        Enum.flat_map(head, fn h -> Enum.map(rest_rows,fn r -> h ++ [r] end) end)
+      is_map(head) ->
+        %{columns: _columns, rows: rows} = head
+        Enum.flat_map(rows, fn h -> Enum.map(rest_rows,fn r -> h ++ [r] end) end)
+      true ->
+        for r <- rest_rows do
+          [head | r]
+        end
+    end
+  end
+
+  def project_columns([chead], [rhead]) do
+    # Logger.debug("Project columns #{inspect {chead, rhead}}")
+    cond do
+      is_list(rhead) ->
+        [chead]
+      is_map(rhead) ->
+        %{columns: columns, rows: _rows} = rhead
+        # special case, I inherit the column name from alias or 1. If more columns at inner table, sorry
+        column_change? = columns in [[{:tmp, :tmp, "generate_series"}], [{:tmp, :tmp, "unnest"}]]
+        # Logger.debug("Change column names #{inspect chead} #{inspect columns} #{inspect column_change?}")
+        if column_change? do
+          [chead]
+        else
+          columns
+        end
+      true ->
+        [chead]
+    end
+  end
+
+  def project_columns([chead | crest], [rhead | rrest]) do
+    rest_columns = project_columns(crest, rrest)
+
+    me_column = cond do
+      is_list(chead) ->
+        [chead]
+      is_map(rhead) ->
+        %{columns: columns, rows: _rows} = rhead
+        columns
+      true ->
+        [chead]
+    end
+
+    me_column ++ rest_columns
   end
 
   def execute_join(table1, table2, expr, context, no_match_strategy) do

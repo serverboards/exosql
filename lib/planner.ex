@@ -170,7 +170,7 @@ defmodule ExoSQL.Planner do
         {:lit, %{ columns: _, rows: _}} -> true
         {:alias, {{:lit, %{ columns: _, rows: _}}, _}} -> true
         {:alias, {{:fn, {name, _args}}, _}} -> ExoSQL.Builtins.is_projectable(name)
-        other -> false
+        _other -> false
       end) do
       {:project, select_plan}
     else
