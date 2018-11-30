@@ -316,12 +316,10 @@ defmodule ExoSQL.Executor do
 
     rows =
       Enum.reduce(data.rows, %{}, fn row, acc ->
-        context = Map.put(context, :columns, data.columns)
-
         set = Enum.map(sgroups, &ExoSQL.Expr.run_expr(&1, Map.put(context, :row, row)))
 
         # Logger.debug("Which set for #{inspect row} by #{inspect sgroups}/#{inspect groups} (#{inspect data.columns}): #{inspect set}")
-        Map.put(acc, set, [row] ++ Map.get(acc, set, []))
+        Map.put(acc, set, [row | Map.get(acc, set, [])])
       end)
       |> Enum.map(fn {group, row} ->
         table = %ExoSQL.Result{
@@ -438,8 +436,10 @@ defmodule ExoSQL.Executor do
   end
 
   def execute({:union, froma, fromb}, context) do
-    {:ok, dataa} = execute(froma, context)
-    {:ok, datab} = execute(fromb, context)
+    taska = Task.async(fn -> execute(froma, context) end)
+    taskb = Task.async(fn -> execute(fromb, context) end)
+    {:ok, dataa} = Task.await(taska)
+    {:ok, datab} = Task.await(taskb)
 
     if Enum.count(dataa.columns) != Enum.count(datab.columns) do
       {:error, {:union_column_count_mismatch}}
@@ -464,9 +464,6 @@ defmodule ExoSQL.Executor do
   end
 
   def execute(%ExoSQL.Result{} = res, _context), do: {:ok, res}
-
-  def execute(%{rows: rows, columns: columns}, _context),
-    do: {:ok, %ExoSQL.Result{rows: rows, columns: columns}}
 
   def execute({:crosstab, ctcolumns, query}, context) do
     {:ok, data} = execute(query, context)
@@ -608,6 +605,8 @@ defmodule ExoSQL.Executor do
     context = Map.put(context, :columns, columns)
     rexpr = ExoSQL.Expr.simplify(expr, context)
     empty_row2 = Enum.map(res2.columns, fn _ -> nil end)
+    left_match = no_match_strategy == :left
+
     # Logger.debug("Columns #{inspect columns}")
     rows =
       Enum.reduce(res1.rows, [], fn row1, acc ->
@@ -624,7 +623,7 @@ defmodule ExoSQL.Executor do
           |> Enum.filter(&(&1 != nil))
 
         nrows =
-          if nrows == [] and no_match_strategy == :left do
+          if nrows == [] and left_match do
             [row1 ++ empty_row2]
           else
             nrows
@@ -644,6 +643,8 @@ defmodule ExoSQL.Executor do
   end
 
   def execute_join_hashmap(res1, res2, expr, context, no_match_strategy) do
+    left_match = no_match_strategy == :left
+    
     case hashmap_decompose_expr(res1.columns, expr) do
       {expra, exprb} ->
         expra = ExoSQL.Expr.simplify(expra, Map.put(context, :columns, res1.columns))
@@ -668,7 +669,7 @@ defmodule ExoSQL.Executor do
             rows2 = Map.get(mapb, vala, [])
 
             nrows =
-              if rows2 == [] and no_match_strategy == :left do
+              if rows2 == [] and left_match do
                 [row1 ++ empty_row2]
               else
                 Enum.map(rows2, fn row2 ->
