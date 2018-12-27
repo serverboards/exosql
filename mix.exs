@@ -4,7 +4,7 @@ defmodule ExoSQL.Mixfile do
   def project do
     [
       app: :exosql,
-      version: "0.2.76",
+      version: "0.2.77",
       elixir: "~> 1.5",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -12,7 +12,12 @@ defmodule ExoSQL.Mixfile do
       homepage_url: "https://serverboards.io",
       description: description(),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [coveralls: :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ],
       package: [
         name: "exosql",
         licenses: ["Apache 2.0"],
@@ -49,7 +54,7 @@ PostgreSQL.
       {:csv, "~> 2.1"},
       {:httpoison, "~> 1.0"},
       {:poison, "~> 3.1"},
-      {:excoveralls, "~> 0.10", only: :test},
+      {:excoveralls, "~> 0.10", only: :test}
     ]
   end
 end
