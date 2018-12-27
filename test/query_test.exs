@@ -1571,6 +1571,22 @@ defmodule QueryTest do
     assert Enum.count(res.rows) == 4
     assert Enum.count(res.columns) == 2
 
+    res = analyze_query!("SELECT email, unnest FROM users, unnest(split('1,2,3,4,5', ','))")
+    assert Enum.count(res.rows) == 15
+  end
+
+  test "UNEST on SPLIT, with alias variations" do
+    # give name
+    res = analyze_query!("SELECT email, unnest FROM users, unnest(split('1,2,3,4,5'))")
+    assert Enum.count(res.rows) == 15
+
+    # Use alias to give name
+    res = analyze_query!("SELECT email, n FROM users, unnest(split('1,2,3,4,5')) n")
+    assert Enum.count(res.rows) == 15
+
+    # Same with AS
+    res = analyze_query!("SELECT email, n FROM users, unnest(split('1,2,3,4,5')) as n")
+    assert Enum.count(res.rows) == 15
   end
 
   test "FROM LATERAL query" do
