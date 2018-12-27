@@ -173,22 +173,25 @@ defmodule ExoSQL.Expr do
   end
 
   def run_expr({:case, list}, context) do
-    res = Enum.find_value(list, fn
-      {condition, expr} ->
-        case run_expr(condition, context) do
-          "" ->
-            nil
-
-          val ->
-            if val do
-              {:ok, run_expr(expr, context)}
-            else
+    res =
+      Enum.find_value(list, fn
+        {condition, expr} ->
+          case run_expr(condition, context) do
+            "" ->
               nil
-            end
-        end
-      {expr} ->
-        {:ok, run_expr(expr, context)}
-    end)
+
+            val ->
+              if val do
+                {:ok, run_expr(expr, context)}
+              else
+                nil
+              end
+          end
+
+        {expr} ->
+          {:ok, run_expr(expr, context)}
+      end)
+
     case res do
       {:ok, res} -> res
       nil -> nil
@@ -197,16 +200,20 @@ defmodule ExoSQL.Expr do
 
   def run_expr({:case, expr, list}, context) do
     val = run_expr(expr, context)
-    res = Enum.find_value(list, fn
-      {condition, expr} ->
-        if run_expr(condition, context) == val do
+
+    res =
+      Enum.find_value(list, fn
+        {condition, expr} ->
+          if run_expr(condition, context) == val do
+            {:ok, run_expr(expr, context)}
+          else
+            nil
+          end
+
+        {expr} ->
           {:ok, run_expr(expr, context)}
-        else
-          nil
-        end
-      {expr} ->
-        {:ok, run_expr(expr, context)}
-    end)
+      end)
+
     case res do
       {:ok, res} -> res
       nil -> nil
@@ -224,6 +231,11 @@ defmodule ExoSQL.Expr do
 
   def run_expr({:column, n}, %{row: row}) when is_number(n) do
     Enum.at(row, n)
+  end
+
+  def run_expr({:column, dtr}, %{parent_columns: parent, parent_row: row}) do
+    idx = Enum.find_index(parent, &(&1 == dtr))
+    Enum.at(row, idx)
   end
 
   def run_expr({:select, query}, context) do
@@ -512,9 +524,14 @@ defmodule ExoSQL.Expr do
 
   def simplify({:not, op1}, context) do
     op1 = simplify(op1, context)
+
     case op1 do
-      {:lit, true} -> {:lit, false}
-      {:lit, false} -> {:lit, true}
+      {:lit, true} ->
+        {:lit, false}
+
+      {:lit, false} ->
+        {:lit, true}
+
       _other ->
         {:not, op1}
     end
@@ -541,18 +558,22 @@ defmodule ExoSQL.Expr do
       Enum.map(list, fn
         {e, v} ->
           {simplify(e, context), simplify(v, context)}
+
         {v} ->
           {simplify(v, context)}
       end)
 
     {:case, list}
   end
+
   def simplify({:case, expr, list}, context) do
     expr = simplify(expr, context)
+
     list =
       Enum.map(list, fn
         {e, v} ->
           {simplify(e, context), simplify(v, context)}
+
         {v} ->
           {simplify(v, context)}
       end)

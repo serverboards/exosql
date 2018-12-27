@@ -1587,6 +1587,13 @@ defmodule QueryTest do
     # Same with AS
     res = analyze_query!("SELECT email, n FROM users, unnest(split('1,2,3,4,5')) as n")
     assert Enum.count(res.rows) == 15
+
+    res =
+      analyze_query!(
+        "SELECT name, n FROM unnestarray, lateral unnest(split(IF ids THEN ids ELSE NULL END, ';')) as n"
+      )
+
+    assert Enum.count(res.rows) == 5
   end
 
   test "FROM LATERAL query" do

@@ -257,6 +257,8 @@ defmodule ExoSQL.Builtins do
     Enum.join(str, sep)
   end
 
+  def split(nil, _sep), do: []
+
   def split(str, sep) do
     String.split(str, sep)
   end
