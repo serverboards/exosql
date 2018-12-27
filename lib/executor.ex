@@ -156,26 +156,28 @@ defmodule ExoSQL.Executor do
     {:ok, from} = execute(from, context)
 
     if Enum.count(from.rows) == 0 do
-      {:ok, from} # warning, the projection fails and the number of columns is undefined.
+      # warning, the projection fails and the number of columns is undefined.
+      {:ok, from}
     else
       # Logger.debug("Orig #{inspect from}")
-      columns = project_columns(from.columns, hd from.rows)
+      columns = project_columns(from.columns, hd(from.rows))
       rows = Enum.flat_map(from.rows, &project_row(&1))
       # Logger.debug("Final #{inspect {columns, rows}}")
-      {:ok, %ExoSQL.Result{
-        columns: columns,
-        rows: rows
-      }}
+      {:ok,
+       %ExoSQL.Result{
+         columns: columns,
+         rows: rows
+       }}
     end
   end
 
   def execute({:filter, from, expr}, context) do
-
     # Can not use the same simplification as an inner query may require a
     # change from a column to a literal (See "Complex nested SELECT" example)
     # So first one simplification to check if the expr is false, and then the
     # real simplification.
     expr_ = ExoSQL.Expr.simplify(expr, context)
+
     case expr_ do
       {:lit, false} ->
         {:ok, %ExoSQL.Result{columns: [], rows: []}}
@@ -293,8 +295,10 @@ defmodule ExoSQL.Executor do
               other ->
                 [other] ++ row
             end)
-          %{ columns: _rcolumns, rows: rrows } ->
+
+          %{columns: _rcolumns, rows: rrows} ->
             rrows |> Enum.map(&(&1 ++ row))
+
           other ->
             [other] ++ row
         end
@@ -349,6 +353,7 @@ defmodule ExoSQL.Executor do
       case expr do
         {:lit, n} ->
           {:column, n}
+
         _other ->
           ExoSQL.Expr.simplify(expr, context)
       end
@@ -470,58 +475,74 @@ defmodule ExoSQL.Executor do
 
     first_column = hd(data.columns)
 
-    columns = case ctcolumns do
-      :all_columns ->
-        Enum.reduce(data.rows, MapSet.new(), fn [_, name, _], acc ->
-          MapSet.put(acc, name)
-        end) |> MapSet.to_list |> Enum.sort
-      other -> other
-    end
+    columns =
+      case ctcolumns do
+        :all_columns ->
+          Enum.reduce(data.rows, MapSet.new(), fn [_, name, _], acc ->
+            MapSet.put(acc, name)
+          end)
+          |> MapSet.to_list()
+          |> Enum.sort()
 
-    columns_ri = Enum.with_index(columns) |> Map.new
+        other ->
+          other
+      end
+
+    columns_ri = Enum.with_index(columns) |> Map.new()
 
     empty_row = Enum.map(columns, fn _ -> nil end)
 
-    rows = Enum.reduce(data.rows, %{}, fn [row, column, value], acc ->
-      current = Map.get(acc, row, empty_row)
-      ncurrent = case Map.get(columns_ri, column, nil) do
-        nil ->
-          current
-        coln ->
-          List.replace_at(current, coln, value)
-      end
-      Map.put(acc, row, ncurrent)
-    end)
+    rows =
+      Enum.reduce(data.rows, %{}, fn [row, column, value], acc ->
+        current = Map.get(acc, row, empty_row)
 
-    columns = [first_column | (columns |> Enum.map(&({:tmp, :tmp, &1})))]
-    rows = rows |> Enum.map( fn {k, v} -> [k | v] end)
+        ncurrent =
+          case Map.get(columns_ri, column, nil) do
+            nil ->
+              current
 
-    {:ok, %{
-      columns: columns,
-      rows: rows,
-    }}
+            coln ->
+              List.replace_at(current, coln, value)
+          end
+
+        Map.put(acc, row, ncurrent)
+      end)
+
+    columns = [first_column | columns |> Enum.map(&{:tmp, :tmp, &1})]
+    rows = rows |> Enum.map(fn {k, v} -> [k | v] end)
+
+    {:ok,
+     %{
+       columns: columns,
+       rows: rows
+     }}
   end
 
-  def project_row([ head ]) do
+  def project_row([head]) do
     cond do
       is_list(head) ->
         [head]
+
       is_map(head) ->
         %{columns: _columns, rows: rows} = head
         rows
+
       true ->
         [head]
     end
   end
-  def project_row([ head | rest]) do
+
+  def project_row([head | rest]) do
     rest_rows = project_row(rest)
 
     cond do
       is_list(head) ->
-        Enum.flat_map(head, fn h -> Enum.map(rest_rows,fn r -> h ++ [r] end) end)
+        Enum.flat_map(head, fn h -> Enum.map(rest_rows, fn r -> h ++ [r] end) end)
+
       is_map(head) ->
         %{columns: _columns, rows: rows} = head
-        Enum.flat_map(rows, fn h -> Enum.map(rest_rows,fn r -> h ++ [r] end) end)
+        Enum.flat_map(rows, fn h -> Enum.map(rest_rows, fn r -> h ++ [r] end) end)
+
       true ->
         for r <- rest_rows do
           [head | r]
@@ -534,16 +555,20 @@ defmodule ExoSQL.Executor do
     cond do
       is_list(rhead) ->
         [chead]
+
       is_map(rhead) ->
         %{columns: columns, rows: _rows} = rhead
+
         # special case, I inherit the column name from alias or 1. If more columns at inner table, sorry
         column_change? = columns in [[{:tmp, :tmp, "generate_series"}], [{:tmp, :tmp, "unnest"}]]
+
         # Logger.debug("Change column names #{inspect chead} #{inspect columns} #{inspect column_change?}")
         if column_change? do
           [chead]
         else
           columns
         end
+
       true ->
         [chead]
     end
@@ -552,15 +577,18 @@ defmodule ExoSQL.Executor do
   def project_columns([chead | crest], [rhead | rrest]) do
     rest_columns = project_columns(crest, rrest)
 
-    me_column = cond do
-      is_list(chead) ->
-        [chead]
-      is_map(rhead) ->
-        %{columns: columns, rows: _rows} = rhead
-        columns
-      true ->
-        [chead]
-    end
+    me_column =
+      cond do
+        is_list(chead) ->
+          [chead]
+
+        is_map(rhead) ->
+          %{columns: columns, rows: _rows} = rhead
+          columns
+
+        true ->
+          [chead]
+      end
 
     me_column ++ rest_columns
   end
@@ -644,7 +672,7 @@ defmodule ExoSQL.Executor do
 
   def execute_join_hashmap(res1, res2, expr, context, no_match_strategy) do
     left_match = no_match_strategy == :left
-    
+
     case hashmap_decompose_expr(res1.columns, expr) do
       {expra, exprb} ->
         expra = ExoSQL.Expr.simplify(expra, Map.put(context, :columns, res1.columns))

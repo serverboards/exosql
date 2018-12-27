@@ -294,13 +294,13 @@ defmodule QueryTest do
         FROM urls
         ORDER BY urlparse(url, 'scheme'), name DESC
     ")
-    assert res.rows == [
-      ["Serverboards", "http://www.serverboards.io"],
-      ["Facebook", "http://www.facebook.com"],
-      ["Serverboards", "https://serverboards.io"],
-      ["Serverboards", "https://serverboards.io/e404"]
-    ]
 
+    assert res.rows == [
+             ["Serverboards", "http://www.serverboards.io"],
+             ["Facebook", "http://www.facebook.com"],
+             ["Serverboards", "https://serverboards.io"],
+             ["Serverboards", "https://serverboards.io/e404"]
+           ]
   end
 
   test "Partially defined data" do
@@ -756,7 +756,7 @@ defmodule QueryTest do
           "SELECT date FROM generate_series('2018-05-17T22:00:00.000Z', '2018-05-16T21:59:59.000Z', 'T0H') AS date"
         )
 
-      Logger.debug "Fixed bug no duration, infinite loop"
+      Logger.debug("Fixed bug no duration, infinite loop")
       res
     catch
       {:error, :invalid_duration} ->
@@ -784,7 +784,12 @@ defmodule QueryTest do
       SELECT 1, generate_series(10), 1
     ")
     assert Enum.count(res.rows) == 10
-    assert res.columns == [{:tmp, :tmp, "col_1"}, {:tmp, :tmp, "generate_series"}, {:tmp, :tmp, "col_3"}]
+
+    assert res.columns == [
+             {:tmp, :tmp, "col_1"},
+             {:tmp, :tmp, "generate_series"},
+             {:tmp, :tmp, "col_3"}
+           ]
   end
 
   test "generate series as call and alias" do
@@ -797,7 +802,7 @@ defmodule QueryTest do
     res = analyze_query!("
       SELECT n, generate_series(n) t FROM generate_series(3) n
     ")
-    assert Enum.count(res.rows) == (1 + 2 + 3)
+    assert Enum.count(res.rows) == 1 + 2 + 3
   end
 
   test "Fail get non existant column" do
@@ -1207,6 +1212,7 @@ defmodule QueryTest do
       ORDER BY
         url
       """)
+
     assert res.rows == [["FB", false], ["BI", false], ["BI", true], ["BI", true]]
   end
 
@@ -1624,39 +1630,44 @@ defmodule QueryTest do
   end
 
   test "Project JSON " do
-    res = analyze_query!("""
-      SELECT unnest(json, 'name', 'empty') FROM json
-    """)
+    res =
+      analyze_query!("""
+        SELECT unnest(json, 'name', 'empty') FROM json
+      """)
 
     assert Enum.count(res.columns) == 2
     assert Enum.count(res.rows) == 4
   end
 
   test "Project JSON literal" do
-    res = analyze_query!("""
-      SELECT unnest('[{"name": "test"}, {"name": "dos"}]', 'name', 'empty')
-    """)
+    res =
+      analyze_query!("""
+        SELECT unnest('[{"name": "test"}, {"name": "dos"}]', 'name', 'empty')
+      """)
 
     assert Enum.count(res.columns) == 2
     assert Enum.count(res.rows) == 2
 
-    res = analyze_query!("""
-      SELECT unnest('[{"name": "test"}, {"name": "dos"}]', 'name')
-    """)
+    res =
+      analyze_query!("""
+        SELECT unnest('[{"name": "test"}, {"name": "dos"}]', 'name')
+      """)
 
     assert res.columns == [{:tmp, :tmp, "name"}]
     assert Enum.count(res.rows) == 2
   end
 
   test "CTE with with access to prev data" do
-    res = analyze_query!("""
-      WITH
-         a AS (SELECT unnest(json, "name", "email") FROM json),
-         b AS (SELECT name || " <" || email || ">" FROM a)
-      SELECT
-        *
-      FROM b
-    """)
+    res =
+      analyze_query!("""
+        WITH
+           a AS (SELECT unnest(json, "name", "email") FROM json),
+           b AS (SELECT name || " <" || email || ">" FROM a)
+        SELECT
+          *
+        FROM b
+      """)
+
     assert Enum.count(res.rows) == 4
   end
 
@@ -1665,99 +1676,116 @@ defmodule QueryTest do
       analyze_query!("""
         SELECT x FROM generate_series(0,10,-1) x
       """)
-      flunk "Should have failed. This is the basis of the next test."
+
+      flunk("Should have failed. This is the basis of the next test.")
     catch
-        {:function, _} ->
-          Logger.info("Function fail. All OK.")
-          :ok
+      {:function, _} ->
+        Logger.info("Function fail. All OK.")
+        :ok
     end
 
     # This does not fail as the select is not even performed as where is
     # always false
-    analyze_query!("""
+    analyze_query!(
+      """
       SELECT
         x
       FROM
         generate_series(0, 10, -1) x
       WHERE
         $test = "test"
-      """, %{"__vars__" => %{
-        "test" => "not test"
-    } })
+      """,
+      %{
+        "__vars__" => %{
+          "test" => "not test"
+        }
+      }
+    )
   end
 
   test "CROSSTAB extension" do
-    res = analyze_query!("""
-      SELECT CROSSTAB users.name, products.name, sum(price * amount)
-      FROM users
-      INNER JOIN purchases ON users.id = purchases.user_id
-      INNER JOIN products ON products.id = purchases.product_id
-      GROUP BY users.name, products.name
-      ORDER BY users.name DESC
-    """)
-    assert Enum.count(res.columns) == 5
-    assert Enum.count(res.rows) == 3
-
-    res = analyze_query!("""
-      SELECT CROSSTAB ON (sugus, donut) users.name, products.name, sum(price * amount)
-      FROM users
-      INNER JOIN purchases ON users.id = purchases.user_id
-      INNER JOIN products ON products.id = purchases.product_id
-      GROUP BY users.name, products.name
-      ORDER BY users.name DESC
-    """)
-    assert Enum.count(res.columns) == 3
-    assert Enum.count(res.rows) == 3
-
-    # order is applied to the crosstab.. but here it only knows about name
-    res2 = analyze_query!("""
-      SELECT CROSSTAB ON (sugus, donut) users.name, products.name, sum(price * amount)
-      FROM users
-      INNER JOIN purchases ON users.id = purchases.user_id
-      INNER JOIN products ON products.id = purchases.product_id
-      GROUP BY users.name, products.name
-      ORDER BY 1 DESC
-    """)
-    assert res.rows != res2.rows
-
-    # Cross tab in nested expression
-    # This returns rows with some data
-    res = analyze_query!("""
-      SELECT * FROM (
-        SELECT CROSSTAB ON (sugus, donut) users.name, products.name, sum(price * amount)
-        FROM users
-        INNER JOIN purchases ON users.id = purchases.user_id
-        INNER JOIN products ON products.id = purchases.product_id
-        GROUP BY users.name, products.name
-        ORDER BY users.name DESC
-      ) WHERE coalesce(sugus, donut) != NULL
-    """)
-    assert Enum.count(res.columns) == 3
-    assert Enum.count(res.rows) == 2
-
-    # Cross tab in nested expression. It allows only first column name, so * only returns it.
-    res = analyze_query!("""
-      SELECT * FROM (
+    res =
+      analyze_query!("""
         SELECT CROSSTAB users.name, products.name, sum(price * amount)
         FROM users
         INNER JOIN purchases ON users.id = purchases.user_id
         INNER JOIN products ON products.id = purchases.product_id
         GROUP BY users.name, products.name
         ORDER BY users.name DESC
-      ) ORDER BY name DESC
-    """)
+      """)
+
+    assert Enum.count(res.columns) == 5
+    assert Enum.count(res.rows) == 3
+
+    res =
+      analyze_query!("""
+        SELECT CROSSTAB ON (sugus, donut) users.name, products.name, sum(price * amount)
+        FROM users
+        INNER JOIN purchases ON users.id = purchases.user_id
+        INNER JOIN products ON products.id = purchases.product_id
+        GROUP BY users.name, products.name
+        ORDER BY users.name DESC
+      """)
+
+    assert Enum.count(res.columns) == 3
+    assert Enum.count(res.rows) == 3
+
+    # order is applied to the crosstab.. but here it only knows about name
+    res2 =
+      analyze_query!("""
+        SELECT CROSSTAB ON (sugus, donut) users.name, products.name, sum(price * amount)
+        FROM users
+        INNER JOIN purchases ON users.id = purchases.user_id
+        INNER JOIN products ON products.id = purchases.product_id
+        GROUP BY users.name, products.name
+        ORDER BY 1 DESC
+      """)
+
+    assert res.rows != res2.rows
+
+    # Cross tab in nested expression
+    # This returns rows with some data
+    res =
+      analyze_query!("""
+        SELECT * FROM (
+          SELECT CROSSTAB ON (sugus, donut) users.name, products.name, sum(price * amount)
+          FROM users
+          INNER JOIN purchases ON users.id = purchases.user_id
+          INNER JOIN products ON products.id = purchases.product_id
+          GROUP BY users.name, products.name
+          ORDER BY users.name DESC
+        ) WHERE coalesce(sugus, donut) != NULL
+      """)
+
+    assert Enum.count(res.columns) == 3
+    assert Enum.count(res.rows) == 2
+
+    # Cross tab in nested expression. It allows only first column name, so * only returns it.
+    res =
+      analyze_query!("""
+        SELECT * FROM (
+          SELECT CROSSTAB users.name, products.name, sum(price * amount)
+          FROM users
+          INNER JOIN purchases ON users.id = purchases.user_id
+          INNER JOIN products ON products.id = purchases.product_id
+          GROUP BY users.name, products.name
+          ORDER BY users.name DESC
+        ) ORDER BY name DESC
+      """)
+
     assert Enum.count(res.columns) == 1
     assert Enum.count(res.rows) == 3
   end
 
   test "Empty result with proper columns" do
-    res = analyze_query!("""
+    res =
+      analyze_query!("""
       SELECT * FROM users WHERE name = 'john'
       """)
 
     Enum.map(res.columns, fn
       {_, _, name} when is_binary(name) -> true
-      c -> raise "Invalid column name format #{inspect c}"
+      c -> raise "Invalid column name format #{inspect(c)}"
     end)
   end
 end

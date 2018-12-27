@@ -127,12 +127,14 @@ defmodule ExoSQL.Builtins do
   def power(nil, _), do: nil
   def power(_, nil), do: nil
   def power(_, 0), do: 1
+
   # To allow big power. From https://stackoverflow.com/questions/32024156/how-do-i-raise-a-number-to-a-power-in-elixir#32024157
   def power(x, n) when Integer.is_odd(n) do
     {:ok, x} = to_number(x)
     {:ok, n} = to_number(n)
     x * :math.pow(x, n - 1)
   end
+
   def power(x, n) do
     {:ok, x} = to_number(x)
     {:ok, n} = to_number(n)
@@ -141,24 +143,28 @@ defmodule ExoSQL.Builtins do
   end
 
   def sqrt(nil), do: nil
+
   def sqrt(n) do
     {:ok, n} = to_number(n)
     :math.sqrt(n)
   end
 
   def log(nil), do: nil
+
   def log(n) do
     {:ok, n} = to_number(n)
     :math.log10(n)
   end
 
   def ln(nil), do: nil
+
   def ln(n) do
     {:ok, n} = to_number(n)
     :math.log(n)
   end
 
   def abs(nil), do: nil
+
   def abs(n) do
     {:ok, n} = to_number(n)
     :erlang.abs(n)
@@ -166,6 +172,7 @@ defmodule ExoSQL.Builtins do
 
   def mod(nil, _), do: nil
   def mod(_, nil), do: nil
+
   def mod(n, m) do
     {:ok, n} = to_number(n)
     {:ok, m} = to_number(m)
@@ -173,8 +180,10 @@ defmodule ExoSQL.Builtins do
   end
 
   def sign(nil), do: nil
+
   def sign(n) do
     {:ok, n} = to_number(n)
+
     cond do
       n < 0 -> -1
       n == 0 -> 0
@@ -207,10 +216,12 @@ defmodule ExoSQL.Builtins do
   def upper(s), do: String.upcase(s)
 
   def to_string_(%DateTime{} = d), do: DateTime.to_iso8601(d)
+
   def to_string_(%{} = d) do
     {:ok, e} = Poison.encode(d)
     e
   end
+
   def to_string_(s), do: to_string(s)
 
   def now(), do: Timex.local()
@@ -596,9 +607,11 @@ defmodule ExoSQL.Builtins do
   def unnest(array, cols) when is_list(cols) do
     array = json(array) || []
 
-    rows = Enum.map(array, fn row ->
-      Enum.map(cols, &Map.get(row, &1))
-    end)
+    rows =
+      Enum.map(array, fn row ->
+        Enum.map(cols, &Map.get(row, &1))
+      end)
+
     columns = Enum.map(cols, &{:tmp, :tmp, &1})
 
     %ExoSQL.Result{
@@ -611,11 +624,21 @@ defmodule ExoSQL.Builtins do
   def unnest(array, col1, col2), do: unnest(array, [col1, col2])
   def unnest(array, col1, col2, col3), do: unnest(array, [col1, col2, col3])
   def unnest(array, col1, col2, col3, col4), do: unnest(array, [col1, col2, col3, col4])
-  def unnest(array, col1, col2, col3, col4, col5), do: unnest(array, [col1, col2, col3, col4, col5])
-  def unnest(array, col1, col2, col3, col4, col5, col5), do: unnest(array, [col1, col2, col3, col4, col5, col5])
-  def unnest(array, col1, col2, col3, col4, col5, col5, col6), do: unnest(array, [col1, col2, col3, col4, col5, col5, col6])
-  def unnest(array, col1, col2, col3, col4, col5, col5, col6, col7), do: unnest(array, [col1, col2, col3, col4, col5, col5, col6, col7])
-  def unnest(array, col1, col2, col3, col4, col5, col5, col6, col7, col8), do: unnest(array, [col1, col2, col3, col4, col5, col5, col6, col7, col8])
+
+  def unnest(array, col1, col2, col3, col4, col5),
+    do: unnest(array, [col1, col2, col3, col4, col5])
+
+  def unnest(array, col1, col2, col3, col4, col5, col5),
+    do: unnest(array, [col1, col2, col3, col4, col5, col5])
+
+  def unnest(array, col1, col2, col3, col4, col5, col5, col6),
+    do: unnest(array, [col1, col2, col3, col4, col5, col5, col6])
+
+  def unnest(array, col1, col2, col3, col4, col5, col5, col6, col7),
+    do: unnest(array, [col1, col2, col3, col4, col5, col5, col6, col7])
+
+  def unnest(array, col1, col2, col3, col4, col5, col5, col6, col7, col8),
+    do: unnest(array, [col1, col2, col3, col4, col5, col5, col6, col7, col8])
 
   @doc ~S"""
   Creates a range, which can later be used in:
