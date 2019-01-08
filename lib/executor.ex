@@ -8,6 +8,7 @@ defmodule ExoSQL.Executor do
   """
   def execute({:select, from, columns}, context) do
     {:ok, %{columns: rcolumns, rows: rows}, context} = execute(from, context)
+    ocontext = context
     # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}. Context: #{inspect context}")
     # Logger.debug("Rows: #{inspect {rcolumns, rows}, pretty: true}")
 
@@ -35,7 +36,7 @@ defmodule ExoSQL.Executor do
           {rows, columns}
       end
 
-    {:ok, %ExoSQL.Result{rows: rows, columns: columns}, context}
+    {:ok, %ExoSQL.Result{rows: rows, columns: columns}, ocontext}
   end
 
   def execute({:distinct, what, from}, context) do
@@ -151,7 +152,7 @@ defmodule ExoSQL.Executor do
     end
 
     data = context[:with][table]
-    column_reselect(data, columns, :with, table, context)
+    column_reselect(data, columns, context)
   end
 
   def execute({:execute, {:table, {db, table}}, quals, columns}, context) do
@@ -173,7 +174,12 @@ defmodule ExoSQL.Executor do
 
     case executor_res do
       {:ok, data} ->
-        column_reselect(data, columns, db, table, context)
+        data = %ExoSQL.Result{
+          columns: Enum.map(data.columns, &{db, table, &1}),
+          rows: data.rows
+        }
+
+        column_reselect(data, columns, context)
 
       {:error, other} ->
         {:error, {:extractor, {db, table}, other}}
@@ -551,10 +557,10 @@ defmodule ExoSQL.Executor do
     {:ok, data, context} = execute(plan, context)
 
     if ExoSQL.debug_mode(context) do
-      Logger.debug("ExoSQL Executor #{inspect({:with, {name, plan}})}")
+      Logger.debug("ExoSQL Executor #{inspect({:with, name})}")
     end
 
-    data = %{data | columns: Enum.map(data.columns, fn {_, _, name} -> name end)}
+    data = %{data | columns: Enum.map(data.columns, fn {_, _, col} -> {:with, name, col} end)}
 
     newwith = Map.put(Map.get(context, :with, %{}), name, data)
     context = Map.put(context, :with, newwith)
@@ -861,30 +867,32 @@ defmodule ExoSQL.Executor do
   end
 
   # common data that given a result, reorders the columns as required
-  def column_reselect(data, columns, db, table, context) do
+  def column_reselect(data, columns, context) do
     case data do
-      %{columns: ^columns, rows: rows} ->
-        {:ok,
-         %ExoSQL.Result{
-           columns: Enum.map(columns, fn c -> {db, table, c} end),
-           rows: rows
-         }, context}
+      %{columns: ^columns, rows: _rows} ->
+        if ExoSQL.debug_mode(context) do
+          Logger.debug("ExoSQL Executor #{inspect({:column_reselect, :equal})}")
+        end
+
+        {:ok, data, context}
 
       %{columns: rcolumns, rows: rows} ->
         if ExoSQL.debug_mode(context) do
           Logger.debug("ExoSQL Executor #{inspect({:column_reselect, rcolumns, columns})}")
         end
 
-        result = %ExoSQL.Result{
-          columns: Enum.map(rcolumns, fn c -> {db, table, c} end),
-          rows: rows
-        }
+        new_order = Enum.map(columns, fn col -> Enum.find_index(rcolumns, &(&1 == col)) end)
 
-        columns = Enum.map(columns, &{:column, &1})
-        execute({:select, result, columns}, context)
+        rows =
+          Enum.map(rows, fn row ->
+            Enum.map(new_order, &Enum.at(row, &1))
+          end)
 
-      other ->
-        other
+        {:ok,
+         %ExoSQL.Result{
+           columns: columns,
+           rows: rows
+         }, context}
     end
   end
 
