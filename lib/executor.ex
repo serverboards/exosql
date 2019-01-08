@@ -4,12 +4,16 @@ defmodule ExoSQL.Executor do
   @doc ~S"""
   Executes the AST for the query.
 
-  Always returns a ExoSQL.Result and work over them.
+  Always returns a {ExoSQL.Result, newcontext}.
   """
   def execute({:select, from, columns}, context) do
     {:ok, %{columns: rcolumns, rows: rows}} = execute(from, context)
     # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}. Context: #{inspect context}")
     # Logger.debug("Rows: #{inspect {rcolumns, rows}, pretty: true}")
+
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:select, columns})}")
+    end
 
     {rows, columns} =
       case Enum.count(rows) do
@@ -36,6 +40,10 @@ defmodule ExoSQL.Executor do
 
   def execute({:distinct, what, from}, context) do
     {:ok, %{columns: columns, rows: rows}} = execute(from, context)
+
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:distinct, what})}")
+    end
 
     rows =
       case what do
@@ -68,6 +76,10 @@ defmodule ExoSQL.Executor do
   end
 
   def execute({:execute, {:table, {"self", "tables"}}, _quals, _columns}, context) do
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:table, "self", "tables"})}")
+    end
+
     rows =
       Enum.flat_map(context, fn {db, _conf} ->
         {:ok, tables} = ExoSQL.schema(db, context)
@@ -95,6 +107,10 @@ defmodule ExoSQL.Executor do
   end
 
   def execute({:fn, {function, params}}, context) do
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:fn, {function, params}})}")
+    end
+
     params =
       params
       |> Enum.map(&ExoSQL.Expr.simplify(&1, context))
@@ -113,6 +129,10 @@ defmodule ExoSQL.Executor do
   def execute({:execute, {:alias, {table, alias_}}, quals, columns}, context) do
     {:ok, res} = execute({:execute, table, quals, columns}, context)
 
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:alias, alias_})}")
+    end
+
     columns =
       Enum.map(res.columns, fn {_db, _table, column} ->
         {:tmp, alias_, column}
@@ -126,11 +146,19 @@ defmodule ExoSQL.Executor do
   end
 
   def execute({:execute, {:table, {:with, table}}, _quals, columns}, context) do
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:table, :with, table})}")
+    end
+
     data = context[:with][table]
     column_reselect(data, columns, :with, table, context)
   end
 
   def execute({:execute, {:table, {db, table}}, quals, columns}, context) do
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({{:table, {db, table}}, quals, columns})}")
+    end
+
     # Logger.debug("Execute table #{inspect {db, table}}")
     {dbmod, ctx} = context[db]
 
@@ -154,6 +182,10 @@ defmodule ExoSQL.Executor do
 
   def execute({:project, from}, context) do
     {:ok, from} = execute(from, context)
+
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:project})}")
+    end
 
     if Enum.count(from.rows) == 0 do
       # warning, the projection fails and the number of columns is undefined.
@@ -180,10 +212,19 @@ defmodule ExoSQL.Executor do
 
     case expr_ do
       {:lit, false} ->
+        if get_in(context, ["__vars__", "debug"]) do
+          Logger.debug("ExoSQL Executor #{inspect({:filter, false})}")
+        end
+
         {:ok, %ExoSQL.Result{columns: [], rows: []}}
 
       _ ->
         {:ok, %{columns: columns, rows: rows}} = execute(from, context)
+
+        if get_in(context, ["__vars__", "debug"]) do
+          Logger.debug("ExoSQL Executor #{inspect({:filter, expr})}")
+        end
+
         context = Map.put(context, :columns, columns)
         expr = ExoSQL.Expr.simplify(expr, context)
 
@@ -200,6 +241,10 @@ defmodule ExoSQL.Executor do
   def execute({:cross_join, table1, table2}, context) do
     {:ok, res1} = execute(table1, context)
     {:ok, res2} = execute(table2, context)
+
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:cross_join})}")
+    end
 
     rows =
       Enum.flat_map(res1.rows, fn r1 ->
@@ -235,6 +280,10 @@ defmodule ExoSQL.Executor do
 
   def execute({:cross_join_lateral, from, expr}, context) do
     {:ok, data} = execute(from, context)
+
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:cross_join_lateral})}")
+    end
 
     # Logger.debug("Cross join lateral #{inspect from, pretty: true}")
     # Logger.debug("Cross join lateral #{inspect expr, pretty: true}")
@@ -310,12 +359,21 @@ defmodule ExoSQL.Executor do
       columns: ncolumns ++ data.columns,
       rows: nrows
     }
+
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:cross_join_lateral_end})}")
+    end
+
     # Logger.debug("Got result #{inspect result, pretty: true}")
     {:ok, result}
   end
 
   def execute({:group_by, from, groups}, context) do
     {:ok, data} = execute(from, context)
+
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:group_by, groups})}")
+    end
 
     context = Map.put(context, :columns, data.columns)
     sgroups = Enum.map(groups, &ExoSQL.Expr.simplify(&1, context))
@@ -349,6 +407,10 @@ defmodule ExoSQL.Executor do
   def execute({:order_by, type, expr, from}, context) do
     {:ok, data} = execute(from, context)
 
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:order_by, type, expr})}")
+    end
+
     context = Map.put(context, :columns, data.columns)
 
     expr =
@@ -377,6 +439,10 @@ defmodule ExoSQL.Executor do
   def execute({:table_to_row, from}, context) do
     {:ok, data} = execute(from, context)
 
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:table_to_row})}")
+    end
+
     {:ok,
      %ExoSQL.Result{
        columns: ["group_by"],
@@ -391,6 +457,10 @@ defmodule ExoSQL.Executor do
       |> Enum.map(&ExoSQL.Expr.simplify(&1, context))
 
     res = ExoSQL.Expr.run_expr({:fn, {function, params}}, context)
+
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:alias, {:fn, {function, params}}, alias_})}")
+    end
 
     columns =
       Enum.map(res.columns, fn _column ->
@@ -407,6 +477,10 @@ defmodule ExoSQL.Executor do
   def execute({:alias, from, alias_}, context) do
     {:ok, data} = execute(from, context)
 
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:alias, alias_})}")
+    end
+
     columns =
       Enum.map(data.columns, fn {_db, _table, column} ->
         {:tmp, alias_, column}
@@ -422,6 +496,11 @@ defmodule ExoSQL.Executor do
 
   def execute({:offset, offset, from}, context) do
     {:ok, data} = execute(from, context)
+
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:offset, offset})}")
+    end
+
     rows = Enum.drop(data.rows, offset)
 
     {:ok,
@@ -435,6 +514,10 @@ defmodule ExoSQL.Executor do
     {:ok, data} = execute(from, context)
     rows = Enum.take(data.rows, limit)
 
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:limit, limit})}")
+    end
+
     {:ok,
      %ExoSQL.Result{
        columns: data.columns,
@@ -447,6 +530,10 @@ defmodule ExoSQL.Executor do
     taskb = Task.async(fn -> execute(fromb, context) end)
     {:ok, dataa} = Task.await(taska)
     {:ok, datab} = Task.await(taskb)
+
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:union})}")
+    end
 
     if Enum.count(dataa.columns) != Enum.count(datab.columns) do
       {:error, {:union_column_count_mismatch}}
@@ -462,6 +549,10 @@ defmodule ExoSQL.Executor do
   def execute({:with, {name, plan}, next}, context) do
     {:ok, data} = execute(plan, context)
 
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:with, {name, plan}})}")
+    end
+
     data = %{data | columns: Enum.map(data.columns, fn {_, _, name} -> name end)}
 
     newwith = Map.put(Map.get(context, :with, %{}), name, data)
@@ -474,6 +565,10 @@ defmodule ExoSQL.Executor do
 
   def execute({:crosstab, ctcolumns, query}, context) do
     {:ok, data} = execute(query, context)
+
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:crosstab, ctcolumns, query})}")
+    end
 
     first_column = hd(data.columns)
 
@@ -631,6 +726,10 @@ defmodule ExoSQL.Executor do
   end
 
   def execute_join_loop(res1, res2, expr, context, no_match_strategy) do
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:join_loop, expr, no_match_strategy})}")
+    end
+
     columns = res1.columns ++ res2.columns
     context = Map.put(context, :columns, columns)
     rexpr = ExoSQL.Expr.simplify(expr, context)
@@ -673,6 +772,10 @@ defmodule ExoSQL.Executor do
   end
 
   def execute_join_hashmap(res1, res2, expr, context, no_match_strategy) do
+    if get_in(context, ["__vars__", "debug"]) do
+      Logger.debug("ExoSQL Executor #{inspect({:join_hashmap, expr, no_match_strategy})}")
+    end
+
     left_match = no_match_strategy == :left
 
     case hashmap_decompose_expr(res1.columns, expr) do
@@ -719,7 +822,7 @@ defmodule ExoSQL.Executor do
          }}
 
       _ ->
-        Logger.debug("Cant decompose expr, use loop strategy")
+        Logger.debug("Cant decompose expr, use loop strategy (#{inspect(expr)})")
         execute_join_loop(res1, res2, expr, context, no_match_strategy)
     end
   end
