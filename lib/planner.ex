@@ -247,14 +247,27 @@ defmodule ExoSQL.Planner do
 
     # On first with it will generate the :with plan, and for further just use
     # it.
-    with_plan =
-      Enum.reduce(query.with, union_plan, fn
-        {name, {:columns, _cols}}, prev_plan ->
-          prev_plan
 
-        {name, query}, prev_plan ->
-          {:ok, plan} = plan(query, context)
-          {:with, {name, plan}, prev_plan}
+    {with_plan, _} =
+      query.with
+      |> Enum.reverse()
+      |> Enum.reduce({union_plan, %{}}, fn
+        {name, cols}, {prev_plan, withs} when is_list(cols) ->
+          Logger.debug("Prepare plan cols: #{inspect(name)} #{inspect(cols)}")
+          {prev_plan, withs}
+
+        {name, query}, {prev_plan, withs} ->
+          case withs[name] do
+            nil ->
+              Logger.debug("Prepare plan query: #{inspect(name)} #{inspect(withs)}")
+              {:ok, plan} = plan(query, context)
+              next_plan = {:with, {name, plan}, prev_plan}
+              {next_plan, Map.put(withs, name, [])}
+
+            # no need to plan it
+            _columns ->
+              {prev_plan, withs}
+          end
       end)
 
     plan = with_plan

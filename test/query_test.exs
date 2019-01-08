@@ -1474,12 +1474,16 @@ defmodule QueryTest do
         res = analyze_query!("
         WITH only_once AS (
           SELECT DEBUG('Only once!')
+        ), second_with AS (
+          SELECT * FROM only_once
+        ), third_with AS (
+          SELECT * FROM second_with
         )
         SELECT * FROM only_once
         UNION
-        SELECT * FROM only_once
+        SELECT * FROM second_with
         UNION
-        SELECT * FROM only_once
+        SELECT * FROM third_with
       ")
 
         assert Enum.count(res.rows) == 3

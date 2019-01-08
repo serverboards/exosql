@@ -39,18 +39,29 @@ defmodule ExoSQL.Parser do
       Logger.debug("ExoSQL Parser #{inspect(parsed, pretty: true)} #{inspect(context)}")
     end
 
-    context =
+    {context, with_parsed} =
       if with_ != [] do
         # Logger.debug("Parsed #{inspect parsed, pretty: true}")
         context = Map.put(context, :with, %{})
 
-        Enum.reduce(with_, context, fn {name, select}, context ->
-          {:ok, parsed} = real_parse(select, context)
-          # Logger.debug("parse with #{inspect parsed}")
-          Map.put(context, :with, Map.put(context.with, name, parsed))
+        # Context adds the known columns to be used later, and returns the
+        # :with_parsed which are the queries to be executed once by the main query.
+        Enum.reduce(with_, {context, []}, fn
+          {name, select}, {context, with_parsed} ->
+            {:ok, parsed} = real_parse(select, context)
+            # Logger.debug("parse with #{inspect parsed}")
+            columns =
+              resolve_columns(parsed, context)
+              |> Enum.map(fn {_, _, col} -> {:with, name, col} end)
+
+            # Logger.debug("Columns for #{inspect(name)}: #{inspect(columns)}")
+
+            context = put_in(context, [:with, name], columns)
+
+            {context, with_parsed ++ [{name, parsed}]}
         end)
       else
-        context
+        {context, []}
       end
 
     all_tables_at_context = resolve_all_tables(context)
@@ -246,21 +257,11 @@ defmodule ExoSQL.Parser do
     union =
       if union do
         {type, other} = union
-
-        nwith =
-          Enum.map(Map.get(context, :with, %{}), fn
-            {k, q} ->
-              {k, {:columns, resolve_columns(q, context)}}
-          end)
-          |> Map.new()
-
-        contextw = Map.put(context, :with, nwith)
-
-        {:ok, other} = real_parse(other, contextw)
+        {:ok, other} = real_parse(other, context)
         {type, other}
       end
 
-    with_ = Map.get(context, :with, %{})
+    with_ = with_parsed
 
     {:ok,
      %ExoSQL.Query{
@@ -338,10 +339,7 @@ defmodule ExoSQL.Parser do
 
   def resolve_columns({:table, {:with, table}}, context) do
     # Logger.debug("Get :with columns: #{inspect table} #{inspect context, pretty: true}")
-    query = context[:with][table]
-
-    get_query_columns(query)
-    |> Enum.map(fn {_db, _table, column} -> {:with, table, column} end)
+    context[:with][table]
   end
 
   def resolve_columns({:table, nil}, _context) do
@@ -416,6 +414,9 @@ defmodule ExoSQL.Parser do
   """
   def resolve_all_tables(context) do
     Enum.flat_map(context, fn
+      {:with_parsed, with_} ->
+        []
+
       {:with, with_} ->
         Map.keys(with_) |> Enum.map(&{:with, &1})
 
