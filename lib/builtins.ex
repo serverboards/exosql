@@ -29,6 +29,7 @@ defmodule ExoSQL.Builtins do
     "now" => {ExoSQL.Builtins, :now},
     "strftime" => {ExoSQL.Builtins, :strftime},
     "format" => {ExoSQL.Builtins, :format},
+    "debug" => {ExoSQL.Builtins, :debug},
     "width_bucket" => {ExoSQL.Builtins, :width_bucket},
     "generate_series" => {ExoSQL.Builtins, :generate_series},
     "urlparse" => {ExoSQL.Builtins, :urlparse},
@@ -92,7 +93,7 @@ defmodule ExoSQL.Builtins do
   end
 
   def can_simplify(f) do
-    is_aggregate(f) or f in ["random", "randint"]
+    is_aggregate(f) or f in ["random", "randint", "debug"]
   end
 
   def is_projectable(f) do
@@ -333,6 +334,14 @@ defmodule ExoSQL.Builtins do
 
   def format(str, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9),
     do: format(str, [arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9])
+
+  @doc ~S"""
+  Print some value to the log
+  """
+  def debug(str) do
+    Logger.debug("SQL DEBUG: #{inspect(str)}")
+    str
+  end
 
   @doc ~S"""
   Returns to which bucket it belongs.
