@@ -33,7 +33,7 @@ defmodule QueryTest do
     Logger.debug("Query is:\n\n#{query}")
     {:ok, parsed} = ExoSQL.parse(query, context)
     Logger.debug("Parsed is #{inspect(parsed, pretty: true)}")
-    {:ok, plan} = ExoSQL.Planner.plan(parsed)
+    {:ok, plan} = ExoSQL.Planner.plan(parsed, context)
     Logger.debug("Plan is #{inspect(plan, pretty: true)}")
     {:ok, result, _context} = ExoSQL.Executor.execute(plan, context)
     # Logger.debug("Raw result is #{inspect(result, pretty: true)}")
@@ -1068,7 +1068,7 @@ defmodule QueryTest do
              "SELECT jp(json('{\"one\": 1, \"two\": {\"three\": 3}}'), 'two/three')",
              @context
            ),
-         {:ok, planned} <- ExoSQL.Planner.plan(parsed) do
+         {:ok, planned} <- ExoSQL.Planner.plan(parsed, @context) do
       Logger.debug("#{inspect(planned, pretty: true)}")
       assert planned == {:select, %ExoSQL.Result{columns: ["?NONAME"], rows: [[1]]}, [{:lit, 3}]}
     end

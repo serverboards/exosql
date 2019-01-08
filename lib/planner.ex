@@ -13,7 +13,7 @@ defmodule ExoSQL.Planner do
   For example, it may return for a very simple:
 
     iex> {:ok, query} = ExoSQL.Parser.parse("SELECT name, price FROM products", %{"A" => {ExoSQL.Csv, path: "test/data/csv/"}})
-    iex> plan(query)
+    iex> plan(query, %{})
     {:ok,
       {:select,
         {:execute, {:table, {"A", "products"}}, [], [{"A", "products", "name"}, {"A", "products", "price"}]}, [
@@ -26,7 +26,7 @@ defmodule ExoSQL.Planner do
 
     iex> query = "SELECT users.name, products.name FROM users, purchases, products WHERE (users.id = purchases.user_id) AND (purchases.product_id = products.id)"
     iex> {:ok, query} = ExoSQL.Parser.parse(query, %{"A" => {ExoSQL.Csv, path: "test/data/csv/"}})
-    iex> plan(query)
+    iex> plan(query, %{})
     {:ok,
       {:select,
         {:filter,
@@ -65,7 +65,7 @@ defmodule ExoSQL.Planner do
 
   TODO: explore different plans acording to some weights and return the optimal one.
   """
-  def plan(query) do
+  def plan(query, context) do
     where = ExoSQL.Expr.simplify(query.where, %{})
     select = ExoSQL.Expr.simplify(query.select, %{})
 
@@ -84,7 +84,7 @@ defmodule ExoSQL.Planner do
     ]
 
     # Logger.debug("a All expressions: #{inspect query.from} | #{inspect all_expressions}")
-    from = plan_execute(query.from, where, all_expressions)
+    from = plan_execute(query.from, where, all_expressions, context)
     # Logger.debug("a Plan #{inspect from, pretty: true}")
 
     from_plan =
@@ -101,16 +101,16 @@ defmodule ExoSQL.Planner do
       Enum.reduce(query.join, from_plan, fn
         {:cross_join, toplan}, acc ->
           # Logger.debug("b All expressions: #{inspect toplan} | #{inspect all_expressions}")
-          from = plan_execute(toplan, all_expressions)
+          from = plan_execute(toplan, all_expressions, context)
           # Logger.debug("b Plan #{inspect from, pretty: true}")
           {:cross_join, acc, from}
 
         {:cross_join_lateral, toplan}, acc ->
-          from = plan_execute(toplan, all_expressions)
+          from = plan_execute(toplan, all_expressions, context)
           {:cross_join_lateral, acc, from}
 
         {join_type, {toplan, expr}}, acc ->
-          from = plan_execute(toplan, expr, all_expressions)
+          from = plan_execute(toplan, expr, all_expressions, context)
           {join_type, acc, from, expr}
       end)
 
@@ -143,7 +143,7 @@ defmodule ExoSQL.Planner do
     select =
       Enum.map(select, fn
         {:select, query} ->
-          {:ok, plan} = plan(query)
+          {:ok, plan} = plan(query, context)
           {:select, plan}
 
         other ->
@@ -232,7 +232,7 @@ defmodule ExoSQL.Planner do
           limit_plan
 
         {:distinct, other} ->
-          {:ok, other_plan} = plan(other)
+          {:ok, other_plan} = plan(other, context)
 
           {
             :distinct,
@@ -241,7 +241,7 @@ defmodule ExoSQL.Planner do
           }
 
         {:all, other} ->
-          {:ok, other_plan} = plan(other)
+          {:ok, other_plan} = plan(other, context)
           {:union, limit_plan, other_plan}
       end
 
@@ -253,23 +253,30 @@ defmodule ExoSQL.Planner do
           prev_plan
 
         {name, query}, prev_plan ->
-          {:ok, plan} = plan(query)
+          {:ok, plan} = plan(query, context)
           {:with, {name, plan}, prev_plan}
       end)
 
     plan = with_plan
 
+    if ExoSQL.debug_mode(context) do
+      Logger.debug("ExoSQL Plan: #{inspect(plan, pretty: true)}")
+    end
+
     {:ok, plan}
   end
 
-  def plan(plan, _context), do: plan(plan)
-
-  defp plan_execute({:alias, {{:fn, {function, params}}, alias_}}, _where, _all_expressions) do
+  defp plan_execute(
+         {:alias, {{:fn, {function, params}}, alias_}},
+         _where,
+         _all_expressions,
+         _context
+       ) do
     ex = {:fn, {function, params}}
     {:alias, ex, alias_}
   end
 
-  defp plan_execute({:alias, {{:table, {db, table}}, alias_}}, where, all_expressions) do
+  defp plan_execute({:alias, {{:table, {db, table}}, alias_}}, where, all_expressions, _context) do
     columns = Enum.uniq(get_table_columns_at_expr(:tmp, alias_, all_expressions))
     columns = Enum.map(columns, fn {:tmp, ^alias_, column} -> {db, table, column} end)
     quals = get_quals(:tmp, alias_, where)
@@ -277,45 +284,45 @@ defmodule ExoSQL.Planner do
     {:alias, ex, alias_}
   end
 
-  defp plan_execute({:alias, {%ExoSQL.Query{} = q, alias_}}, _where, _all_expressions) do
-    {:ok, ex} = plan(q)
+  defp plan_execute({:alias, {%ExoSQL.Query{} = q, alias_}}, _where, _all_expressions, context) do
+    {:ok, ex} = plan(q, context)
     {:alias, ex, alias_}
   end
 
-  defp plan_execute({:table, {db, table}}, where, all_expressions) do
+  defp plan_execute({:table, {db, table}}, where, all_expressions, _context) do
     columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
     quals = get_quals(db, table, where)
     {:execute, {:table, {db, table}}, quals, columns}
   end
 
-  defp plan_execute(nil, _where, _all_expressions) do
+  defp plan_execute(nil, _where, _all_expressions, _context) do
     nil
   end
 
-  defp plan_execute(%ExoSQL.Query{} = q, _where, _all_expressions) do
-    {:ok, q} = plan(q)
+  defp plan_execute(%ExoSQL.Query{} = q, _where, _all_expressions, context) do
+    {:ok, q} = plan(q, context)
     q
   end
 
-  defp plan_execute({:fn, f}, _where, _all_expressions) do
+  defp plan_execute({:fn, f}, _where, _all_expressions, _context) do
     {:fn, f}
   end
 
   # this are with no _where
-  defp plan_execute({:alias, {{:fn, {function, params}}, alias_}}, _all_expressions) do
+  defp plan_execute({:alias, {{:fn, {function, params}}, alias_}}, _all_expressions, _context) do
     ex = {:fn, {function, params}}
     {:alias, ex, alias_}
   end
 
-  defp plan_execute({:fn, _} = func, _all_expressions), do: func
+  defp plan_execute({:fn, _} = func, _all_expressions, _context), do: func
 
-  defp plan_execute({:table, {db, table}}, all_expressions) do
+  defp plan_execute({:table, {db, table}}, all_expressions, _context) do
     columns = Enum.uniq(get_table_columns_at_expr(db, table, all_expressions))
     {:execute, {:table, {db, table}}, [], columns}
   end
 
-  defp plan_execute(%ExoSQL.Query{} = q, _all_expressions) do
-    {:ok, q} = plan(q)
+  defp plan_execute(%ExoSQL.Query{} = q, _all_expressions, context) do
+    {:ok, q} = plan(q, context)
     q
   end
 

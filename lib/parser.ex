@@ -35,7 +35,9 @@ defmodule ExoSQL.Parser do
 
     {select, select_options} = select
 
-    # Logger.debug("Real parse #{inspect parsed, pretty: true} #{inspect context}")
+    if ExoSQL.debug_mode(context) do
+      Logger.debug("ExoSQL Parser #{inspect(parsed, pretty: true)} #{inspect(context)}")
+    end
 
     context =
       if with_ != [] do

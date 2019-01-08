@@ -15,7 +15,7 @@ defmodule DebugTest do
     Logger.debug("Query is:\n\n#{query}")
     {:ok, parsed} = ExoSQL.parse(query, context)
     Logger.debug("Parsed is #{inspect(parsed, pretty: true)}")
-    {:ok, plan} = ExoSQL.Planner.plan(parsed)
+    {:ok, plan} = ExoSQL.Planner.plan(parsed, context)
     Logger.debug("Plan is #{inspect(plan, pretty: true)}")
     {:ok, result, _context} = ExoSQL.Executor.execute(plan, context)
     # Logger.debug("Raw result is #{inspect(result, pretty: true)}")

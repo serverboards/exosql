@@ -64,7 +64,7 @@ defmodule ExoSQL do
     # Logger.debug(inspect sql)
     try do
       with {:ok, parsed} <- ExoSQL.Parser.parse(sql, context),
-           {:ok, plan} <- ExoSQL.Planner.plan(parsed),
+           {:ok, plan} <- ExoSQL.Planner.plan(parsed, context),
            {:ok, result, _context} <- ExoSQL.Executor.execute(plan, context) do
         {:ok, result}
       end
@@ -91,7 +91,7 @@ defmodule ExoSQL do
   def explain(sql, context) do
     Logger.info("Explain #{inspect(sql)}")
     {:ok, parsed} = ExoSQL.Parser.parse(sql, context)
-    {:ok, plan} = ExoSQL.Planner.plan(parsed)
+    {:ok, plan} = ExoSQL.Planner.plan(parsed, context)
     Logger.info(inspect(plan, pretty: true))
   end
 
@@ -158,5 +158,9 @@ defmodule ExoSQL do
 
         repl(context)
     end
+  end
+
+  def debug_mode(context) do
+    get_in(context, ["__vars__", "debug"])
   end
 end

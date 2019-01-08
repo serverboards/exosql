@@ -11,7 +11,7 @@ defmodule ExoSQL.Executor do
     # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}. Context: #{inspect context}")
     # Logger.debug("Rows: #{inspect {rcolumns, rows}, pretty: true}")
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:select, columns})}")
     end
 
@@ -41,7 +41,7 @@ defmodule ExoSQL.Executor do
   def execute({:distinct, what, from}, context) do
     {:ok, %{columns: columns, rows: rows}, context} = execute(from, context)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:distinct, what})}")
     end
 
@@ -76,7 +76,7 @@ defmodule ExoSQL.Executor do
   end
 
   def execute({:execute, {:table, {"self", "tables"}}, _quals, _columns}, context) do
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:table, "self", "tables"})}")
     end
 
@@ -107,7 +107,7 @@ defmodule ExoSQL.Executor do
   end
 
   def execute({:fn, {function, params}}, context) do
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:fn, {function, params}})}")
     end
 
@@ -129,7 +129,7 @@ defmodule ExoSQL.Executor do
   def execute({:execute, {:alias, {table, alias_}}, quals, columns}, context) do
     {:ok, res, context} = execute({:execute, table, quals, columns}, context)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:alias, alias_})}")
     end
 
@@ -146,7 +146,7 @@ defmodule ExoSQL.Executor do
   end
 
   def execute({:execute, {:table, {:with, table}}, _quals, columns}, context) do
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:table, :with, table})}")
     end
 
@@ -155,7 +155,7 @@ defmodule ExoSQL.Executor do
   end
 
   def execute({:execute, {:table, {db, table}}, quals, columns}, context) do
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({{:table, {db, table}}, quals, columns})}")
     end
 
@@ -183,7 +183,7 @@ defmodule ExoSQL.Executor do
   def execute({:project, from}, context) do
     {:ok, from, context} = execute(from, context)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:project})}")
     end
 
@@ -212,7 +212,7 @@ defmodule ExoSQL.Executor do
 
     case expr_ do
       {:lit, false} ->
-        if get_in(context, ["__vars__", "debug"]) do
+        if ExoSQL.debug_mode(context) do
           Logger.debug("ExoSQL Executor #{inspect({:filter, false})}")
         end
 
@@ -221,7 +221,7 @@ defmodule ExoSQL.Executor do
       _ ->
         {:ok, %{columns: columns, rows: rows}, context} = execute(from, context)
 
-        if get_in(context, ["__vars__", "debug"]) do
+        if ExoSQL.debug_mode(context) do
           Logger.debug("ExoSQL Executor #{inspect({:filter, expr})}")
         end
 
@@ -242,7 +242,7 @@ defmodule ExoSQL.Executor do
     {:ok, res1, context} = execute(table1, context)
     {:ok, res2, context} = execute(table2, context)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:cross_join})}")
     end
 
@@ -282,7 +282,7 @@ defmodule ExoSQL.Executor do
     {:ok, data, context} = execute(from, context)
     context_orig = context
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:cross_join_lateral})}")
     end
 
@@ -361,7 +361,7 @@ defmodule ExoSQL.Executor do
       rows: nrows
     }
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:cross_join_lateral_end})}")
     end
 
@@ -372,7 +372,7 @@ defmodule ExoSQL.Executor do
   def execute({:group_by, from, groups}, context) do
     {:ok, data, context} = execute(from, context)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:group_by, groups})}")
     end
 
@@ -408,7 +408,7 @@ defmodule ExoSQL.Executor do
   def execute({:order_by, type, expr, from}, context) do
     {:ok, data, context} = execute(from, context)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:order_by, type, expr})}")
     end
 
@@ -440,7 +440,7 @@ defmodule ExoSQL.Executor do
   def execute({:table_to_row, from}, context) do
     {:ok, data, context} = execute(from, context)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:table_to_row})}")
     end
 
@@ -459,7 +459,7 @@ defmodule ExoSQL.Executor do
 
     res = ExoSQL.Expr.run_expr({:fn, {function, params}}, context)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:alias, {:fn, {function, params}}, alias_})}")
     end
 
@@ -478,7 +478,7 @@ defmodule ExoSQL.Executor do
   def execute({:alias, from, alias_}, context) do
     {:ok, data, context} = execute(from, context)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:alias, alias_})}")
     end
 
@@ -498,7 +498,7 @@ defmodule ExoSQL.Executor do
   def execute({:offset, offset, from}, context) do
     {:ok, data, context} = execute(from, context)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:offset, offset})}")
     end
 
@@ -515,7 +515,7 @@ defmodule ExoSQL.Executor do
     {:ok, data, context} = execute(from, context)
     rows = Enum.take(data.rows, limit)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:limit, limit})}")
     end
 
@@ -532,7 +532,7 @@ defmodule ExoSQL.Executor do
     {:ok, dataa, _context} = Task.await(taska)
     {:ok, datab, context} = Task.await(taskb)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:union})}")
     end
 
@@ -550,7 +550,7 @@ defmodule ExoSQL.Executor do
   def execute({:with, {name, plan}, next}, context) do
     {:ok, data, context} = execute(plan, context)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:with, {name, plan}})}")
     end
 
@@ -567,7 +567,7 @@ defmodule ExoSQL.Executor do
   def execute({:crosstab, ctcolumns, query}, context) do
     {:ok, data, context} = execute(query, context)
 
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:crosstab, ctcolumns, query})}")
     end
 
@@ -727,7 +727,7 @@ defmodule ExoSQL.Executor do
   end
 
   def execute_join_loop(res1, res2, expr, context, no_match_strategy) do
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:join_loop, expr, no_match_strategy})}")
     end
 
@@ -773,7 +773,7 @@ defmodule ExoSQL.Executor do
   end
 
   def execute_join_hashmap(res1, res2, expr, context, no_match_strategy) do
-    if get_in(context, ["__vars__", "debug"]) do
+    if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:join_hashmap, expr, no_match_strategy})}")
     end
 
@@ -871,7 +871,7 @@ defmodule ExoSQL.Executor do
          }, context}
 
       %{columns: rcolumns, rows: rows} ->
-        if get_in(context, ["__vars__", "debug"]) do
+        if ExoSQL.debug_mode(context) do
           Logger.debug("ExoSQL Executor #{inspect({:column_reselect, rcolumns, columns})}")
         end
 
