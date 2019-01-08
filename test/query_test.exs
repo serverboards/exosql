@@ -25,7 +25,8 @@ defmodule QueryTest do
 
   @context %{
     "A" => {ExoSQL.Csv, path: "test/data/csv/"},
-    "B" => {QueryTest.WillFail, []}
+    "B" => {QueryTest.WillFail, []},
+    "__vars__" => %{"debug" => true}
   }
 
   def analyze_query!(query, context \\ @context) do
@@ -34,7 +35,7 @@ defmodule QueryTest do
     Logger.debug("Parsed is #{inspect(parsed, pretty: true)}")
     {:ok, plan} = ExoSQL.Planner.plan(parsed)
     Logger.debug("Plan is #{inspect(plan, pretty: true)}")
-    {:ok, result} = ExoSQL.Executor.execute(plan, context)
+    {:ok, result, _context} = ExoSQL.Executor.execute(plan, context)
     # Logger.debug("Raw result is #{inspect(result, pretty: true)}")
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
     result

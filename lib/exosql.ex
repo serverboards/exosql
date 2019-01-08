@@ -64,8 +64,9 @@ defmodule ExoSQL do
     # Logger.debug(inspect sql)
     try do
       with {:ok, parsed} <- ExoSQL.Parser.parse(sql, context),
-           {:ok, plan} <- ExoSQL.Planner.plan(parsed) do
-        ExoSQL.Executor.execute(plan, context)
+           {:ok, plan} <- ExoSQL.Planner.plan(parsed),
+           {:ok, result, _context} <- ExoSQL.Executor.execute(plan, context) do
+        {:ok, result}
       end
     rescue
       err in MatchError ->

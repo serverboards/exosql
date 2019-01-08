@@ -16,7 +16,7 @@ defmodule NestedSelectTest do
     Logger.debug("Parsed is #{inspect(parsed, pretty: true)}")
     {:ok, plan} = ExoSQL.Planner.plan(parsed)
     Logger.debug("Plan is #{inspect(plan, pretty: true)}")
-    {:ok, result} = ExoSQL.Executor.execute(plan, context)
+    {:ok, result, _context} = ExoSQL.Executor.execute(plan, context)
     Logger.debug(inspect(result, pretty: true))
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
     result
@@ -38,7 +38,7 @@ defmodule NestedSelectTest do
     Logger.debug("Query: #{inspect(query, pretty: true)}")
     {:ok, plan} = ExoSQL.plan(query, @context)
     Logger.debug("Plan: #{inspect(plan, pretty: true)}")
-    {:ok, result} = ExoSQL.execute(plan, @context)
+    {:ok, result, _context} = ExoSQL.execute(plan, @context)
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
 
     assert Enum.count(result.rows) == 3
@@ -62,7 +62,7 @@ defmodule NestedSelectTest do
     Logger.debug("Query: #{inspect(query, pretty: true)}")
     {:ok, plan} = ExoSQL.plan(query, @context)
     Logger.debug("Plan: #{inspect(plan, pretty: true)}")
-    {:ok, result} = ExoSQL.execute(plan, @context)
+    {:ok, result, _context} = ExoSQL.execute(plan, @context)
     Logger.debug("Result: #{inspect(result, pretty: true)}")
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
 

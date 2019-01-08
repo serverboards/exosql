@@ -17,7 +17,7 @@ defmodule DebugTest do
     Logger.debug("Parsed is #{inspect(parsed, pretty: true)}")
     {:ok, plan} = ExoSQL.Planner.plan(parsed)
     Logger.debug("Plan is #{inspect(plan, pretty: true)}")
-    {:ok, result} = ExoSQL.Executor.execute(plan, context)
+    {:ok, result, _context} = ExoSQL.Executor.execute(plan, context)
     # Logger.debug("Raw result is #{inspect(result, pretty: true)}")
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
     result
@@ -27,7 +27,5 @@ defmodule DebugTest do
     assert capture_log(fn ->
              analyze_query!("SELECT * FROM purchases")
            end) =~ "ExoSQL Executor"
-
-    flunk(1)
   end
 end
