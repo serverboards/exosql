@@ -12,7 +12,7 @@ defmodule ExecutorTest do
       {:execute, {:table, {"A", "products"}}, [],
        [{"A", "products", "name"}, {"A", "products", "price"}]}
 
-    {:ok, result, _context} = ExoSQL.Executor.execute(plan, @context)
+    {:ok, result} = ExoSQL.Executor.execute(plan, @context)
 
     assert result == %ExoSQL.Result{
              columns: [{"A", "products", "name"}, {"A", "products", "price"}],
@@ -35,7 +35,7 @@ defmodule ExecutorTest do
       [{:column, {"A", "products", "name"}}, {:column, {"A", "products", "price"}}]
     }
 
-    {:ok, result, _context} = ExoSQL.Executor.execute(plan, @context)
+    {:ok, result} = ExoSQL.Executor.execute(plan, @context)
 
     assert result == %ExoSQL.Result{
              columns: [{"A", "products", "name"}, {"A", "products", "price"}],
@@ -56,7 +56,7 @@ defmodule ExecutorTest do
        [{"A", "products", "id"}, {"A", "products", "name"}]}
     }
 
-    {:ok, result, _context} = ExoSQL.Executor.execute(plan, @context)
+    {:ok, result} = ExoSQL.Executor.execute(plan, @context)
 
     assert result == %ExoSQL.Result{
              columns: [
@@ -112,7 +112,7 @@ defmodule ExecutorTest do
            {"=", {:column, {"A", "purchases", "product_id"}}, {:column, {"A", "products", "id"}}}}}}},
        [{:column, {"A", "users", "name"}}, {:column, {"A", "products", "name"}}]}
 
-    {:ok, result, _context} = ExoSQL.Executor.execute(plan, @context)
+    {:ok, result} = ExoSQL.Executor.execute(plan, @context)
 
     assert result == %ExoSQL.Result{
              columns: [{"A", "users", "name"}, {"A", "products", "name"}],
@@ -138,7 +138,7 @@ defmodule ExecutorTest do
          [{"A", "products", "id"}, {"A", "products", "name"}]}, [{:lit, true}]},
        [{:fn, {"count", [{:column, 1}, {:pass, {:lit, "*"}}]}}]}
 
-    {:ok, result, _context} = ExoSQL.Executor.execute(plan, @context)
+    {:ok, result} = ExoSQL.Executor.execute(plan, @context)
     assert result == %ExoSQL.Result{columns: [{:tmp, :tmp, "col_1"}], rows: [[4]]}
   end
 
@@ -153,7 +153,7 @@ defmodule ExecutorTest do
          {:fn, {"count", [{:column, 1}, {:pass, {:lit, "*"}}]}}
        ]}
 
-    {:ok, result, _context} = ExoSQL.Executor.execute(plan, @context)
+    {:ok, result} = ExoSQL.Executor.execute(plan, @context)
 
     assert result == %ExoSQL.Result{
              columns: [{"A", "purchases", "product_id"}, {:tmp, :tmp, "col_2"}],
@@ -201,7 +201,7 @@ defmodule ExecutorTest do
            ]}}
        ]}
 
-    {:ok, result, _context} = ExoSQL.Executor.execute(plan, @context)
+    {:ok, result} = ExoSQL.Executor.execute(plan, @context)
 
     assert result == %ExoSQL.Result{
              columns: [{"A", "users", "name"}, {:tmp, :tmp, "col_2"}],

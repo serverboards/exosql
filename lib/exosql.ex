@@ -65,7 +65,7 @@ defmodule ExoSQL do
     try do
       with {:ok, parsed} <- ExoSQL.Parser.parse(sql, context),
            {:ok, plan} <- ExoSQL.Planner.plan(parsed, context),
-           {:ok, result, _context} <- ExoSQL.Executor.execute(plan, context) do
+           {:ok, result} <- ExoSQL.Executor.execute(plan, context) do
         {:ok, result}
       end
     rescue

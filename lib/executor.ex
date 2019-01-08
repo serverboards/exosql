@@ -4,10 +4,10 @@ defmodule ExoSQL.Executor do
   @doc ~S"""
   Executes the AST for the query.
 
-  Always returns a {:ok, ExoSQL.Result, newcontext}.
+  Always returns a {:ok, ExoSQL.Result}.
   """
   def execute({:select, from, columns}, context) do
-    {:ok, %{columns: rcolumns, rows: rows}, context} = execute(from, context)
+    {:ok, %{columns: rcolumns, rows: rows}} = execute(from, context)
     ocontext = context
     # Logger.debug("Get #{inspect columns} from #{inspect rcolumns}. Context: #{inspect context}")
     # Logger.debug("Rows: #{inspect {rcolumns, rows}, pretty: true}")
@@ -36,11 +36,11 @@ defmodule ExoSQL.Executor do
           {rows, columns}
       end
 
-    {:ok, %ExoSQL.Result{rows: rows, columns: columns}, ocontext}
+    {:ok, %ExoSQL.Result{rows: rows, columns: columns}}
   end
 
   def execute({:distinct, what, from}, context) do
-    {:ok, %{columns: columns, rows: rows}, context} = execute(from, context)
+    {:ok, %{columns: columns, rows: rows}} = execute(from, context)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:distinct, what})}")
@@ -73,7 +73,7 @@ defmodule ExoSQL.Executor do
      %{
        columns: columns,
        rows: rows
-     }, context}
+     }}
   end
 
   def execute({:execute, {:table, {"self", "tables"}}, _quals, _columns}, context) do
@@ -104,7 +104,7 @@ defmodule ExoSQL.Executor do
          {"self", "tables", "column"}
        ],
        rows: rows
-     }, context}
+     }}
   end
 
   def execute({:fn, {function, params}}, context) do
@@ -123,12 +123,12 @@ defmodule ExoSQL.Executor do
       rows: res.rows
     }
 
-    {:ok, res, context}
+    {:ok, res}
   end
 
   # alias select needs to rename quals and columns to the final, and back to aliased
   def execute({:execute, {:alias, {table, alias_}}, quals, columns}, context) do
-    {:ok, res, context} = execute({:execute, table, quals, columns}, context)
+    {:ok, res} = execute({:execute, table, quals, columns}, context)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:alias, alias_})}")
@@ -143,7 +143,7 @@ defmodule ExoSQL.Executor do
      %ExoSQL.Result{
        columns: columns,
        rows: res.rows
-     }, context}
+     }}
   end
 
   def execute({:execute, {:table, {:with, table}}, _quals, columns}, context) do
@@ -187,7 +187,7 @@ defmodule ExoSQL.Executor do
   end
 
   def execute({:project, from}, context) do
-    {:ok, from, context} = execute(from, context)
+    {:ok, from} = execute(from, context)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:project})}")
@@ -205,7 +205,7 @@ defmodule ExoSQL.Executor do
        %ExoSQL.Result{
          columns: columns,
          rows: rows
-       }, context}
+       }}
     end
   end
 
@@ -222,10 +222,10 @@ defmodule ExoSQL.Executor do
           Logger.debug("ExoSQL Executor #{inspect({:filter, false})}")
         end
 
-        {:ok, %ExoSQL.Result{columns: [], rows: []}, context}
+        {:ok, %ExoSQL.Result{columns: [], rows: []}}
 
       _ ->
-        {:ok, %{columns: columns, rows: rows}, context} = execute(from, context)
+        {:ok, %{columns: columns, rows: rows}} = execute(from, context)
 
         if ExoSQL.debug_mode(context) do
           Logger.debug("ExoSQL Executor #{inspect({:filter, expr})}")
@@ -240,13 +240,13 @@ defmodule ExoSQL.Executor do
             ExoSQL.Expr.run_expr(expr, Map.put(context, :row, row))
           end)
 
-        {:ok, %ExoSQL.Result{columns: columns, rows: rows}, context}
+        {:ok, %ExoSQL.Result{columns: columns, rows: rows}}
     end
   end
 
   def execute({:cross_join, table1, table2}, context) do
-    {:ok, res1, context} = execute(table1, context)
-    {:ok, res2, context} = execute(table2, context)
+    {:ok, res1} = execute(table1, context)
+    {:ok, res2} = execute(table2, context)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:cross_join})}")
@@ -263,7 +263,7 @@ defmodule ExoSQL.Executor do
      %ExoSQL.Result{
        columns: res1.columns ++ res2.columns,
        rows: rows
-     }, context}
+     }}
   end
 
   # An inner join does a first loop to get the quals for a single query on the
@@ -285,8 +285,7 @@ defmodule ExoSQL.Executor do
   end
 
   def execute({:cross_join_lateral, from, expr}, context) do
-    {:ok, data, context} = execute(from, context)
-    context_orig = context
+    {:ok, data} = execute(from, context)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:cross_join_lateral})}")
@@ -334,7 +333,7 @@ defmodule ExoSQL.Executor do
         res =
           case sexpr do
             {:select, _, _} = select ->
-              {:ok, data, _context} = execute(select, context)
+              {:ok, data} = execute(select, context)
               data.rows
 
             sexpr ->
@@ -372,11 +371,11 @@ defmodule ExoSQL.Executor do
     end
 
     # Logger.debug("Got result #{inspect result, pretty: true}")
-    {:ok, result, context_orig}
+    {:ok, result}
   end
 
   def execute({:group_by, from, groups}, context) do
-    {:ok, data, context} = execute(from, context)
+    {:ok, data} = execute(from, context)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:group_by, groups})}")
@@ -408,11 +407,11 @@ defmodule ExoSQL.Executor do
      %ExoSQL.Result{
        columns: columns,
        rows: rows
-     }, context}
+     }}
   end
 
   def execute({:order_by, type, expr, from}, context) do
-    {:ok, data, context} = execute(from, context)
+    {:ok, data} = execute(from, context)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:order_by, type, expr})}")
@@ -440,11 +439,11 @@ defmodule ExoSQL.Executor do
      %ExoSQL.Result{
        columns: data.columns,
        rows: rows
-     }, context}
+     }}
   end
 
   def execute({:table_to_row, from}, context) do
-    {:ok, data, context} = execute(from, context)
+    {:ok, data} = execute(from, context)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:table_to_row})}")
@@ -454,7 +453,7 @@ defmodule ExoSQL.Executor do
      %ExoSQL.Result{
        columns: ["group_by"],
        rows: [[data]]
-     }, context}
+     }}
   end
 
   # alias of fn renames the table and the column inside
@@ -478,11 +477,11 @@ defmodule ExoSQL.Executor do
      %ExoSQL.Result{
        columns: columns,
        rows: res.rows
-     }, context}
+     }}
   end
 
   def execute({:alias, from, alias_}, context) do
-    {:ok, data, context} = execute(from, context)
+    {:ok, data} = execute(from, context)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:alias, alias_})}")
@@ -498,11 +497,11 @@ defmodule ExoSQL.Executor do
      %ExoSQL.Result{
        columns: columns,
        rows: data.rows
-     }, context}
+     }}
   end
 
   def execute({:offset, offset, from}, context) do
-    {:ok, data, context} = execute(from, context)
+    {:ok, data} = execute(from, context)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:offset, offset})}")
@@ -514,11 +513,11 @@ defmodule ExoSQL.Executor do
      %ExoSQL.Result{
        columns: data.columns,
        rows: rows
-     }, context}
+     }}
   end
 
   def execute({:limit, limit, from}, context) do
-    {:ok, data, context} = execute(from, context)
+    {:ok, data} = execute(from, context)
     rows = Enum.take(data.rows, limit)
 
     if ExoSQL.debug_mode(context) do
@@ -529,14 +528,14 @@ defmodule ExoSQL.Executor do
      %ExoSQL.Result{
        columns: data.columns,
        rows: rows
-     }, context}
+     }}
   end
 
   def execute({:union, froma, fromb}, context) do
     taska = Task.async(fn -> execute(froma, context) end)
     taskb = Task.async(fn -> execute(fromb, context) end)
-    {:ok, dataa, _context} = Task.await(taska)
-    {:ok, datab, context} = Task.await(taskb)
+    {:ok, dataa} = Task.await(taska)
+    {:ok, datab} = Task.await(taskb)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:union})}")
@@ -549,12 +548,12 @@ defmodule ExoSQL.Executor do
        %ExoSQL.Result{
          columns: dataa.columns,
          rows: dataa.rows ++ datab.rows
-       }, context}
+       }}
     end
   end
 
   def execute({:with, {name, plan}, next}, context) do
-    {:ok, data, context} = execute(plan, context)
+    {:ok, data} = execute(plan, context)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:with, name})}")
@@ -568,10 +567,10 @@ defmodule ExoSQL.Executor do
     execute(next, context)
   end
 
-  def execute(%ExoSQL.Result{} = res, context), do: {:ok, res, context}
+  def execute(%ExoSQL.Result{} = res, context), do: {:ok, res}
 
   def execute({:crosstab, ctcolumns, query}, context) do
-    {:ok, data, context} = execute(query, context)
+    {:ok, data} = execute(query, context)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:crosstab, ctcolumns, query})}")
@@ -619,7 +618,7 @@ defmodule ExoSQL.Executor do
      %{
        columns: columns,
        rows: rows
-     }, context}
+     }}
   end
 
   def project_row([head]) do
@@ -698,7 +697,7 @@ defmodule ExoSQL.Executor do
   end
 
   def execute_join(table1, table2, expr, context, no_match_strategy) do
-    {:ok, res1, context} = execute(table1, context)
+    {:ok, res1} = execute(table1, context)
 
     # calculate extraquals with the {:in, "id", [...]} form, or none and
     # do a full query
@@ -717,7 +716,7 @@ defmodule ExoSQL.Executor do
 
     # Now we get the final table2. As always if the quals are ignored it is just
     # less efficient.
-    {:ok, res2, context} = execute(table2, context)
+    {:ok, res2} = execute(table2, context)
 
     # Logger.debug("Left join of\n\n#{inspect res1, pretty: true}\n\n#{inspect res2, pretty: true}\n\n#{inspect expr}")
 
@@ -775,7 +774,7 @@ defmodule ExoSQL.Executor do
      %ExoSQL.Result{
        columns: columns,
        rows: rows
-     }, context}
+     }}
   end
 
   def execute_join_hashmap(res1, res2, expr, context, no_match_strategy) do
@@ -826,7 +825,7 @@ defmodule ExoSQL.Executor do
          %ExoSQL.Result{
            columns: columns,
            rows: rows
-         }, context}
+         }}
 
       _ ->
         Logger.debug("Cant decompose expr, use loop strategy (#{inspect(expr)})")
@@ -874,7 +873,7 @@ defmodule ExoSQL.Executor do
           Logger.debug("ExoSQL Executor #{inspect({:column_reselect, :equal})}")
         end
 
-        {:ok, data, context}
+        {:ok, data}
 
       %{columns: rcolumns, rows: rows} ->
         if ExoSQL.debug_mode(context) do
@@ -892,7 +891,7 @@ defmodule ExoSQL.Executor do
          %ExoSQL.Result{
            columns: columns,
            rows: rows
-         }, context}
+         }}
     end
   end
 

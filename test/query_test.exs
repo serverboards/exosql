@@ -35,7 +35,7 @@ defmodule QueryTest do
     Logger.debug("Parsed is #{inspect(parsed, pretty: true)}")
     {:ok, plan} = ExoSQL.Planner.plan(parsed, context)
     Logger.debug("Plan is #{inspect(plan, pretty: true)}")
-    {:ok, result, _context} = ExoSQL.Executor.execute(plan, context)
+    {:ok, result} = ExoSQL.Executor.execute(plan, context)
     # Logger.debug("Raw result is #{inspect(result, pretty: true)}")
     Logger.debug("Result:\n#{ExoSQL.format_result(result)}")
     result
