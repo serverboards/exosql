@@ -37,6 +37,7 @@ defmodule ExoSQL.Builtins do
     "json" => {ExoSQL.Builtins, :json},
     "unnest" => {ExoSQL.Builtins, :unnest},
     "regex" => {ExoSQL.Builtins, :regex},
+    "regex_all" => {ExoSQL.Builtins, :regex_all},
     "random" => {ExoSQL.Builtins, :random},
     "randint" => {ExoSQL.Builtins, :randint},
     "range" => {ExoSQL.Builtins, :range},
@@ -92,7 +93,7 @@ defmodule ExoSQL.Builtins do
     end
   end
 
-  def can_simplify(f) do
+  def cant_simplify(f) do
     is_aggregate(f) or f in ["random", "randint", "debug"]
   end
 
@@ -376,13 +377,16 @@ defmodule ExoSQL.Builtins do
 
   Returns NULL if no match (which is falsy, so can be used for expressions)
   """
-  def regex(str, regexs) when is_binary(regexs) do
+  def regex(str, regexs) do
     # slow. Should have been precompiled (simplify)
-    regex = Regex.compile!(regexs)
-    regex(str, regex, String.contains?(regexs, "(?<"))
+    regex_real(str, regexs)
   end
 
-  def regex(str, %Regex{} = regex, captures) do
+  def regex(str, regexs, query) do
+    jp(regex_real(str, regexs), query)
+  end
+
+  def regex_real(str, {regex, captures}) do
     if captures do
       Regex.named_captures(regex, str)
     else
@@ -390,8 +394,38 @@ defmodule ExoSQL.Builtins do
     end
   end
 
-  def regex(str, regexs, query) when is_binary(regexs) do
-    jp(regex(str, regexs), query)
+  def regex_real(str, regexs) when is_binary(regexs) do
+    captures = String.contains?(regexs, "(?<")
+    regex = Regex.compile!(regexs)
+    regex_real(str, {regex, captures})
+  end
+
+  @doc ~S"""
+  Performs a regex scan
+
+  Returns all the matches, if groups are used, then its a list of groups matching.
+
+  As an optional third parameter it performs a jp query.
+
+  Returns NULL if no match (which is falsy, so can be used for expressions)
+  """
+  def regex_all(str, regexs) do
+    # slow. Should have been precompiled (simplify)
+    regex_all_real(str, regexs)
+  end
+
+  def regex_all(str, regexs, query) do
+    regex_all_real(str, regexs)
+    |> Enum.map(&jp(&1, query))
+  end
+
+  def regex_all_real(str, regexs) when is_binary(regexs) do
+    regex = Regex.compile!(regexs)
+    regex_all_real(str, regex)
+  end
+
+  def regex_all_real(str, regex) do
+    Regex.scan(regex, str)
   end
 
   @doc ~S"""
@@ -720,12 +754,9 @@ defmodule ExoSQL.Builtins do
   def ceil(n), do: ceil(ExoSQL.Utils.to_number!(n))
 
   ### Aggregate functions
-  def is_aggregate("count"), do: true
-  def is_aggregate("avg"), do: true
-  def is_aggregate("sum"), do: true
-  def is_aggregate("max"), do: true
-  def is_aggregate("min"), do: true
-  def is_aggregate(_other), do: false
+  def is_aggregate(x) do
+    x in ["count", "avg", "sum", "max", "min"]
+  end
 
   def count(data, {:lit, '*'}) do
     Enum.count(data.rows)

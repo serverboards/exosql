@@ -157,13 +157,47 @@ defmodule ExoSQL.BuiltinsTest do
     assert ExoSQL.DateTime.datediff(ExoSQL.Builtins.range("2018-01-01", "2018-01-08"), "seconds") ==
              7 * 24 * 60 * 60
 
-    assert ExoSQL.DateTime.datediff("2017-01-01T00:00:00+01:00", "2018-12-31T23:59:59+01:00", "months") == 24
-    assert ExoSQL.DateTime.datediff("2017-01-01T00:00:00+01:00", "2017-12-31T23:59:59+01:00", "months") == 12
-    assert ExoSQL.DateTime.datediff("2017-01-01T00:00:00+01:00", "2018-01-01T00:00:00+01:00", "months") == 12
-    assert ExoSQL.DateTime.datediff("2017-01-01T00:00:00+01:00", "2017-01-31T23:59:59+01:00", "months") == 1
-    assert ExoSQL.DateTime.datediff("2017-02-01T00:00:00+01:00", "2017-02-01T23:59:59+01:00", "months") == 0
-    assert ExoSQL.DateTime.datediff("2017-02-01T00:00:00+01:00", "2017-02-28T23:59:59+01:00", "months") == 0
-    assert ExoSQL.DateTime.datediff("2017-02-01T00:00:00+01:00", "2017-03-01T23:59:59+01:00", "months") == 1
+    assert ExoSQL.DateTime.datediff(
+             "2017-01-01T00:00:00+01:00",
+             "2018-12-31T23:59:59+01:00",
+             "months"
+           ) == 24
+
+    assert ExoSQL.DateTime.datediff(
+             "2017-01-01T00:00:00+01:00",
+             "2017-12-31T23:59:59+01:00",
+             "months"
+           ) == 12
+
+    assert ExoSQL.DateTime.datediff(
+             "2017-01-01T00:00:00+01:00",
+             "2018-01-01T00:00:00+01:00",
+             "months"
+           ) == 12
+
+    assert ExoSQL.DateTime.datediff(
+             "2017-01-01T00:00:00+01:00",
+             "2017-01-31T23:59:59+01:00",
+             "months"
+           ) == 1
+
+    assert ExoSQL.DateTime.datediff(
+             "2017-02-01T00:00:00+01:00",
+             "2017-02-01T23:59:59+01:00",
+             "months"
+           ) == 0
+
+    assert ExoSQL.DateTime.datediff(
+             "2017-02-01T00:00:00+01:00",
+             "2017-02-28T23:59:59+01:00",
+             "months"
+           ) == 0
+
+    assert ExoSQL.DateTime.datediff(
+             "2017-02-01T00:00:00+01:00",
+             "2017-03-01T23:59:59+01:00",
+             "months"
+           ) == 1
   end
 
   test "format string" do
@@ -283,7 +317,7 @@ defmodule ExoSQL.BuiltinsTest do
     assert 4 == ExoSQL.Builtins.power(-2, 2)
     assert 4 == ExoSQL.Builtins.power(2, "2")
     assert 4 == ExoSQL.Builtins.power("2", "2")
-    assert abs( 2 - ExoSQL.Builtins.power(4, 0.5) ) < epsilon
+    assert abs(2 - ExoSQL.Builtins.power(4, 0.5)) < epsilon
 
     assert 2 == ExoSQL.Builtins.sqrt(4)
     assert 4 == ExoSQL.Builtins.sqrt(16)
@@ -296,5 +330,52 @@ defmodule ExoSQL.BuiltinsTest do
     assert 0 == ExoSQL.Builtins.mod(10, 2)
     assert 0 == ExoSQL.Builtins.mod(10, 2.5)
     assert 1 == ExoSQL.Builtins.mod(10, 3)
+  end
+
+  test "Regex" do
+    context = %{row: ["test"]}
+
+    assert ExoSQL.Builtins.regex("test", "t") == ["t"]
+
+    regx = ExoSQL.Expr.simplify({:fn, {"regex", [{:column, 0}, {:lit, "t"}]}}, context)
+    Logger.debug("simpl #{inspect(regx)}")
+    {:fn, {"regex", [_arg1, arg2]}} = regx
+    assert arg2 != {:lit, "t"}
+    res = ExoSQL.Expr.run_expr(regx, context)
+    assert res == ["t"]
+
+    regx =
+      ExoSQL.Expr.simplify({:fn, {"regex", [{:column, 0}, {:lit, "(t)"}, {:lit, 1}]}}, context)
+
+    Logger.debug("simpl #{inspect(regx)}")
+    {:fn, {"regex", [_arg1, arg2, {:lit, 1}]}} = regx
+    assert arg2 != {:lit, "(t)"}
+    res = ExoSQL.Expr.run_expr(regx, context)
+    assert res == "t"
+  end
+
+  test "Regex All" do
+    context = %{row: ["test"]}
+
+    assert ExoSQL.Builtins.regex("test", "t") == ["t"]
+
+    regx = ExoSQL.Expr.simplify({:fn, {"regex_all", [{:column, 0}, {:lit, "t"}]}}, context)
+    Logger.debug("simpl #{inspect(regx)}")
+    {:fn, {"regex_all", [_arg1, arg2]}} = regx
+    assert arg2 != {:lit, "t"}
+    res = ExoSQL.Expr.run_expr(regx, context)
+    assert res == [["t"], ["t"]]
+
+    regx =
+      ExoSQL.Expr.simplify(
+        {:fn, {"regex_all", [{:column, 0}, {:lit, "(t)"}, {:lit, 1}]}},
+        context
+      )
+
+    Logger.debug("simpl #{inspect(regx)}")
+    {:fn, {"regex_all", [_arg1, arg2, {:lit, 1}]}} = regx
+    assert arg2 != {:lit, "(t)"}
+    res = ExoSQL.Expr.run_expr(regx, context)
+    assert res == ["t", "t"]
   end
 end

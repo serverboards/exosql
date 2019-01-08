@@ -537,6 +537,39 @@ defmodule ExoSQL.Expr do
     end
   end
 
+  def simplify({:fn, {"regex", [str, {:lit, regexs}]}}, context) when is_binary(regexs) do
+    str = simplify(str, context)
+    regex = Regex.compile!(regexs)
+    captures = String.contains?(regexs, "(?<")
+
+    {:fn, {"regex", [str, {:lit, {regex, captures}}]}}
+  end
+
+  def simplify({:fn, {"regex", [str, {:lit, regexs}, query]}}, context) when is_binary(regexs) do
+    str = simplify(str, context)
+    query = simplify(query, context)
+    regex = Regex.compile!(regexs)
+    captures = String.contains?(regexs, "(?<")
+
+    {:fn, {"regex", [str, {:lit, {regex, captures}}, query]}}
+  end
+
+  def simplify({:fn, {"regex_all", [str, {:lit, regexs}]}}, context) when is_binary(regexs) do
+    str = simplify(str, context)
+    regex = Regex.compile!(regexs)
+
+    {:fn, {"regex_all", [str, {:lit, regex}]}}
+  end
+
+  def simplify({:fn, {"regex_all", [str, {:lit, regexs}, query]}}, context)
+      when is_binary(regexs) do
+    str = simplify(str, context)
+    query = simplify(query, context)
+    regex = Regex.compile!(regexs)
+
+    {:fn, {"regex_all", [str, {:lit, regex}, query]}}
+  end
+
   def simplify({:fn, {f, params}}, context) do
     params = Enum.map(params, &simplify(&1, context))
 
@@ -546,7 +579,7 @@ defmodule ExoSQL.Expr do
         _ -> false
       end)
 
-    if all_literals and not ExoSQL.Builtins.can_simplify(f) do
+    if all_literals and not ExoSQL.Builtins.cant_simplify(f) do
       {:lit, run_expr({:fn, {f, params}}, context)}
     else
       {:fn, {f, params}}

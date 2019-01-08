@@ -537,7 +537,7 @@ Ranges can be decomposed with `lower(range)` and `upper(range)`.
 
 #### `regex(str, regex, query \\ nil)`
 
-Performs a regex search on the string.
+Performs a regex search on the string and returns the first match.
 
 It uses elixir regex, so use it as reference.
 
@@ -547,6 +547,10 @@ with the result. It can optionally use directly JSON pointer queries. See
 
 If matches the result will be "trueish" (or "falsy" if doesn't) so can be used
 as a boolean.
+
+#### `regex_all(str, regex, query \\ nil)`
+
+Similar to `regex(str, regex, query \\ nil)` but returns all matches in a list.
 
 #### `unnest(json, col1...)`
 
