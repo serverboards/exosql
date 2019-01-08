@@ -130,7 +130,9 @@ defmodule ExoSQL.Planner do
 
     # Order can be applied pre select or post select. This is the pre select.
     order_plan =
-      query.orderby |> Enum.reverse |> Enum.reduce(group_plan, fn
+      query.orderby
+      |> Enum.reverse()
+      |> Enum.reduce(group_plan, fn
         {_type, {:lit, _n}}, acc ->
           acc
 
@@ -165,17 +167,18 @@ defmodule ExoSQL.Planner do
           {:select, order_plan, select}
       end
 
-    select_plan = if Enum.any?(select, fn
-        {:fn, {name, _args}} -> ExoSQL.Builtins.is_projectable(name)
-        {:lit, %{ columns: _, rows: _}} -> true
-        {:alias, {{:lit, %{ columns: _, rows: _}}, _}} -> true
-        {:alias, {{:fn, {name, _args}}, _}} -> ExoSQL.Builtins.is_projectable(name)
-        _other -> false
-      end) do
-      {:project, select_plan}
-    else
-      select_plan
-    end
+    select_plan =
+      if Enum.any?(select, fn
+           {:fn, {name, _args}} -> ExoSQL.Builtins.is_projectable(name)
+           {:lit, %{columns: _, rows: _}} -> true
+           {:alias, {{:lit, %{columns: _, rows: _}}, _}} -> true
+           {:alias, {{:fn, {name, _args}}, _}} -> ExoSQL.Builtins.is_projectable(name)
+           _other -> false
+         end) do
+        {:project, select_plan}
+      else
+        select_plan
+      end
 
     distinct_plan =
       case query.distinct do
@@ -195,7 +198,9 @@ defmodule ExoSQL.Planner do
 
     # Order can be applied pre select or post select. This is the post select.
     order_plan =
-      query.orderby |> Enum.reverse |> Enum.reduce(crosstab_plan, fn
+      query.orderby
+      |> Enum.reverse()
+      |> Enum.reduce(crosstab_plan, fn
         {type, {:lit, n}}, acc ->
           {:order_by, type, {:column, n - 1}, acc}
 
@@ -240,10 +245,16 @@ defmodule ExoSQL.Planner do
           {:union, limit_plan, other_plan}
       end
 
+    # On first with it will generate the :with plan, and for further just use
+    # it.
     with_plan =
-      Enum.reduce(query.with, union_plan, fn {name, query}, prev_plan ->
-        {:ok, plan} = plan(query)
-        {:with, {name, plan}, prev_plan}
+      Enum.reduce(query.with, union_plan, fn
+        {name, {:columns, _cols}}, prev_plan ->
+          prev_plan
+
+        {name, query}, prev_plan ->
+          {:ok, plan} = plan(query)
+          {:with, {name, plan}, prev_plan}
       end)
 
     plan = with_plan
@@ -353,6 +364,7 @@ defmodule ExoSQL.Planner do
     Enum.flat_map(list, fn
       {e, v} ->
         Enum.flat_map([e, v], &get_table_columns_at_expr(db, table, &1))
+
       {v} ->
         get_table_columns_at_expr(db, table, v)
     end)

@@ -1466,6 +1466,28 @@ defmodule QueryTest do
     ")
   end
 
+  test "cached WITH" do
+    import ExUnit.CaptureLog
+
+    log =
+      capture_log(fn ->
+        res = analyze_query!("
+        WITH only_once AS (
+          SELECT DEBUG('Only once!')
+        )
+        SELECT * FROM only_once
+        UNION
+        SELECT * FROM only_once
+        UNION
+        SELECT * FROM only_once
+      ")
+
+        assert Enum.count(res.rows) == 3
+      end)
+
+    assert Enum.count(String.split(log, "SQL DEBUG: \"Only once!\"")) - 1 == 1
+  end
+
   test "SQL standard table alias" do
     analyze_query!("SELECT * FROM purchases pur")
     analyze_query!("SELECT name n FROM products pro")

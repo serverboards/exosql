@@ -76,6 +76,7 @@ defmodule ExoSQL.Parser do
               # functions are always lateral
               {:fn, f} ->
                 {:cross_join_lateral, {:fn, f}}
+
               {:alias, {{:fn, f}, al}} ->
                 {:cross_join_lateral, {:alias, {{:fn, f}, al}}}
 
@@ -212,6 +213,7 @@ defmodule ExoSQL.Parser do
         [{:all_columns}] ->
           # SELECT * do not include parent columns.
           select_columns |> Enum.map(&{:column, &1})
+
         _other ->
           Enum.map(select, &resolve_column(&1, all_columns, context))
       end
@@ -242,7 +244,17 @@ defmodule ExoSQL.Parser do
     union =
       if union do
         {type, other} = union
-        {:ok, other} = real_parse(other, context)
+
+        nwith =
+          Enum.map(Map.get(context, :with, %{}), fn
+            {k, q} ->
+              {k, {:columns, resolve_columns(q, context)}}
+          end)
+          |> Map.new()
+
+        contextw = Map.put(context, :with, nwith)
+
+        {:ok, other} = real_parse(other, contextw)
         {type, other}
       end
 
@@ -386,6 +398,10 @@ defmodule ExoSQL.Parser do
     get_query_columns(q)
   end
 
+  def resolve_columns({:columns, columns}, _context) do
+    columns
+  end
+
   def get_table_columns({db, table}, all_columns) do
     for {^db, ^table, column} <- all_columns, do: column
   end
@@ -481,17 +497,17 @@ defmodule ExoSQL.Parser do
             # Logger.debug("Found column from parent #{inspect found}")
             {:column, found}
           else
-            raise "Not found #{inspect column} in #{inspect all_columns}"
+            raise "Not found #{inspect(column)} in #{inspect(all_columns)}"
           end
 
         many ->
-          raise "Ambiguous column #{inspect column} in #{inspect many}"
+          raise "Ambiguous column #{inspect(column)} in #{inspect(many)}"
       end
 
     if found do
       found
     else
-      raise "Not found #{inspect column} in #{inspect all_columns}"
+      raise "Not found #{inspect(column)} in #{inspect(all_columns)}"
     end
   end
 
@@ -546,6 +562,7 @@ defmodule ExoSQL.Parser do
       Enum.map(list, fn
         {c, e} ->
           {resolve_column(c, all_columns, context), resolve_column(e, all_columns, context)}
+
         {e} ->
           {resolve_column(e, all_columns, context)}
       end)
@@ -555,10 +572,12 @@ defmodule ExoSQL.Parser do
 
   def resolve_column({:case, expr, list}, all_columns, context) do
     expr = resolve_column(expr, all_columns, context)
+
     list =
       Enum.map(list, fn
         {c, e} ->
           {resolve_column(c, all_columns, context), resolve_column(e, all_columns, context)}
+
         {e} ->
           {resolve_column(e, all_columns, context)}
       end)
@@ -589,13 +608,21 @@ defmodule ExoSQL.Parser do
   defp get_query_columns(%ExoSQL.Query{select: select, crosstab: nil}) do
     get_column_names_or_alias(select, 1)
   end
+
   defp get_query_columns(%ExoSQL.Query{select: select, crosstab: :all_columns}) do
-    [hd get_column_names_or_alias(select, 1)] # only the first is sure.. the rest too dynamic to know
+    # only the first is sure.. the rest too dynamic to know
+    [hd(get_column_names_or_alias(select, 1))]
   end
-  defp get_query_columns(%ExoSQL.Query{select: select, crosstab: crosstab}) when is_list(crosstab) do
-    first = hd get_column_names_or_alias(select, 1)
+
+  defp get_query_columns(%ExoSQL.Query{select: select, crosstab: crosstab})
+       when is_list(crosstab) do
+    first = hd(get_column_names_or_alias(select, 1))
     more = crosstab |> Enum.map(&{:tmp, :tmp, &1})
     [first | more]
+  end
+
+  defp get_query_columns({:columns, columns}) do
+    columns
   end
 
   defp get_column_names_or_alias([{:column, column} | rest], count) do
@@ -607,7 +634,8 @@ defmodule ExoSQL.Parser do
   end
 
   defp get_column_names_or_alias([{:fn, {"unnest", [_from | columns]}} | rest], count) do
-    Enum.map(columns, fn {:lit, name} -> {:tmp, :tmp, name} end) ++ get_column_names_or_alias(rest, count + 1)
+    Enum.map(columns, fn {:lit, name} -> {:tmp, :tmp, name} end) ++
+      get_column_names_or_alias(rest, count + 1)
   end
 
   defp get_column_names_or_alias([_head | rest], count) do
