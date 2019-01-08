@@ -253,13 +253,13 @@ defmodule ExoSQL.Planner do
       |> Enum.reverse()
       |> Enum.reduce({union_plan, %{}}, fn
         {name, cols}, {prev_plan, withs} when is_list(cols) ->
-          Logger.debug("Prepare plan cols: #{inspect(name)} #{inspect(cols)}")
+          # Logger.debug("Prepare plan cols: #{inspect(name)} #{inspect(cols)}")
           {prev_plan, withs}
 
         {name, query}, {prev_plan, withs} ->
           case withs[name] do
             nil ->
-              Logger.debug("Prepare plan query: #{inspect(name)} #{inspect(withs)}")
+              # Logger.debug("Prepare plan query: #{inspect(name)} #{inspect(withs)}")
               {:ok, plan} = plan(query, context)
               next_plan = {:with, {name, plan}, prev_plan}
               {next_plan, Map.put(withs, name, [])}
