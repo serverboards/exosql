@@ -228,6 +228,7 @@ defmodule ExoSQL.Builtins do
 
   def now(), do: Timex.local()
   def now(tz), do: Timex.now(tz)
+  def to_datetime(nil), do: nil
   def to_datetime(other), do: ExoSQL.DateTime.to_datetime(other)
   def to_datetime(other, mod), do: ExoSQL.DateTime.to_datetime(other, mod)
   def to_timestamp(%DateTime{} = d), do: DateTime.to_unix(d)
