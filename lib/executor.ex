@@ -248,8 +248,8 @@ defmodule ExoSQL.Executor do
     taska = Task.async(fn -> execute(table1, context) end)
     taskb = Task.async(fn -> execute(table2, context) end)
     # Wait 1m30s
-    {:ok, res1} = Task.await(taska, 90_000)
-    {:ok, res2} = Task.await(taskb, 90_000)
+    {:ok, res1} = Task.await(taska, :infinity)
+    {:ok, res2} = Task.await(taskb, :infinity)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:cross_join})}")
@@ -538,8 +538,8 @@ defmodule ExoSQL.Executor do
     taska = Task.async(fn -> execute(froma, context) end)
     taskb = Task.async(fn -> execute(fromb, context) end)
     # Wait 1m30s
-    {:ok, dataa} = Task.await(taska, 90_000)
-    {:ok, datab} = Task.await(taskb, 90_000)
+    {:ok, dataa} = Task.await(taska, :infinity)
+    {:ok, datab} = Task.await(taskb, :infinity)
 
     if ExoSQL.debug_mode(context) do
       Logger.debug("ExoSQL Executor #{inspect({:union})}")

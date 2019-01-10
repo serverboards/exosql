@@ -4,7 +4,7 @@ defmodule ExoSQL.Mixfile do
   def project do
     [
       app: :exosql,
-      version: "0.2.86",
+      version: "0.2.87",
       elixir: "~> 1.5",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
