@@ -41,6 +41,10 @@ defmodule ExoSQL.BuiltinsTest do
     assert ExoSQL.Builtins.substr(dt, 0, 10) == "2018-02-10"
   end
 
+  test "Split" do
+    assert ExoSQL.Builtins.split(nil) == []
+  end
+
   test "jp test" do
     json = %{
       "first_name" => "Anonymous",

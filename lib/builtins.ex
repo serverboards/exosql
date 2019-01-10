@@ -101,6 +101,8 @@ defmodule ExoSQL.Builtins do
     f in ["unnest", "generate_series"]
   end
 
+  def round(nil), do: nil
+
   def round(n) do
     {:ok, n} = to_float(n)
 
@@ -256,6 +258,8 @@ defmodule ExoSQL.Builtins do
     substr(str, skip, 10_000)
   end
 
+  def join(nil, _), do: nil
+
   def join(str, sep \\ ",") do
     Enum.join(str, sep)
   end
@@ -267,7 +271,7 @@ defmodule ExoSQL.Builtins do
   end
 
   def split(str) do
-    String.split(str, [", ", ",", " "])
+    split(str, [", ", ",", " "])
   end
 
   @doc ~S"""
