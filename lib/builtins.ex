@@ -21,6 +21,7 @@ defmodule ExoSQL.Builtins do
     "upper" => {ExoSQL.Builtins, :upper},
     "split" => {ExoSQL.Builtins, :split},
     "join" => {ExoSQL.Builtins, :join},
+    "trim" => {ExoSQL.Builtins, :trim},
     "to_string" => {ExoSQL.Builtins, :to_string_},
     "to_datetime" => {ExoSQL.Builtins, :to_datetime},
     "to_timestamp" => {ExoSQL.Builtins, :to_timestamp},
@@ -256,6 +257,12 @@ defmodule ExoSQL.Builtins do
   def substr(str, skip) do
     # A upper limit on what to return, should be enought
     substr(str, skip, 10_000)
+  end
+
+  def trim(nil), do: nil
+
+  def trim(str) do
+    String.trim(str)
   end
 
   def join(nil, _), do: nil
