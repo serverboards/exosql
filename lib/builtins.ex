@@ -51,8 +51,8 @@ defmodule ExoSQL.Builtins do
     ## Math
     "round" => {ExoSQL.Builtins, :round},
     "trunc" => {ExoSQL.Builtins, :trunc},
-    "floor" => {ExoSQL.Builtins, :floor},
-    "ceil" => {ExoSQL.Builtins, :ceil},
+    "floor" => {ExoSQL.Builtins, :floor_},
+    "ceil" => {ExoSQL.Builtins, :ceil_},
     "power" => {ExoSQL.Builtins, :power},
     "sqrt" => {ExoSQL.Builtins, :sqrt},
     "log" => {ExoSQL.Builtins, :log},
@@ -265,9 +265,11 @@ defmodule ExoSQL.Builtins do
     String.trim(str)
   end
 
+  def join(str), do: join(str, ",")
+
   def join(nil, _), do: nil
 
-  def join(str, sep \\ ",") do
+  def join(str, sep) do
     Enum.join(str, sep)
   end
 
@@ -757,13 +759,13 @@ defmodule ExoSQL.Builtins do
   def nullif(a, a), do: nil
   def nullif(a, _), do: a
 
-  def floor(n) when is_float(n), do: trunc(Float.floor(n))
-  def floor(n) when is_number(n), do: n
-  def floor(n), do: floor(ExoSQL.Utils.to_number!(n))
+  def floor_(n) when is_float(n), do: trunc(Float.floor(n))
+  def floor_(n) when is_number(n), do: n
+  def floor_(n), do: floor_(ExoSQL.Utils.to_number!(n))
 
-  def ceil(n) when is_float(n), do: trunc(Float.ceil(n))
-  def ceil(n) when is_number(n), do: n
-  def ceil(n), do: ceil(ExoSQL.Utils.to_number!(n))
+  def ceil_(n) when is_float(n), do: trunc(Float.ceil(n))
+  def ceil_(n) when is_number(n), do: n
+  def ceil_(n), do: ceil_(ExoSQL.Utils.to_number!(n))
 
   ### Aggregate functions
   def is_aggregate(x) do
